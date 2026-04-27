@@ -12,7 +12,12 @@ import { queryClient } from './lib/query-client.js';
 WebApp.ready();
 WebApp.expand();
 
-const manifestUrl = import.meta.env.VITE_TONCONNECT_MANIFEST_URL;
+// Default to same-origin manifest so we don't have to set an env var per
+// environment (Vercel preview / production / local). Override via
+// VITE_TONCONNECT_MANIFEST_URL only if hosting the manifest elsewhere.
+const manifestUrl =
+  import.meta.env.VITE_TONCONNECT_MANIFEST_URL ??
+  `${window.location.origin}/tonconnect-manifest.json`;
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');

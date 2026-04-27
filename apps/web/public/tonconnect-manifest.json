@@ -1,5 +1,5 @@
 {
-  "url": "https://__REPLACE_WITH_VERCEL_URL__",
+  "url": "https://fantasytoken.vercel.app",
   "name": "Fantasy Token League",
-  "iconUrl": "https://__REPLACE_WITH_VERCEL_URL__/icon-192.png"
+  "iconUrl": "https://fantasytoken.vercel.app/icon-192.png"
 }
