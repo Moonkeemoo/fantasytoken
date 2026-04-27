@@ -34,7 +34,6 @@ async function main() {
 }
 
 main().catch((err: unknown) => {
-  // eslint-disable-next-line no-console
   console.error('Fatal startup error:', err);
   process.exit(1);
 });

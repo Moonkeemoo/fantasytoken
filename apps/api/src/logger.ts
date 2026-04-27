@@ -7,7 +7,7 @@ import type { Config } from './config.js';
  * Add new sensitive paths here when introducing fields.
  */
 export function createLogger(config: Config) {
-  return pino({
+  const base: pino.LoggerOptions = {
     level: config.LOG_LEVEL,
     redact: {
       paths: [
@@ -23,14 +23,16 @@ export function createLogger(config: Config) {
       ],
       censor: '[REDACTED]',
     },
-    transport:
-      config.NODE_ENV === 'development'
-        ? {
-            target: 'pino-pretty',
-            options: { colorize: true, translateTime: 'SYS:HH:MM:ss' },
-          }
-        : undefined,
-  });
+  };
+
+  if (config.NODE_ENV === 'development') {
+    base.transport = {
+      target: 'pino-pretty',
+      options: { colorize: true, translateTime: 'SYS:HH:MM:ss' },
+    };
+  }
+
+  return pino(base);
 }
 
 export type Logger = ReturnType<typeof createLogger>;

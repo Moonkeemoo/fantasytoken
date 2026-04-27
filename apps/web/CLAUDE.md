@@ -13,15 +13,15 @@ For on-device TG testing, expose dev server via tunnel (ngrok / cloudflared) and
 
 ## Layout
 
-| Path | Purpose |
-|---|---|
-| `src/main.tsx` | Bootstrap: TG SDK ready, providers (QueryClient, TonConnect, Router). |
-| `src/App.tsx` | Route table. |
-| `src/lib/api-client.ts` | Typed fetch + zod validation + initData header (INV-1). |
-| `src/lib/telegram.ts` | Wrapper around @twa-dev/sdk so features don't import SDK directly. |
-| `src/lib/query-client.ts` | Configured TanStack Query client. |
-| `src/components/ui/` | Shared visual primitives (Button, Card, Input, …). |
-| `src/features/<name>/` | Domain features. See `src/features/CLAUDE.md`. |
+| Path                      | Purpose                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
+| `src/main.tsx`            | Bootstrap: TG SDK ready, providers (QueryClient, TonConnect, Router). |
+| `src/App.tsx`             | Route table.                                                          |
+| `src/lib/api-client.ts`   | Typed fetch + zod validation + initData header (INV-1).               |
+| `src/lib/telegram.ts`     | Wrapper around @twa-dev/sdk so features don't import SDK directly.    |
+| `src/lib/query-client.ts` | Configured TanStack Query client.                                     |
+| `src/components/ui/`      | Shared visual primitives (Button, Card, Input, …).                    |
+| `src/features/<name>/`    | Domain features. See `src/features/CLAUDE.md`.                        |
 
 ## Telegram theme
 

@@ -9,14 +9,14 @@ export type ErrorCode =
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly httpStatus: number;
-  public readonly cause?: unknown;
+  public override readonly cause?: unknown;
 
   constructor(code: ErrorCode, message: string, httpStatus = 400, cause?: unknown) {
     super(message);
     this.name = 'AppError';
     this.code = code;
     this.httpStatus = httpStatus;
-    this.cause = cause;
+    if (cause !== undefined) this.cause = cause;
   }
 }
 

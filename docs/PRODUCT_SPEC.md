@@ -16,13 +16,13 @@
 
 ### Два режими гри
 
-| | Free Mode | Verified Mode |
-|---|---|---|
-| Вхід | Відкритий для всіх | Потрібно підключити гаманець (TON Connect) |
-| Токени | Будь-які з каталогу | Тільки ті що реально є на гаманці |
-| Ставки | Безкоштовно | Entry fee (Stars / TON) |
-| Нагороди | XP, бейджі, лідерборд | Реальні призи (Stars / TON) |
-| Мета | Acquisition, practice, fun | Monetization, retention, skin in the game |
+|          | Free Mode                  | Verified Mode                              |
+| -------- | -------------------------- | ------------------------------------------ |
+| Вхід     | Відкритий для всіх         | Потрібно підключити гаманець (TON Connect) |
+| Токени   | Будь-які з каталогу        | Тільки ті що реально є на гаманці          |
+| Ставки   | Безкоштовно                | Entry fee (Stars / TON)                    |
+| Нагороди | XP, бейджі, лідерборд      | Реальні призи (Stars / TON)                |
+| Мета     | Acquisition, practice, fun | Monetization, retention, skin in the game  |
 
 **Конверсійна воронка:** Free Mode → звичка → хочу вищі ставки → підключаю гаманець → Verified Mode.
 
@@ -43,13 +43,13 @@
 
 ### Формати контестів
 
-| Формат | Тривалість | Гравці | Entry | MVP? |
-|---|---|---|---|---|
-| Sprint | 24 години | Unlimited | Free / 50 Stars | Так |
-| Marathon | 7 днів | Unlimited | Free / 100 Stars | Так |
-| Head-to-Head | 24h або 7d | 2 гравці | 100–500 Stars | V2 |
-| Tournament | 24h або 7d | 8–64 гравці | 200+ Stars | V2 |
-| Custom | 1h–30d | Creator sets | Creator sets | V3 |
+| Формат       | Тривалість | Гравці       | Entry            | MVP? |
+| ------------ | ---------- | ------------ | ---------------- | ---- |
+| Sprint       | 24 години  | Unlimited    | Free / 50 Stars  | Так  |
+| Marathon     | 7 днів     | Unlimited    | Free / 100 Stars | Так  |
+| Head-to-Head | 24h або 7d | 2 гравці     | 100–500 Stars    | V2   |
+| Tournament   | 24h або 7d | 8–64 гравці  | 200+ Stars       | V2   |
+| Custom       | 1h–30d     | Creator sets | Creator sets     | V3   |
 
 Кожен формат може бути Bull або Bear.
 
@@ -62,6 +62,7 @@
 Для Bear ліг: score = -1 × % зміни × weight. Тобто падіння = плюс, зростання = мінус.
 
 Бонуси (V2):
+
 - Volume spike (>2x average): +5 pts
 - New ATH під час контесту: +10 pts
 - Rug pull / token goes to zero: -50 pts
@@ -86,12 +87,12 @@
 
 ### Stack
 
-| Шар | Технологія |
-|---|---|
-| Frontend | React + Vite + @twa-dev/sdk + @tonconnect/ui-react |
-| Backend | Node.js + PostgreSQL |
-| Telegram Bot | node-telegram-bot-api або grammY |
-| Payments | Telegram Stars API + TON Connect 2.0 |
+| Шар          | Технологія                                         |
+| ------------ | -------------------------------------------------- |
+| Frontend     | React + Vite + @twa-dev/sdk + @tonconnect/ui-react |
+| Backend      | Node.js + PostgreSQL                               |
+| Telegram Bot | node-telegram-bot-api або grammY                   |
+| Payments     | Telegram Stars API + TON Connect 2.0               |
 
 **Дизайн** робиться через Claude Code — потрібні нормальні UI інпути, компоненти, адаптивна верстка під Telegram webview.
 
@@ -101,18 +102,19 @@
 
 Можливі джерела:
 
-| API | Плюси | Мінуси |
-|---|---|---|
-| DEXScreener | Безкоштовний, 300 req/min, lookup по contract address | Немає historical >24h |
-| CoinGecko | Historical OHLC, market cap | Free tier 10K calls/mo |
-| CoinMarketCap | Metadata, rankings, широке покриття | Free tier 10K credits/mo |
-| Ankr | Wallet scan всіх чейнів одним запитом | Тільки holdings, не ціни |
+| API           | Плюси                                                 | Мінуси                   |
+| ------------- | ----------------------------------------------------- | ------------------------ |
+| DEXScreener   | Безкоштовний, 300 req/min, lookup по contract address | Немає historical >24h    |
+| CoinGecko     | Historical OHLC, market cap                           | Free tier 10K calls/mo   |
+| CoinMarketCap | Metadata, rankings, широке покриття                   | Free tier 10K credits/mo |
+| Ankr          | Wallet scan всіх чейнів одним запитом                 | Тільки holdings, не ціни |
 
 Рекомендований підхід: cron кожні 5–10 хвилин, batch запит цін всіх токенів в активних контестах, кеш в базу. Конкретний API обрати по ходу.
 
 ### Wallet Scanning
 
 Для отримання token holdings з гаманця:
+
 - **Ankr** — один виклик = всі чейни + USD ціни. Free 30M req/mo.
 - **Moralis** — 40K CUs/day free. Enriched data.
 - **Alchemy** — 300M CUs/month free. Найщедріший.
@@ -129,13 +131,13 @@ leaderboard:     contest_id, user_id, score, rank (materialized view)
 
 ### Chain Support
 
-| Чейн | Пріоритет | Коментар |
-|---|---|---|
-| Ethereum | P0 | Основні токени |
-| Solana | P0 | Meme coins, швидкозростаючі |
-| BSC | P1 | Великий ринок |
-| Base | P1 | Швидко росте |
-| TON | P2 | Для Telegram compliance |
+| Чейн     | Пріоритет | Коментар                    |
+| -------- | --------- | --------------------------- |
+| Ethereum | P0        | Основні токени              |
+| Solana   | P0        | Meme coins, швидкозростаючі |
+| BSC      | P1        | Великий ринок               |
+| Base     | P1        | Швидко росте                |
+| TON      | P2        | Для Telegram compliance     |
 
 ---
 
@@ -170,74 +172,82 @@ leaderboard:     contest_id, user_id, score, rank (materialized view)
 ### Revenue Streams
 
 **1. Rake з paid contests (основний)**
+
 - 10% від entry fee кожного paid контесту
 - Оплата через Stars (70% dev share) або TON direct (100% dev share)
 - Приклад: 1000 DAU × 2 contests × 100 Stars = 200K Stars/day volume → 20K rake → ~$280/day
 
 **2. Premium features (V2)**
+
 - Advanced analytics, custom contests, portfolio optimizer
 - 500 Stars/month або 2 TON/month
 
 **3. Cosmetics (V3)**
+
 - Profile themes, avatars, team badges, victory animations
 - 50–500 Stars per item
 
 **4. Sponsored contests (V3)**
+
 - Token projects платять за брендовані контести
 - $500–5,000 per sponsored contest
 
 ### Revenue Projections (Conservative)
 
-| Метрика | Month 1 | Month 3 | Month 6 |
-|---|---|---|---|
-| DAU | 200 | 1,000 | 5,000 |
-| Paid contest rate | 10% | 15% | 20% |
-| Monthly rake | ~$42 | ~$630 | ~$6,300 |
+| Метрика           | Month 1 | Month 3 | Month 6 |
+| ----------------- | ------- | ------- | ------- |
+| DAU               | 200     | 1,000   | 5,000   |
+| Paid contest rate | 10%     | 15%     | 20%     |
+| Monthly rake      | ~$42    | ~$630   | ~$6,300 |
 
 ---
 
 ## MVP Plan
 
 ### Week 1: Foundation
+
 - **Day 1–2:** Project setup (React + Vite + TG SDK). Bot registration. Backend (Node.js + PostgreSQL). Deploy staging.
 - **Day 3–4:** Wallet scan. Paste address → see holdings. Basic portfolio view.
 - **Day 5–7:** Token data pipeline. Price fetching + caching. Snapshot cron job.
 
 ### Week 2: Core Game Loop
+
 - **Day 8–9:** Team builder UI. Select 5 tokens, allocate budget. Validation.
 - **Day 10–11:** Contest system. Bull + Bear leagues. Auto-start/end. Score calculation.
 - **Day 12–14:** Leaderboard. Rankings updated periodically. Personal scorecard. Results page.
 
 ### Week 3: Social + Polish
+
 - **Day 15–16:** Share mechanics. Result cards for Telegram chats. Referral links.
 - **Day 17–18:** XP system. Basic achievements. Profile page.
 - **Day 19–21:** Polish, bug fixes, load testing. TG Mini App store submission.
 
 ### Week 4: Monetization (can push to V2)
+
 - **Day 22–24:** Stars integration. Paid contest entry. Prize distribution.
 - **Day 25–26:** TON Connect. Wallet verification for Verified Mode.
 - **Day 27–28:** Paid contest testing. Edge cases. Launch decision.
 
 ### Post-MVP
 
-| Phase | Features | Timeline |
-|---|---|---|
-| V2 | H2H, tournaments, TON payments, salary cap, achievements | Month 2 |
-| V3 | Custom contests, cosmetics, sponsored events, leagues | Month 3–4 |
-| V4 | AI advisor, social features, mobile push | Month 5–6 |
+| Phase | Features                                                 | Timeline  |
+| ----- | -------------------------------------------------------- | --------- |
+| V2    | H2H, tournaments, TON payments, salary cap, achievements | Month 2   |
+| V3    | Custom contests, cosmetics, sponsored events, leagues    | Month 3–4 |
+| V4    | AI advisor, social features, mobile push                 | Month 5–6 |
 
 ---
 
 ## Ризики
 
-| Severity | Ризик | Mitigation |
-|---|---|---|
-| HIGH | Telegram забороняє показувати non-TON токени | Fallback: pivot на TON-only або винести гру на зовнішній сайт |
-| HIGH | Низький user acquisition | Viral sharing з Day 1. Seed в крипто TG групах |
-| MEDIUM | API rate limits при масштабуванні | Агресивний кеш. Upgrade на paid тiers |
-| MEDIUM | Price manipulation (мікрокап токени) | Мінімальний market cap фільтр. Liquidity requirements |
-| MEDIUM | Regulatory (фентезі = gambling?) | Спочатку free-only. Stars-only оплата. Skill-based framing |
-| LOW | Копікети | First-mover в TG. Network effects. Community moat |
+| Severity | Ризик                                        | Mitigation                                                    |
+| -------- | -------------------------------------------- | ------------------------------------------------------------- |
+| HIGH     | Telegram забороняє показувати non-TON токени | Fallback: pivot на TON-only або винести гру на зовнішній сайт |
+| HIGH     | Низький user acquisition                     | Viral sharing з Day 1. Seed в крипто TG групах                |
+| MEDIUM   | API rate limits при масштабуванні            | Агресивний кеш. Upgrade на paid тiers                         |
+| MEDIUM   | Price manipulation (мікрокап токени)         | Мінімальний market cap фільтр. Liquidity requirements         |
+| MEDIUM   | Regulatory (фентезі = gambling?)             | Спочатку free-only. Stars-only оплата. Skill-based framing    |
+| LOW      | Копікети                                     | First-mover в TG. Network effects. Community moat             |
 
 ---
 

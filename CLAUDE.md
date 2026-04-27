@@ -52,10 +52,10 @@ fantasytoken/
 
 ## Workflow
 
-| Тип роботи | Як |
-|---|---|
-| Bug fix, refactor known shape | Direct edit, TDD inline, без plan-файлу |
-| Нова feature / subsystem | brainstorm → spec → plan → execute (через Skills) |
+| Тип роботи                    | Як                                                |
+| ----------------------------- | ------------------------------------------------- |
+| Bug fix, refactor known shape | Direct edit, TDD inline, без plan-файлу           |
+| Нова feature / subsystem      | brainstorm → spec → plan → execute (через Skills) |
 
 Для паралельної роботи з колегою — `git worktree add .worktrees/feature-X -b feature/X`.
 
@@ -104,6 +104,7 @@ pnpm --filter @fantasytoken/api db:studio
 ## Maintenance triggers
 
 Оновлюй цей файл коли:
+
 - З'являється новий top-level домен/папка
 - Змінюється stack або обов'язкові інструменти
 - Додається/змінюється Top Rule (синхронізуй з INVARIANTS якщо це invariant)
