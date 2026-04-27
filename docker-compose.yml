@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fantasytoken
+      POSTGRES_PASSWORD: fantasytoken
+      POSTGRES_DB: fantasytoken
+    ports:
+      - '5432:5432'
+    volumes:
+      # Per CLAUDE.md rule 6: local DB data in .tmp/ (gitignored).
+      - ./.tmp/pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fantasytoken']
+      interval: 5s
+      timeout: 3s
+      retries: 5
