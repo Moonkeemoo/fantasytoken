@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App.js';
 import './index.css';
+import { ErrorBoundary } from './lib/error-boundary.js';
 import { queryClient } from './lib/query-client.js';
 
 // Tell Telegram we're alive as early as possible so the splash dismisses cleanly.
@@ -24,12 +25,14 @@ if (!root) throw new Error('Missing #root element');
 
 createRoot(root).render(
   <StrictMode>
-    <TonConnectUIProvider manifestUrl={manifestUrl}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </TonConnectUIProvider>
+    <ErrorBoundary>
+      <TonConnectUIProvider manifestUrl={manifestUrl}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </TonConnectUIProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
