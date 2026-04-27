@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import type { Config } from './config.js';
@@ -6,6 +7,7 @@ import type { Database } from './db/client.js';
 import { AppError } from './lib/errors.js';
 import type { Logger } from './logger.js';
 import { healthRoutes } from './modules/health/health.routes.js';
+import { meRoutes } from './modules/me/me.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -22,6 +24,18 @@ export async function createServer(deps: ServerDeps) {
   });
 
   await app.register(helmet);
+  await app.register(cors, {
+    // Whitelist: production web origin + Vercel previews + local dev.
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // same-origin or curl
+      if (origin === 'https://fantasytoken.vercel.app') return cb(null, true);
+      if (/^https:\/\/fantasytoken-[a-z0-9-]+\.vercel\.app$/.test(origin)) return cb(null, true);
+      if (origin === 'http://localhost:5173') return cb(null, true);
+      cb(new Error(`CORS origin not allowed: ${origin}`), false);
+    },
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['content-type', 'x-telegram-init-data'],
+  });
   await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
@@ -40,6 +54,7 @@ export async function createServer(deps: ServerDeps) {
   });
 
   await app.register(healthRoutes, { prefix: '/health' });
+  await app.register(meRoutes, { prefix: '/me' });
 
   return app;
 }
