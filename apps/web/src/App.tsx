@@ -1,17 +1,10 @@
 import { Route, Routes } from 'react-router-dom';
+import { StatusPage } from './features/status/StatusPage.js';
 
 export function App() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <main className="min-h-dvh p-4">
-            <h1 className="text-xl font-semibold">Fantasy Token League</h1>
-            <p className="text-tg-hint mt-2">Skeleton ready. Features coming.</p>
-          </main>
-        }
-      />
+      <Route path="/" element={<StatusPage />} />
     </Routes>
   );
 }
