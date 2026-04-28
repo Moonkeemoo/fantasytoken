@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, priceSnapshots, tokens, transactions } from '../../db/schema/index.js';
 import type { ResultEntrySnapshot, ResultRepo } from './result.service.js';
@@ -136,6 +136,15 @@ export function createResultRepo(db: Database): ResultRepo {
         )
         .limit(1);
       return !!r;
+    },
+
+    async getImagesBySymbols(symbols) {
+      if (symbols.length === 0) return new Map();
+      const rows = await db
+        .select({ symbol: tokens.symbol, imageUrl: tokens.imageUrl })
+        .from(tokens)
+        .where(inArray(tokens.symbol, symbols));
+      return new Map(rows.map((r) => [r.symbol, r.imageUrl]));
     },
   };
 }

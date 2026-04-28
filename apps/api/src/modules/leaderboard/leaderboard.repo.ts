@@ -108,5 +108,14 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
         .limit(1);
       return u?.firstName ?? u?.username ?? 'Player';
     },
+
+    async getImagesBySymbols(symbols) {
+      if (symbols.length === 0) return new Map();
+      const rows = await db
+        .select({ symbol: tokens.symbol, imageUrl: tokens.imageUrl })
+        .from(tokens)
+        .where(inArray(tokens.symbol, symbols));
+      return new Map(rows.map((r) => [r.symbol, r.imageUrl]));
+    },
   };
 }

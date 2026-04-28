@@ -5,6 +5,7 @@ export type ResultOutcome = z.infer<typeof ResultOutcome>;
 
 export const LineupFinalRow = z.object({
   symbol: z.string(),
+  imageUrl: z.string().nullable(),
   alloc: z.number().int(),
   finalPlPct: z.number(),
 });

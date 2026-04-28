@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const LineupRow = z.object({
   symbol: z.string(),
+  imageUrl: z.string().nullable(),
   alloc: z.number().int(),
   pctChange: z.number(),
   contribUsd: z.number(),

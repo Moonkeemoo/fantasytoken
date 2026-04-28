@@ -1,6 +1,7 @@
 import type { LineupFinalRow } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
+import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { formatPct } from '../../lib/format.js';
 
 export function LineupRecap({ rows }: { rows: LineupFinalRow[] }) {
@@ -10,9 +11,7 @@ export function LineupRecap({ rows }: { rows: LineupFinalRow[] }) {
       <Label>your lineup · final</Label>
       {rows.map((r) => (
         <Card key={r.symbol} className="flex items-center gap-2 !px-[10px] !py-[6px]">
-          <div className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[8px] font-bold">
-            {r.symbol}
-          </div>
+          <TokenIcon symbol={r.symbol} imageUrl={r.imageUrl} size={22} />
           <div className="flex-1 text-[11px] font-bold">
             {r.symbol} <span className="font-normal text-muted">{r.alloc}%</span>
           </div>

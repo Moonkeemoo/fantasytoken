@@ -26,6 +26,7 @@ export interface ResultRepo {
   ): Promise<ResultEntrySnapshot | null>;
   getPriceSnapshots(contestId: string): Promise<Map<string, { start: number; end: number }>>;
   hasRefund(entryId: string): Promise<boolean>;
+  getImagesBySymbols(symbols: string[]): Promise<Map<string, string | null>>;
 }
 
 export interface ResultServiceDeps {
@@ -77,10 +78,16 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
       }
 
       // Lineup recap with per-pick % change.
+      const images = await deps.repo.getImagesBySymbols(myEntry.picks.map((p) => p.symbol));
       const lineupFinal = myEntry.picks.map((p) => {
         const pr = prices.get(p.symbol);
         const pct = pr && pr.start > 0 ? (pr.end - pr.start) / pr.start : 0;
-        return { symbol: p.symbol, alloc: p.alloc, finalPlPct: pct };
+        return {
+          symbol: p.symbol,
+          imageUrl: images.get(p.symbol) ?? null,
+          alloc: p.alloc,
+          finalPlPct: pct,
+        };
       });
 
       return {

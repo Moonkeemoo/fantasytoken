@@ -1,6 +1,7 @@
 import { ALLOCATION_STEP_PCT, type Token } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
 import { Card } from '../../components/ui/Card.js';
+import { TokenIcon } from '../../components/ui/TokenIcon.js';
 
 export interface TokenResultRowProps {
   token: Token;
@@ -28,9 +29,7 @@ export function TokenResultRow({
 }: TokenResultRowProps) {
   return (
     <Card className="flex items-center gap-2 !px-[10px] !py-[6px]">
-      <div className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[8px] font-bold">
-        {token.symbol}
-      </div>
+      <TokenIcon symbol={token.symbol} imageUrl={token.imageUrl} size={24} />
       <div className="flex-1 text-[11px]">
         <div className="font-bold leading-tight">
           {token.name}{' '}

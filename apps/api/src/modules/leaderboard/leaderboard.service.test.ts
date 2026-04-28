@@ -73,6 +73,9 @@ function makeRepo(opts: {
     async getDisplayNameForUser() {
       return opts.displayName ?? 'You';
     },
+    async getImagesBySymbols() {
+      return new Map();
+    },
   };
 }
 

@@ -5,6 +5,7 @@ export interface TokenUpsertRow {
   coingeckoId: string;
   symbol: string;
   name: string;
+  imageUrl: string | null;
   currentPriceUsd: number | null;
   pctChange24h: number | null;
   marketCapUsd: number | null;
@@ -17,6 +18,7 @@ export interface TokensRepo {
     items: Array<{
       symbol: string;
       name: string;
+      imageUrl: string | null;
       currentPriceUsd: string | null;
       pctChange24h: string | null;
       marketCapUsd: string | null;
@@ -27,6 +29,7 @@ export interface TokensRepo {
     Array<{
       symbol: string;
       name: string;
+      imageUrl: string | null;
       currentPriceUsd: string | null;
       pctChange24h: string | null;
       marketCapUsd: string | null;
@@ -105,6 +108,7 @@ function toUpsertRow(m: CoinGeckoMarket): TokenUpsertRow {
     coingeckoId: m.id,
     symbol: m.symbol.toUpperCase(),
     name: m.name,
+    imageUrl: m.image,
     currentPriceUsd: m.current_price,
     pctChange24h: m.price_change_percentage_24h,
     marketCapUsd: m.market_cap,
