@@ -22,14 +22,14 @@ export function Live() {
     }
   }, [live.data, id, navigate]);
 
-  if (!id) return <div className="p-6 text-tg-error">missing contest id</div>;
-  if (live.isLoading) return <div className="p-6 text-tg-hint">loading…</div>;
-  if (live.isError || !live.data) return <div className="p-6 text-tg-error">contest not found</div>;
+  if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
+  if (live.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (live.isError || !live.data) return <div className="p-6 text-hl-red">contest not found</div>;
 
   const data = live.data;
 
   return (
-    <div className="flex min-h-screen flex-col bg-tg-bg text-tg-text">
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
       <LiveHeader contestName={'Contest'} endsAt={data.endsAt} status={data.status} />
       <Scoreboard
         plPct={data.portfolio.plPct}
