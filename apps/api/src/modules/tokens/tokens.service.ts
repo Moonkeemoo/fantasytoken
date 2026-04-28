@@ -32,6 +32,7 @@ export interface TokensRepo {
       marketCapUsd: string | null;
     }>
   >;
+  listActiveSymbols(): Promise<string[]>;
 }
 
 export interface TokensServiceDeps {
@@ -42,6 +43,7 @@ export interface TokensServiceDeps {
 
 export interface TokensService {
   syncCatalog(args: { pages: number; perPage: number }): Promise<number>;
+  syncActive(): Promise<number>;
   listPage(args: { page: number; limit: number }): ReturnType<TokensRepo['listPage']>;
   search(args: { q: string; limit: number }): ReturnType<TokensRepo['search']>;
 }
@@ -63,6 +65,26 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
       }
       deps.log.info({ upserted, pages }, 'tokens.sync.catalog done');
       return upserted;
+    },
+
+    async syncActive() {
+      const symbols = await deps.repo.listActiveSymbols();
+      if (symbols.length === 0) return 0;
+      try {
+        const markets = await deps.client.topMarkets({ perPage: 250, page: 1 });
+        const upper = new Set(symbols);
+        const filtered = markets.filter((m) => upper.has(m.symbol.toUpperCase()));
+        const rows = filtered.map(toUpsertRow);
+        await deps.repo.upsertMany(rows);
+        deps.log.info(
+          { refreshed: rows.length, active: symbols.length },
+          'tokens.sync.active done',
+        );
+        return rows.length;
+      } catch (err) {
+        deps.log.warn({ err }, 'tokens.sync.active failed');
+        return 0;
+      }
     },
 
     async listPage(args) {

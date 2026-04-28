@@ -17,6 +17,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async search() {
       return [];
     },
+    async listActiveSymbols() {
+      return [];
+    },
   };
 }
 

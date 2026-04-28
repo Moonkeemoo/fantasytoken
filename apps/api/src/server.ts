@@ -24,6 +24,11 @@ import { makeAdminRoutes } from './modules/admin/admin.routes.js';
 import { createEntriesRepo } from './modules/entries/entries.repo.js';
 import { createEntriesService } from './modules/entries/entries.service.js';
 import { makeEntriesRoutes } from './modules/entries/entries.routes.js';
+import { createContestsTickRepo } from './modules/contests/contests.tick.repo.js';
+import { createContestsTickService } from './modules/contests/contests.tick.service.js';
+import { createLeaderboardRepo } from './modules/leaderboard/leaderboard.repo.js';
+import { createLeaderboardService } from './modules/leaderboard/leaderboard.service.js';
+import { makeLiveRoutes } from './modules/leaderboard/leaderboard.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -95,14 +100,27 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
+  const tickRepo = createContestsTickRepo(deps.db);
+  const tick = createContestsTickService({
+    repo: tickRepo,
+    log: deps.logger,
+    botMinFiller: deps.config.BOT_MIN_FILLER,
+    botRatio: deps.config.BOT_RATIO,
+  });
+
+  const leaderboardRepo = createLeaderboardRepo(deps.db);
+  const leaderboard = createLeaderboardService({ repo: leaderboardRepo });
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
+  await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeAdminRoutes({ contests, users }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
+  const MINUTE = 60_000;
   const HOUR = 60 * 60 * 1000;
   const stopCatalogSync = scheduleEvery({
     intervalMs: HOUR,
@@ -114,10 +132,32 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  const stopTick = scheduleEvery({
+    intervalMs: MINUTE,
+    fn: async () => {
+      await tick.tick();
+    },
+    name: 'contests.tick',
+    log: deps.logger,
+    runOnStart: deps.config.NODE_ENV !== 'test',
+  });
+
+  const stopActiveSync = scheduleEvery({
+    intervalMs: 5 * MINUTE,
+    fn: async () => {
+      await tokens.syncActive();
+    },
+    name: 'tokens.sync.active',
+    log: deps.logger,
+    runOnStart: deps.config.NODE_ENV !== 'test',
+  });
+
   return {
     app,
     stopCrons: () => {
       stopCatalogSync();
+      stopTick();
+      stopActiveSync();
     },
   };
 }
