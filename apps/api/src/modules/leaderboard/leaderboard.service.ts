@@ -33,6 +33,7 @@ export interface LeaderboardRepo {
   getCurrentPrices(symbols: string[]): Promise<Map<string, number>>;
   getMyEntry(contestId: string, userId: string): Promise<EntrySnapshot | null>;
   getDisplayNameForUser(userId: string): Promise<string>;
+  getImagesBySymbols(symbols: string[]): Promise<Map<string, string | null>>;
 }
 
 export interface LeaderboardServiceDeps {
@@ -125,12 +126,14 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       if (userId) {
         const my = await deps.repo.getMyEntry(contestId, userId);
         if (my) {
+          const images = await deps.repo.getImagesBySymbols(my.picks.map((p) => p.symbol));
           lineup = my.picks.map((p) => {
             const start = startPrices.get(p.symbol) ?? null;
             const cur = currentPrices.get(p.symbol) ?? null;
             const pct = start && cur && start > 0 ? (cur - start) / start : 0;
             return {
               symbol: p.symbol,
+              imageUrl: images.get(p.symbol) ?? null,
               alloc: p.alloc,
               pctChange: pct,
               contribUsd: (p.alloc / 100) * pct * 100,

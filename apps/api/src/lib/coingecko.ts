@@ -9,6 +9,7 @@ export interface CoinGeckoMarket {
   id: string; // coingecko_id, e.g. 'bitcoin'
   symbol: string; // 'btc'
   name: string;
+  image: string | null;
   current_price: number | null;
   market_cap: number | null;
   price_change_percentage_24h: number | null;
@@ -41,6 +42,7 @@ export function createCoinGeckoClient(cfg: CoinGeckoConfig, log: Logger): CoinGe
         id: String(r.id ?? ''),
         symbol: String(r.symbol ?? ''),
         name: String(r.name ?? ''),
+        image: typeof r.image === 'string' ? r.image : null,
         current_price: typeof r.current_price === 'number' ? r.current_price : null,
         market_cap: typeof r.market_cap === 'number' ? r.market_cap : null,
         price_change_percentage_24h:

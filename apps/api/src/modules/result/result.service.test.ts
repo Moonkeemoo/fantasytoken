@@ -46,6 +46,9 @@ function makeRepo(opts: {
     async hasRefund(entryId) {
       return (opts.refundedEntries ?? []).includes(entryId);
     },
+    async getImagesBySymbols() {
+      return new Map();
+    },
   };
 }
 

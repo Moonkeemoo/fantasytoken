@@ -15,6 +15,7 @@ export function createTokensRepo(db: Database): TokensRepo {
             coingeckoId: r.coingeckoId,
             symbol: r.symbol,
             name: r.name,
+            imageUrl: r.imageUrl,
             currentPriceUsd: r.currentPriceUsd === null ? null : String(r.currentPriceUsd),
             pctChange24h: r.pctChange24h === null ? null : String(r.pctChange24h),
             marketCapUsd: r.marketCapUsd === null ? null : String(r.marketCapUsd),
@@ -26,6 +27,7 @@ export function createTokensRepo(db: Database): TokensRepo {
           set: {
             symbol: sql`excluded.symbol`,
             name: sql`excluded.name`,
+            imageUrl: sql`excluded.image_url`,
             currentPriceUsd: sql`excluded.current_price_usd`,
             pctChange24h: sql`excluded.pct_change_24h`,
             marketCapUsd: sql`excluded.market_cap_usd`,
@@ -40,6 +42,7 @@ export function createTokensRepo(db: Database): TokensRepo {
         .select({
           symbol: tokens.symbol,
           name: tokens.name,
+          imageUrl: tokens.imageUrl,
           currentPriceUsd: tokens.currentPriceUsd,
           pctChange24h: tokens.pctChange24h,
           marketCapUsd: tokens.marketCapUsd,
@@ -82,6 +85,7 @@ export function createTokensRepo(db: Database): TokensRepo {
         .select({
           symbol: tokens.symbol,
           name: tokens.name,
+          imageUrl: tokens.imageUrl,
           currentPriceUsd: tokens.currentPriceUsd,
           pctChange24h: tokens.pctChange24h,
           marketCapUsd: tokens.marketCapUsd,
