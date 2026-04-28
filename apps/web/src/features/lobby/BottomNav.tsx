@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const ITEMS = [
   { path: '/lobby', label: 'Play' },
   { path: '/live', label: 'Live' },
-  { path: '/wallet', label: 'Wallet' },
+  { path: '/rankings', label: 'Rankings' },
   { path: '/me', label: 'Me' },
 ];
 

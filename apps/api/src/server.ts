@@ -35,6 +35,12 @@ import { createResultRepo } from './modules/result/result.repo.js';
 import { createResultService } from './modules/result/result.service.js';
 import { makeResultRoutes } from './modules/result/result.routes.js';
 import { createReplenishService } from './modules/contests/contests.replenish.js';
+import { createFriendsRepo } from './modules/friends/friends.repo.js';
+import { createFriendsService } from './modules/friends/friends.service.js';
+import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
+import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
+import { createRankingsService } from './modules/rankings/rankings.service.js';
+import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -125,6 +131,11 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const resultRepo = createResultRepo(deps.db);
   const result = createResultService({ repo: resultRepo });
 
+  const friendsRepo = createFriendsRepo(deps.db);
+  const friends = createFriendsService({ repo: friendsRepo, log: deps.logger });
+  const rankingsRepo = createRankingsRepo(deps.db);
+  const rankings = createRankingsService({ repo: rankingsRepo });
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
@@ -132,6 +143,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
+  await app.register(makeFriendsRoutes({ friends, users }), { prefix: '/friends' });
+  await app.register(makeRankingsRoutes({ rankings, friends, users }), { prefix: '/rankings' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
