@@ -21,6 +21,9 @@ import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
 import { makeAdminRoutes } from './modules/admin/admin.routes.js';
+import { createEntriesRepo } from './modules/entries/entries.repo.js';
+import { createEntriesService } from './modules/entries/entries.service.js';
+import { makeEntriesRoutes } from './modules/entries/entries.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -89,10 +92,14 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const contestsRepo = createContestsRepo(deps.db);
   const contests = createContestsService(contestsRepo);
 
+  const entriesRepo = createEntriesRepo(deps.db);
+  const entries = createEntriesService({ repo: entriesRepo, currency });
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
+  await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeAdminRoutes({ contests, users }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
