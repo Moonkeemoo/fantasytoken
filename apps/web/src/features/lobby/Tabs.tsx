@@ -1,4 +1,5 @@
 import type { ContestFilter } from '@fantasytoken/shared';
+import { Pill } from '../../components/ui/Pill.js';
 
 export interface TabsProps {
   active: ContestFilter;
@@ -14,17 +15,11 @@ const LABELS: Record<ContestFilter, string> = {
 
 export function Tabs({ active, counts, onChange }: TabsProps) {
   return (
-    <div className="flex gap-2 p-3">
+    <div className="flex gap-2 px-3 py-2">
       {(Object.keys(LABELS) as ContestFilter[]).map((f) => (
-        <button
-          key={f}
-          onClick={() => onChange(f)}
-          className={`flex-1 rounded px-3 py-2 text-sm ${
-            active === f ? 'bg-tg-button text-tg-button-text' : 'bg-tg-bg-secondary text-tg-text'
-          }`}
-        >
+        <Pill key={f} active={active === f} onClick={() => onChange(f)}>
           {LABELS[f]} · {counts[f]}
-        </button>
+        </Pill>
       ))}
     </div>
   );

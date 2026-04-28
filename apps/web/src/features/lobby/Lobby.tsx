@@ -37,15 +37,15 @@ export function Lobby() {
 
   const active = (my.data?.items ?? []).filter((c) => c.status === 'active');
 
-  if (me.isLoading) return <div className="p-6 text-tg-hint">loading…</div>;
+  if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (me.isError || !me.data)
-    return <div className="p-6 text-tg-error">error: {String(me.error)}</div>;
+    return <div className="p-6 text-hl-red">error: {String(me.error)}</div>;
 
   const goTeamBuilder = (id: string) => navigate(`/contests/${id}/build`);
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
 
   return (
-    <div className="flex min-h-screen flex-col bg-tg-bg text-tg-text">
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
       <Header
         firstName={me.data.user.first_name}
         balanceCents={me.data.balanceCents}
