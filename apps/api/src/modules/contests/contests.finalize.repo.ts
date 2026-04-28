@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { computeActualPrizeCents } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import { contests, entries, priceSnapshots, tokens, transactions } from '../../db/schema/index.js';
 import type { CurrencyService } from '../currency/currency.service.js';
@@ -12,6 +13,7 @@ export interface ContestsFinalizeRepo {
 export function createContestsFinalizeRepo(
   db: Database,
   currency: CurrencyService,
+  rakePct: number,
 ): ContestsFinalizeRepo {
   return {
     async findContestsToFinalize2() {
@@ -24,7 +26,11 @@ export function createContestsFinalizeRepo(
     async finalize(contestId) {
       // 1. Load contest.
       const [contest] = await db
-        .select({ id: contests.id, prizePoolCents: contests.prizePoolCents })
+        .select({
+          id: contests.id,
+          prizePoolCents: contests.prizePoolCents,
+          entryFeeCents: contests.entryFeeCents,
+        })
         .from(contests)
         .where(eq(contests.id, contestId))
         .limit(1);
@@ -69,11 +75,19 @@ export function createContestsFinalizeRepo(
         prices.set(s.symbol, cur);
       }
 
-      // 4. Pure compute.
+      // 4. Pure compute. Pool is derived from real entries × fee × (1-rake);
+      // prize_pool_cents column acts as guaranteed minimum (overlay).
+      const realCount = inputEntries.filter((e) => !e.isBot).length;
+      const actualPoolCents = computeActualPrizeCents({
+        realCount,
+        entryFeeCents: Number(contest.entryFeeCents),
+        rakePct,
+        guaranteedPoolCents: Number(contest.prizePoolCents),
+      });
       const result = finalizeContest({
         entries: inputEntries,
         prices,
-        prizePoolCents: Number(contest.prizePoolCents),
+        prizePoolCents: actualPoolCents,
       });
 
       // 5. Apply entry updates + contest status in single tx.

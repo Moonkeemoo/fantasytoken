@@ -1,4 +1,19 @@
 /**
+ * Dynamic prize pool: realCount × entryFeeCents × (1 - rakePct/100), with optional
+ * house-funded overlay floor (guaranteedPoolCents). Bots don't contribute.
+ */
+export function computeActualPrizeCents(args: {
+  realCount: number;
+  entryFeeCents: number;
+  rakePct: number;
+  guaranteedPoolCents?: number;
+}): number {
+  const collected = Math.max(0, args.realCount) * Math.max(0, args.entryFeeCents);
+  const afterRake = Math.floor((collected * (100 - args.rakePct)) / 100);
+  return Math.max(afterRake, args.guaranteedPoolCents ?? 0);
+}
+
+/**
  * Hardcoded prize curve (top 30% of real entries pay).
  * Returns map of rank (1-indexed) → cents.
  * Total payout == prizePoolCents (rounding remainder → 1st place).

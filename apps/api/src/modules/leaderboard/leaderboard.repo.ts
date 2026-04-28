@@ -14,6 +14,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
           startsAt: contests.startsAt,
           endsAt: contests.endsAt,
           prizePoolCents: contests.prizePoolCents,
+          entryFeeCents: contests.entryFeeCents,
         })
         .from(contests)
         .where(eq(contests.id, id))
@@ -26,6 +27,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
         startsAt: c.startsAt,
         endsAt: c.endsAt,
         prizePoolCents: Number(c.prizePoolCents),
+        entryFeeCents: Number(c.entryFeeCents),
       };
     },
 

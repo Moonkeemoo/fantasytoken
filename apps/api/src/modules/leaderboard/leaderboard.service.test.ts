@@ -29,6 +29,7 @@ function entry(
 function makeRepo(opts: {
   status?: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
   prizePoolCents?: number;
+  entryFeeCents?: number;
   entries: EntrySnapshot[];
   startPrices?: Record<string, number>;
   currentPrices?: Record<string, number>;
@@ -53,6 +54,7 @@ function makeRepo(opts: {
         startsAt: new Date('2026-04-28T11:00:00Z'),
         endsAt: new Date('2026-04-28T13:00:00Z'),
         prizePoolCents: opts.prizePoolCents ?? 100_000,
+        entryFeeCents: opts.entryFeeCents ?? 0,
       };
     },
     async getEntries() {
@@ -78,14 +80,17 @@ describe('LeaderboardService.getLive', () => {
   it('returns null when contest not found', async () => {
     const repo = makeRepo({ entries: [] });
     repo.getContest = async () => null;
-    const svc = createLeaderboardService({ repo });
+    const svc = createLeaderboardService({ repo, rakePct: 10 });
     const r = await svc.getLive({ contestId: 'missing' });
     expect(r).toBeNull();
   });
 
   it('single real entry, BTC up 10% with 40% alloc → portfolio +4%', async () => {
     const e = entry({ id: 'e1' });
-    const svc = createLeaderboardService({ repo: makeRepo({ entries: [e], myEntryId: 'e1' }) });
+    const svc = createLeaderboardService({
+      repo: makeRepo({ entries: [e], myEntryId: 'e1' }),
+      rakePct: 10,
+    });
     const r = await svc.getLive({ contestId: 'c-1', userId: 'user-e1' });
     expect(r).not.toBeNull();
     expect(r!.portfolio.plPct).toBeCloseTo(0.04);
@@ -111,6 +116,7 @@ describe('LeaderboardService.getLive', () => {
     });
     const svc = createLeaderboardService({
       repo: makeRepo({ entries: [real, botBeats] }),
+      rakePct: 10,
     });
     const r = await svc.getLive({ contestId: 'c-1' });
     expect(r).not.toBeNull();
@@ -127,10 +133,29 @@ describe('LeaderboardService.getLive', () => {
     // Same picks, same prices → identical score
     const svc = createLeaderboardService({
       repo: makeRepo({ entries: [later, earlier] }),
+      rakePct: 10,
     });
     const r = await svc.getLive({ contestId: 'c-1' });
     expect(r!.leaderboardTop[0]?.entryId).toBe('earlier');
     expect(r!.leaderboardTop[1]?.entryId).toBe('later');
+  });
+
+  it('projectedPrize uses dynamic pool (entries × fee × (1-rake)) not hardcoded prizePoolCents', async () => {
+    // 10 real × $1 × 0.9 = $9.00 = 900c. Curve top 30% = top 3.
+    // 1st gets ~50% = 450c (regardless of guaranteed=0).
+    const reals = Array.from({ length: 10 }).map((_, i) =>
+      entry({ id: `real-${i}`, submittedAt: new Date(NOW.getTime() - i * 1000) }),
+    );
+    const svc = createLeaderboardService({
+      repo: makeRepo({ entries: reals, prizePoolCents: 0, entryFeeCents: 100 }),
+      rakePct: 10,
+    });
+    // user-real-9 has earliest submission → wins tie-break → rank 1
+    const r = await svc.getLive({ contestId: 'c-1', userId: 'user-real-9' });
+    expect(r!.projectedPrizeCents).toBeGreaterThan(0);
+    expect(r!.projectedPrizeCents).toBeLessThan(900); // not the full pool, just top-1 share
+    // Pool sum across top 3 = 900
+    // (We can't directly inspect pool but bounds are tight: 1st should be ~450c.)
   });
 
   it('projectedPrize: top 30% of REAL entries gets payout', async () => {
@@ -141,6 +166,7 @@ describe('LeaderboardService.getLive', () => {
     );
     const svc = createLeaderboardService({
       repo: makeRepo({ entries: reals, prizePoolCents: 100_000 }),
+      rakePct: 10,
     });
     const r = await svc.getLive({ contestId: 'c-1', userId: 'user-real-9' }); // submittedAt = NOW − 9000 → earliest
     // user-real-9 has earliest submission → wins tie-break → rank 1 → top 3 pays → gets prize
