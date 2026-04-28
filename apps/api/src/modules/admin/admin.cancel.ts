@@ -84,6 +84,22 @@ export function createCancelContest(deps: CancelContestDeps) {
         .limit(1);
       if (refundTx) continue;
 
+      // Don't refund entries that already received PRIZE_PAYOUT (contest was correctly
+      // finalized earlier; cancel would double-pay). Guards against desync where
+      // contest.status stays 'active' while entries are 'finalized'.
+      const [prizeTx] = await deps.db
+        .select({ id: transactions.id })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.refType, 'entry'),
+            eq(transactions.refId, e.id),
+            eq(transactions.type, 'PRIZE_PAYOUT'),
+          ),
+        )
+        .limit(1);
+      if (prizeTx) continue;
+
       await deps.currency.transact({
         userId: e.userId,
         deltaCents: BigInt(entryFee),
