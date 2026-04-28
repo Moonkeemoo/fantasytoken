@@ -7,6 +7,27 @@ const ConfigSchema = z.object({
   DATABASE_URL: z.string().url(),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TON_NETWORK: z.enum(['mainnet', 'testnet']).default('mainnet'),
+
+  WELCOME_BONUS_USD_CENTS: z.coerce.number().int().nonnegative().default(10_000),
+  RAKE_PCT: z.coerce.number().int().min(0).max(50).default(10),
+  BOT_MIN_FILLER: z.coerce.number().int().nonnegative().default(20),
+  BOT_RATIO: z.coerce.number().int().nonnegative().default(3),
+
+  // Empty string → empty array. List of TG IDs as integers.
+  ADMIN_TG_IDS: z
+    .string()
+    .default('')
+    .transform((s) =>
+      s
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .map((x) => Number.parseInt(x, 10)),
+    )
+    .pipe(z.array(z.number().int().positive())),
+
+  COINGECKO_BASE_URL: z.string().url().default('https://api.coingecko.com/api/v3'),
+  COINGECKO_API_KEY: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

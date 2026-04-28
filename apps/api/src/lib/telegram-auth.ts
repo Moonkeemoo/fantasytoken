@@ -1,5 +1,11 @@
 import { createHmac } from 'node:crypto';
 
+import { TelegramUser } from '@fantasytoken/shared';
+
+// Re-export the shared zod-derived type so callers in this package can keep
+// importing TelegramUser from telegram-auth.ts (no churn).
+export type { TelegramUser };
+
 /**
  * Validate Telegram Mini App initData via HMAC-SHA256 (INV-1).
  * Spec: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
@@ -33,25 +39,23 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export interface TelegramUser {
-  id: number;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
-  language_code?: string;
-}
-
 /**
  * Parse user from validated initData. Caller MUST validate first.
- * Returns null on parse failure; caller should log and reject (INV-7).
+ *
+ * Returns null on parse failure (malformed JSON, schema mismatch, missing user).
+ * Caller should map null → AUTH error (INV-7: routes log via global handler;
+ * the silent return here is the documented contract).
  */
 export function parseUserFromInitData(initData: string): TelegramUser | null {
   const params = new URLSearchParams(initData);
   const userJson = params.get('user');
   if (!userJson) return null;
+  let raw: unknown;
   try {
-    return JSON.parse(userJson) as TelegramUser;
+    raw = JSON.parse(userJson);
   } catch {
     return null;
   }
+  const parsed = TelegramUser.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }

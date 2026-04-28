@@ -11,5 +11,6 @@ export type TelegramUser = z.infer<typeof TelegramUser>;
 
 export const MeResponse = z.object({
   user: TelegramUser,
+  balanceCents: z.number().int().nonnegative(),
 });
 export type MeResponse = z.infer<typeof MeResponse>;

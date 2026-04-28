@@ -1,6 +1,7 @@
 export type ErrorCode =
   | 'AUTH_INVALID_INIT_DATA'
   | 'AUTH_MISSING_INIT_DATA'
+  | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION_FAILED'
   | 'CONTEST_NOT_OPEN'
@@ -23,6 +24,7 @@ export class AppError extends Error {
 export const errors = {
   invalidInitData: () => new AppError('AUTH_INVALID_INIT_DATA', 'Invalid initData', 401),
   missingInitData: () => new AppError('AUTH_MISSING_INIT_DATA', 'Missing initData header', 401),
+  forbidden: () => new AppError('FORBIDDEN', 'Forbidden', 403),
   notFound: (resource: string) => new AppError('NOT_FOUND', `${resource} not found`, 404),
   contestNotOpen: () => new AppError('CONTEST_NOT_OPEN', 'Contest is not open for entries', 409),
 };

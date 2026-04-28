@@ -7,7 +7,11 @@ import type { Database } from './db/client.js';
 import { AppError } from './lib/errors.js';
 import type { Logger } from './logger.js';
 import { healthRoutes } from './modules/health/health.routes.js';
-import { meRoutes } from './modules/me/me.routes.js';
+import { makeMeRoutes } from './modules/me/me.routes.js';
+import { createCurrencyRepo } from './modules/currency/currency.repo.js';
+import { createCurrencyService } from './modules/currency/currency.service.js';
+import { createUsersRepo } from './modules/users/users.repo.js';
+import { createUsersService } from './modules/users/users.service.js';
 
 export interface ServerDeps {
   config: Config;
@@ -19,15 +23,14 @@ export async function createServer(deps: ServerDeps) {
   const app = Fastify({
     loggerInstance: deps.logger,
     trustProxy: true,
-    bodyLimit: 100_000, // 100 KB; portfolio payloads are tiny.
+    bodyLimit: 100_000,
     disableRequestLogging: false,
   });
 
   await app.register(helmet);
   await app.register(cors, {
-    // Whitelist: production web origin + Vercel previews + local dev.
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // same-origin or curl
+      if (!origin) return cb(null, true);
       if (origin === 'https://fantasytoken.vercel.app') return cb(null, true);
       if (/^https:\/\/fantasytoken-[a-z0-9-]+\.vercel\.app$/.test(origin)) return cb(null, true);
       if (origin === 'http://localhost:5173') return cb(null, true);
@@ -36,14 +39,10 @@ export async function createServer(deps: ServerDeps) {
     methods: ['GET', 'POST'],
     allowedHeaders: ['content-type', 'x-telegram-init-data'],
   });
-  await app.register(rateLimit, {
-    max: 100,
-    timeWindow: '1 minute',
-  });
+  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 
   app.decorate('deps', deps);
 
-  // INV-7: every caught error leaves a structured trace before responding.
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
       req.log.warn({ code: err.code, cause: err.cause }, err.message);
@@ -53,8 +52,18 @@ export async function createServer(deps: ServerDeps) {
     return reply.status(500).send({ code: 'INTERNAL', message: 'Internal server error' });
   });
 
+  // Compose modules.
+  const currencyRepo = createCurrencyRepo(deps.db);
+  const currency = createCurrencyService(currencyRepo);
+  const usersRepo = createUsersRepo(deps.db);
+  const users = createUsersService({
+    repo: usersRepo,
+    currency,
+    welcomeBonusCents: BigInt(deps.config.WELCOME_BONUS_USD_CENTS),
+  });
+
   await app.register(healthRoutes, { prefix: '/health' });
-  await app.register(meRoutes, { prefix: '/me' });
+  await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
 
   return app;
 }

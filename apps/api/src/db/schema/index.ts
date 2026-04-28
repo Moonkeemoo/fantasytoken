@@ -2,9 +2,15 @@
 // drizzle-kit reads this barrel for migration generation; the client passes
 // the namespace into `drizzle({ schema })` for typed query builders.
 //
-// Add as features land:
-//   export * from './users.js';
-//   export * from './contests.js';
-//   export * from './portfolios.js';
-//   export * from './price_snapshots.js';
-export {};
+// NOTE: Inter-schema imports intentionally use extensionless paths (e.g. './users' not './users.js').
+// drizzle-kit 0.28 uses a CJS loader internally and resolves './users.js' literally — there is no
+// actual 'users.js' file on disk (only 'users.ts'), so the '.js' extension causes MODULE_NOT_FOUND.
+// This is a known drizzle-kit limitation. Once drizzle-kit gains proper ESM/ts-node resolution,
+// these should be migrated back to './users.js' per the rest of the apps/api codebase convention.
+export * from './users';
+export * from './balances';
+export * from './transactions';
+export * from './tokens';
+export * from './contests';
+export * from './entries';
+export * from './price_snapshots';
