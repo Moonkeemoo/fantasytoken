@@ -7,7 +7,7 @@ function nowPlusMin(min: number) {
 
 interface FakeContest {
   id: string;
-  status: 'scheduled' | 'active' | 'finalizing';
+  status: 'scheduled' | 'active' | 'finalizing' | 'finalized';
   startsAt: Date;
   endsAt: Date;
   maxCapacity: number;
@@ -38,7 +38,8 @@ function makeFakeRepo(
 
   type Op =
     | { kind: 'lock'; contestId: string; bots: number }
-    | { kind: 'finalize'; contestId: string };
+    | { kind: 'finalize'; contestId: string }
+    | { kind: 'finalize2'; contestId: string };
   const ops: Op[] = [];
 
   const repo: ContestsTickRepo = {
@@ -85,6 +86,17 @@ function makeFakeRepo(
       ops.push({ kind: 'finalize', contestId: args.contestId });
       const c = contests.find((c) => c.id === args.contestId);
       if (c) c.status = 'finalizing';
+    },
+    async findContestsToFinalize2() {
+      return contests
+        .filter((c) => c.status === 'finalizing')
+        .map((c) => ({ id: c.id, prizePoolCents: 100_000n }));
+    },
+    async finalize(contestId) {
+      ops.push({ kind: 'finalize2', contestId });
+      const c = contests.find((c) => c.id === contestId);
+      if (c) c.status = 'finalized' as never;
+      return { paidCount: 1, totalCents: 100_000 };
     },
   };
   return { repo, ops };
@@ -212,8 +224,31 @@ describe('ContestsTickService', () => {
       });
       const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
       await svc.tick();
-      expect(ops).toHaveLength(1);
+      // step 2 transitions active→finalizing; step 3 immediately picks it up in the same tick
+      expect(ops).toHaveLength(2);
       expect(ops[0]).toMatchObject({ kind: 'finalize', contestId: 'c1' });
+      expect(ops[1]).toMatchObject({ kind: 'finalize2', contestId: 'c1' });
+    });
+  });
+
+  describe('finalize2 (finalizing → finalized)', () => {
+    it('calls finalize on contests in finalizing status', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'c1',
+            status: 'finalizing',
+            startsAt: nowPlusMin(-120),
+            endsAt: nowPlusMin(-30),
+            maxCapacity: 100,
+            realEntries: 5,
+          },
+        ],
+      });
+      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      await svc.tick();
+      expect(ops).toHaveLength(1);
+      expect(ops[0]).toMatchObject({ kind: 'finalize2', contestId: 'c1' });
     });
   });
 });

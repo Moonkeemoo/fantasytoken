@@ -23,6 +23,8 @@ export interface ContestsTickRepo {
     botPicks: Array<{ handle: string; picks: { symbol: string; alloc: number }[] }>;
   }): Promise<void>;
   finalizeStart(args: { contestId: string }): Promise<void>;
+  findContestsToFinalize2(): Promise<Array<{ id: string; prizePoolCents: bigint }>>;
+  finalize(contestId: string): Promise<{ paidCount: number; totalCents: number }>;
 }
 
 export interface ContestsTickServiceDeps {
@@ -82,6 +84,20 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
         try {
           await deps.repo.finalizeStart({ contestId: c.id });
           deps.log.info({ contestId: c.id }, 'contests.tick finalize-start');
+        } catch (err) {
+          deps.log.error({ err, contestId: c.id }, 'contests.tick finalize failed');
+        }
+      }
+
+      // 3. finalizing → finalized
+      const toFinalize2 = await deps.repo.findContestsToFinalize2();
+      for (const c of toFinalize2) {
+        try {
+          const r = await deps.repo.finalize(c.id);
+          deps.log.info(
+            { contestId: c.id, paidCount: r.paidCount, totalCents: r.totalCents },
+            'contests.tick finalized',
+          );
         } catch (err) {
           deps.log.error({ err, contestId: c.id }, 'contests.tick finalize failed');
         }

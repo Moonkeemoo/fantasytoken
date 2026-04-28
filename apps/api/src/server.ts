@@ -24,6 +24,7 @@ import { makeAdminRoutes } from './modules/admin/admin.routes.js';
 import { createEntriesRepo } from './modules/entries/entries.repo.js';
 import { createEntriesService } from './modules/entries/entries.service.js';
 import { makeEntriesRoutes } from './modules/entries/entries.routes.js';
+import { createContestsFinalizeRepo } from './modules/contests/contests.finalize.repo.js';
 import { createContestsTickRepo } from './modules/contests/contests.tick.repo.js';
 import { createContestsTickService } from './modules/contests/contests.tick.service.js';
 import { createLeaderboardRepo } from './modules/leaderboard/leaderboard.repo.js';
@@ -100,7 +101,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
-  const tickRepo = createContestsTickRepo(deps.db);
+  const finalizeRepo = createContestsFinalizeRepo(deps.db, currency);
+  const tickRepo = createContestsTickRepo(deps.db, finalizeRepo);
   const tick = createContestsTickService({
     repo: tickRepo,
     log: deps.logger,
