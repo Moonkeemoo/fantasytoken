@@ -13,7 +13,9 @@ export interface SeedContestsArgs {
  *   - 1 free (Free Roll)
  *   - 1 high stakes paid
  *
- * Idempotent: if any contest with the same name already exists, skip.
+ * Idempotent: if a contest with the same name already exists, update its
+ * maxCapacity from the fixture (so reseeding can rebalance contest size
+ * without dropping data).
  */
 export async function seedContests(
   db: Database,
@@ -46,7 +48,7 @@ export async function seedContests(
       name: 'Memecoin Madness',
       entryFeeCents: 500n,
       prizePoolCents: 1_000_000n,
-      maxCapacity: 1000,
+      maxCapacity: 20,
       startsAt: inHours(4),
       endsAt: inHours(28),
       isFeatured: true,
@@ -55,7 +57,7 @@ export async function seedContests(
       name: 'Quick Match',
       entryFeeCents: 100n,
       prizePoolCents: 20_000n,
-      maxCapacity: 500,
+      maxCapacity: 20,
       startsAt: inHours(1),
       endsAt: inHours(2),
       isFeatured: false,
@@ -64,7 +66,7 @@ export async function seedContests(
       name: 'Free Roll',
       entryFeeCents: 0n,
       prizePoolCents: 5_000n,
-      maxCapacity: 2000,
+      maxCapacity: 20,
       startsAt: inHours(2),
       endsAt: inHours(26),
       isFeatured: false,
@@ -73,7 +75,7 @@ export async function seedContests(
       name: 'High Stakes',
       entryFeeCents: 2500n,
       prizePoolCents: 250_000n,
-      maxCapacity: 100,
+      maxCapacity: 20,
       startsAt: inHours(4),
       endsAt: inHours(28),
       isFeatured: false,
@@ -87,7 +89,13 @@ export async function seedContests(
       .from(contests)
       .where(eq(contests.name, f.name))
       .limit(1);
-    if (existing) continue;
+    if (existing) {
+      await db
+        .update(contests)
+        .set({ maxCapacity: f.maxCapacity })
+        .where(eq(contests.id, existing.id));
+      continue;
+    }
     await db.insert(contests).values({
       ...f,
       createdByUserId: adminId,
