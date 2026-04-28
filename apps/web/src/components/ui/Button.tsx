@@ -13,12 +13,10 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
-  const base = 'rounded font-semibold transition-opacity disabled:opacity-50';
-  const sizeCls = size === 'sm' ? 'px-3 py-1 text-sm' : 'px-4 py-2 text-base';
-  const variantCls =
-    variant === 'primary'
-      ? 'bg-tg-button text-tg-button-text'
-      : 'bg-transparent text-tg-text border border-tg-text/20';
+  const base =
+    'inline-flex items-center justify-center rounded-[3px] border-[1.5px] border-ink font-mono font-bold uppercase tracking-[0.04em] transition-opacity disabled:opacity-50 disabled:cursor-not-allowed';
+  const sizeCls = size === 'sm' ? 'px-2 py-[3px] text-[10px]' : 'px-[10px] py-[6px] text-[11px]';
+  const variantCls = variant === 'primary' ? 'bg-ink text-paper' : 'bg-paper text-ink';
   return (
     <button {...rest} className={`${base} ${sizeCls} ${variantCls} ${className ?? ''}`}>
       {children}
