@@ -3,25 +3,28 @@ import type { Database } from '../../db/client.js';
 import { contests, users } from '../../db/schema/index.js';
 import type { Logger } from '../../logger.js';
 
+// prize_pool_cents = guaranteed minimum (overlay floor). Actual pool is derived
+// from real entries × fee × (1 - rake). Set to 0 → pure pari-mutuel; non-zero
+// becomes house-funded floor.
 export const REPLENISH_TEMPLATES = [
   {
     name: 'Quick Match',
     entryFeeCents: 100n,
-    prizePoolCents: 2_000n,
+    prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
   },
   {
     name: 'Memecoin Madness',
     entryFeeCents: 500n,
-    prizePoolCents: 10_000n,
+    prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: true,
   },
   {
     name: 'High Stakes',
     entryFeeCents: 2_500n,
-    prizePoolCents: 50_000n,
+    prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
   },

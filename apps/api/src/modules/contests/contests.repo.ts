@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { computeActualPrizeCents } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
 import type { ContestsRepo, ContestRowFromRepo, CreateContestArgs } from './contests.service.js';
@@ -8,6 +9,8 @@ const MAX_CENTS_AS_NUMBER = BigInt(Number.MAX_SAFE_INTEGER);
 function rowFromDbRow(
   row: typeof contests.$inferSelect,
   spotsFilled: number,
+  realSpotsFilled: number,
+  rakePct: number,
   userHasEntered: boolean,
 ): ContestRowFromRepo {
   // Guard against silent precision loss on bigint→number cast.
@@ -17,12 +20,18 @@ function rowFromDbRow(
       `contest ${row.id} has cents value exceeding Number.MAX_SAFE_INTEGER — wire shape would lose precision`,
     );
   }
+  const dynamicPool = computeActualPrizeCents({
+    realCount: realSpotsFilled,
+    entryFeeCents: Number(row.entryFeeCents),
+    rakePct,
+    guaranteedPoolCents: Number(row.prizePoolCents),
+  });
   return {
     id: row.id,
     name: row.name,
     status: row.status as ContestRowFromRepo['status'],
     entryFeeCents: Number(row.entryFeeCents),
-    prizePoolCents: Number(row.prizePoolCents),
+    prizePoolCents: dynamicPool,
     maxCapacity: row.maxCapacity,
     spotsFilled,
     startsAt: row.startsAt.toISOString(),
@@ -32,7 +41,7 @@ function rowFromDbRow(
   };
 }
 
-export function createContestsRepo(db: Database): ContestsRepo {
+export function createContestsRepo(db: Database, rakePct: number): ContestsRepo {
   return {
     async list({ filter, userId }) {
       const baseQuery = db.select({ row: contests }).from(contests).$dynamic();
@@ -62,9 +71,16 @@ export function createContestsRepo(db: Database): ContestsRepo {
 
       const contestIds = rows.map((r) => r.row.id);
       const counts = await countSpots(db, contestIds);
+      const realCounts = await countRealSpots(db, contestIds);
       const enteredSet = userId ? await getEnteredSet(db, userId, contestIds) : new Set<string>();
       return rows.map((r) =>
-        rowFromDbRow(r.row, counts.get(r.row.id) ?? 0, enteredSet.has(r.row.id)),
+        rowFromDbRow(
+          r.row,
+          counts.get(r.row.id) ?? 0,
+          realCounts.get(r.row.id) ?? 0,
+          rakePct,
+          enteredSet.has(r.row.id),
+        ),
       );
     },
 
@@ -76,8 +92,15 @@ export function createContestsRepo(db: Database): ContestsRepo {
         .limit(1);
       if (!r) return null;
       const counts = await countSpots(db, [id]);
+      const realCounts = await countRealSpots(db, [id]);
       const enteredSet = userId ? await getEnteredSet(db, userId, [id]) : new Set<string>();
-      return rowFromDbRow(r.row, counts.get(id) ?? 0, enteredSet.has(id));
+      return rowFromDbRow(
+        r.row,
+        counts.get(id) ?? 0,
+        realCounts.get(id) ?? 0,
+        rakePct,
+        enteredSet.has(id),
+      );
     },
 
     async create(args: CreateContestArgs) {
@@ -106,6 +129,16 @@ async function countSpots(db: Database, contestIds: string[]): Promise<Map<strin
     .select({ contestId: entries.contestId, n: sql<number>`COUNT(*)::int` })
     .from(entries)
     .where(inArray(entries.contestId, contestIds))
+    .groupBy(entries.contestId);
+  return new Map(rows.map((r) => [r.contestId, r.n]));
+}
+
+async function countRealSpots(db: Database, contestIds: string[]): Promise<Map<string, number>> {
+  if (contestIds.length === 0) return new Map();
+  const rows = await db
+    .select({ contestId: entries.contestId, n: sql<number>`COUNT(*)::int` })
+    .from(entries)
+    .where(and(inArray(entries.contestId, contestIds), eq(entries.isBot, false)))
     .groupBy(entries.contestId);
   return new Map(rows.map((r) => [r.contestId, r.n]));
 }

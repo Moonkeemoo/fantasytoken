@@ -100,13 +100,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const tokensRepo = createTokensRepo(deps.db);
   const tokens = createTokensService({ repo: tokensRepo, client: cgClient, log: deps.logger });
 
-  const contestsRepo = createContestsRepo(deps.db);
+  const contestsRepo = createContestsRepo(deps.db, deps.config.RAKE_PCT);
   const contests = createContestsService(contestsRepo);
 
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
-  const finalizeRepo = createContestsFinalizeRepo(deps.db, currency);
+  const finalizeRepo = createContestsFinalizeRepo(deps.db, currency, deps.config.RAKE_PCT);
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo);
   const tick = createContestsTickService({
     repo: tickRepo,
@@ -116,7 +116,10 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   });
 
   const leaderboardRepo = createLeaderboardRepo(deps.db);
-  const leaderboard = createLeaderboardService({ repo: leaderboardRepo });
+  const leaderboard = createLeaderboardService({
+    repo: leaderboardRepo,
+    rakePct: deps.config.RAKE_PCT,
+  });
 
   const resultRepo = createResultRepo(deps.db);
   const result = createResultService({ repo: resultRepo });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePrizeCurve } from './index.js';
+import { computePrizeCurve, computeActualPrizeCents } from './index.js';
 
 describe('computePrizeCurve', () => {
   it('1 real → 1 paying gets all', () => {
@@ -33,5 +33,51 @@ describe('computePrizeCurve', () => {
   it('zero real or zero pool returns empty map', () => {
     expect(computePrizeCurve(0, 1_000).size).toBe(0);
     expect(computePrizeCurve(10, 0).size).toBe(0);
+  });
+});
+
+describe('computeActualPrizeCents', () => {
+  it('21 real × $1 entry × 10% rake → 1890 cents', () => {
+    expect(computeActualPrizeCents({ realCount: 21, entryFeeCents: 100, rakePct: 10 })).toBe(1890);
+  });
+
+  it('1 real × $1 × 10% rake → 90 cents (covers user-bug case)', () => {
+    expect(computeActualPrizeCents({ realCount: 1, entryFeeCents: 100, rakePct: 10 })).toBe(90);
+  });
+
+  it('zero real entries → zero pool', () => {
+    expect(computeActualPrizeCents({ realCount: 0, entryFeeCents: 100, rakePct: 10 })).toBe(0);
+  });
+
+  it('zero rake → full sum', () => {
+    expect(computeActualPrizeCents({ realCount: 10, entryFeeCents: 500, rakePct: 0 })).toBe(5000);
+  });
+
+  it('rounds down to integer cents', () => {
+    // 7 × 33 × 0.9 = 207.9 → 207
+    expect(computeActualPrizeCents({ realCount: 7, entryFeeCents: 33, rakePct: 10 })).toBe(207);
+  });
+
+  it('honours guaranteed minimum overlay when collected < guaranteed', () => {
+    // 1 × $1 × 0.9 = $0.90, guaranteed $5 → $5
+    expect(
+      computeActualPrizeCents({
+        realCount: 1,
+        entryFeeCents: 100,
+        rakePct: 10,
+        guaranteedPoolCents: 500,
+      }),
+    ).toBe(500);
+  });
+
+  it('uses collected when collected > guaranteed', () => {
+    expect(
+      computeActualPrizeCents({
+        realCount: 100,
+        entryFeeCents: 100,
+        rakePct: 10,
+        guaranteedPoolCents: 500,
+      }),
+    ).toBe(9000);
   });
 });

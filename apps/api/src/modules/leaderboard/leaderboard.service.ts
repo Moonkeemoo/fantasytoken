@@ -1,4 +1,5 @@
 import {
+  computeActualPrizeCents,
   computePrizeCurve,
   type LiveResponse,
   type LeaderboardEntry,
@@ -20,7 +21,9 @@ export interface ContestSnapshot {
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
   startsAt: Date;
   endsAt: Date;
+  /** Guaranteed minimum (overlay floor). Actual pool is computed from real entries × fee × (1-rake). */
   prizePoolCents: number;
+  entryFeeCents: number;
 }
 
 export interface LeaderboardRepo {
@@ -34,6 +37,7 @@ export interface LeaderboardRepo {
 
 export interface LeaderboardServiceDeps {
   repo: LeaderboardRepo;
+  rakePct: number;
 }
 
 export interface LeaderboardService {
@@ -93,6 +97,13 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       const userRow = userId ? (display.find((d) => d.isMe) ?? null) : null;
 
       // Projected prize: among real entries only, find user's real-rank, apply curve.
+      // Pool is dynamic — derived from real entries × fee × (1-rake), with prize_pool_cents as floor.
+      const actualPoolCents = computeActualPrizeCents({
+        realCount: realEntries,
+        entryFeeCents: contest.entryFeeCents,
+        rakePct: deps.rakePct,
+        guaranteedPoolCents: contest.prizePoolCents,
+      });
       let projectedPrizeCents = 0;
       let userRank: number | null = null;
       if (userId && userRow) {
@@ -104,7 +115,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         });
         const realRank = realScored.findIndex((s) => s.entry.userId === userId) + 1;
         if (realRank > 0) {
-          const curve = computePrizeCurve(realEntries, contest.prizePoolCents);
+          const curve = computePrizeCurve(realEntries, actualPoolCents);
           projectedPrizeCents = curve.get(realRank) ?? 0;
         }
       }
