@@ -21,14 +21,19 @@ import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
 import { makeAdminRoutes } from './modules/admin/admin.routes.js';
+import { createCancelContest } from './modules/admin/admin.cancel.js';
 import { createEntriesRepo } from './modules/entries/entries.repo.js';
 import { createEntriesService } from './modules/entries/entries.service.js';
 import { makeEntriesRoutes } from './modules/entries/entries.routes.js';
+import { createContestsFinalizeRepo } from './modules/contests/contests.finalize.repo.js';
 import { createContestsTickRepo } from './modules/contests/contests.tick.repo.js';
 import { createContestsTickService } from './modules/contests/contests.tick.service.js';
 import { createLeaderboardRepo } from './modules/leaderboard/leaderboard.repo.js';
 import { createLeaderboardService } from './modules/leaderboard/leaderboard.service.js';
 import { makeLiveRoutes } from './modules/leaderboard/leaderboard.routes.js';
+import { createResultRepo } from './modules/result/result.repo.js';
+import { createResultService } from './modules/result/result.service.js';
+import { makeResultRoutes } from './modules/result/result.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -100,7 +105,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
-  const tickRepo = createContestsTickRepo(deps.db);
+  const finalizeRepo = createContestsFinalizeRepo(deps.db, currency);
+  const tickRepo = createContestsTickRepo(deps.db, finalizeRepo);
   const tick = createContestsTickService({
     repo: tickRepo,
     log: deps.logger,
@@ -111,13 +117,18 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const leaderboardRepo = createLeaderboardRepo(deps.db);
   const leaderboard = createLeaderboardService({ repo: leaderboardRepo });
 
+  const resultRepo = createResultRepo(deps.db);
+  const result = createResultService({ repo: resultRepo });
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
-  await app.register(makeAdminRoutes({ contests, users }), { prefix: '/admin' });
+  await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
+  const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
+  await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
   const MINUTE = 60_000;

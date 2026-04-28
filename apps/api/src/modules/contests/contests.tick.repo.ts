@@ -1,9 +1,13 @@
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, priceSnapshots, tokens } from '../../db/schema/index.js';
+import type { ContestsFinalizeRepo } from './contests.finalize.repo.js';
 import type { ContestsTickRepo } from './contests.tick.service.js';
 
-export function createContestsTickRepo(db: Database): ContestsTickRepo {
+export function createContestsTickRepo(
+  db: Database,
+  finalize: ContestsFinalizeRepo,
+): ContestsTickRepo {
   return {
     async findContestsToLock() {
       const now = new Date();
@@ -146,6 +150,14 @@ export function createContestsTickRepo(db: Database): ContestsTickRepo {
             .onConflictDoNothing();
         }
       });
+    },
+
+    async findContestsToFinalize2() {
+      return finalize.findContestsToFinalize2();
+    },
+
+    async finalize(contestId) {
+      return finalize.finalize(contestId);
     },
   };
 }
