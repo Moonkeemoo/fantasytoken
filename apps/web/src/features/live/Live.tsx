@@ -30,7 +30,12 @@ export function Live() {
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <LiveHeader contestName={data.contestName} endsAt={data.endsAt} status={data.status} />
+      <LiveHeader
+        contestName={data.contestName}
+        startsAt={data.startsAt}
+        endsAt={data.endsAt}
+        status={data.status}
+      />
       <Scoreboard
         plPct={data.portfolio.plPct}
         startUsd={data.portfolio.startUsd}
@@ -38,7 +43,9 @@ export function Live() {
         rank={data.rank}
         totalEntries={data.totalEntries}
         projectedPrizeCents={data.projectedPrizeCents}
+        startsAt={data.startsAt}
         endsAt={data.endsAt}
+        status={data.status}
       />
       <LineupPerf rows={data.lineup} />
       <MiniLeaderboard
