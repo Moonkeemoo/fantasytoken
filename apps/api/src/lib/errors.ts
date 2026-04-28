@@ -25,12 +25,19 @@ export class AppError extends Error {
 }
 
 export const errors = {
-  invalidInitData: () => new AppError('AUTH_INVALID_INIT_DATA', 'Invalid initData', 401),
-  missingInitData: () => new AppError('AUTH_MISSING_INIT_DATA', 'Missing initData header', 401),
-  forbidden: () => new AppError('FORBIDDEN', 'Forbidden', 403),
-  notFound: (resource: string) => new AppError('NOT_FOUND', `${resource} not found`, 404),
-  contestNotOpen: () => new AppError('CONTEST_NOT_OPEN', 'Contest is not open for entries', 409),
-  invalidLineup: (cause?: unknown) => new AppError('INVALID_LINEUP', 'Invalid lineup', 400, cause),
-  insufficientBalance: () => new AppError('INSUFFICIENT_BALANCE', 'Insufficient balance', 402),
-  contestClosed: () => new AppError('CONTEST_CLOSED', 'Contest is closed for entries', 409),
+  invalidInitData: () =>
+    new AppError('AUTH_INVALID_INIT_DATA', 'AUTH_INVALID_INIT_DATA: Invalid initData', 401),
+  missingInitData: () =>
+    new AppError('AUTH_MISSING_INIT_DATA', 'AUTH_MISSING_INIT_DATA: Missing initData header', 401),
+  forbidden: () => new AppError('FORBIDDEN', 'FORBIDDEN', 403),
+  notFound: (resource: string) =>
+    new AppError('NOT_FOUND', `NOT_FOUND: ${resource} not found`, 404),
+  contestNotOpen: () =>
+    new AppError('CONTEST_NOT_OPEN', 'CONTEST_NOT_OPEN: Contest is not open for entries', 409),
+  invalidLineup: (cause?: unknown) =>
+    new AppError('INVALID_LINEUP', 'INVALID_LINEUP: Invalid lineup', 400, cause),
+  insufficientBalance: () =>
+    new AppError('INSUFFICIENT_BALANCE', 'INSUFFICIENT_BALANCE: Insufficient balance', 402),
+  contestClosed: () =>
+    new AppError('CONTEST_CLOSED', 'CONTEST_CLOSED: Contest is closed for entries', 409),
 };
