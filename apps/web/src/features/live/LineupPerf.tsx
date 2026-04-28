@@ -1,6 +1,6 @@
 import type { LineupRow } from '@fantasytoken/shared';
-import { Bar } from '../../components/ui/Bar.js';
 import { Card } from '../../components/ui/Card.js';
+import { Label } from '../../components/ui/Label.js';
 import { formatPct } from '../../lib/format.js';
 
 export interface LineupPerfProps {
@@ -9,30 +9,35 @@ export interface LineupPerfProps {
 
 export function LineupPerf({ rows }: LineupPerfProps) {
   if (rows.length === 0) {
-    return <div className="px-4 py-2 text-center text-xs text-tg-hint">no lineup</div>;
+    return <div className="px-4 py-2 text-center text-[10px] text-muted">no lineup</div>;
   }
   return (
-    <div className="flex flex-col gap-1 p-3">
-      <div className="text-xs uppercase tracking-wide text-tg-hint">your lineup · live</div>
+    <div className="flex flex-col gap-[5px] px-3 py-2">
+      <Label>your lineup · live</Label>
       {rows.map((r) => {
         const pos = r.pctChange >= 0;
-        const barWidth = Math.min(1, Math.abs(r.pctChange) * 4); // visualize 25% as full bar
+        const barWidth = Math.min(1, Math.abs(r.pctChange) * 4);
         return (
-          <Card key={r.symbol} className="flex items-center gap-2 p-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-tg-bg text-[8px] font-bold">
+          <Card key={r.symbol} className="flex items-center gap-2 !px-[10px] !py-[6px]">
+            <div className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[8px] font-bold">
               {r.symbol}
             </div>
-            <div className="flex-1 text-xs">
-              <div className="font-bold">
-                {r.symbol} <span className="font-normal text-tg-hint">{r.alloc}%</span>
+            <div className="flex-1 text-[11px]">
+              <div className="font-bold leading-tight">
+                {r.symbol} <span className="font-normal text-muted">{r.alloc}%</span>
               </div>
-              <Bar value={pos ? barWidth : 0} />
+              <div className="mt-[3px] h-1 w-full overflow-hidden rounded-full bg-paper-dim">
+                <div
+                  className={`h-full ${pos ? 'bg-hl-green' : 'bg-hl-red'}`}
+                  style={{ width: `${barWidth * 100}%` }}
+                />
+              </div>
             </div>
-            <div className="text-right text-xs">
-              <div className={`font-bold ${pos ? 'text-green-600' : 'text-tg-error'}`}>
+            <div className="text-right text-[11px]">
+              <div className={`font-bold ${pos ? 'text-hl-green' : 'text-hl-red'}`}>
                 {formatPct(r.pctChange)}
               </div>
-              <div className="text-tg-hint">
+              <div className="text-[9px] text-muted">
                 {r.contribUsd >= 0 ? '+' : ''}${r.contribUsd.toFixed(2)} contrib
               </div>
             </div>

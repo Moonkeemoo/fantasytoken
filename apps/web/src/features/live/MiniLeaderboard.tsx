@@ -1,4 +1,6 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
+import { Card } from '../../components/ui/Card.js';
+import { Label } from '../../components/ui/Label.js';
 import { formatPct } from '../../lib/format.js';
 
 export interface MiniLeaderboardProps {
@@ -9,24 +11,27 @@ export interface MiniLeaderboardProps {
 
 export function MiniLeaderboard({ top, userRow, onViewAll }: MiniLeaderboardProps) {
   return (
-    <div className="m-3 rounded border border-tg-text/10 bg-tg-bg-secondary p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wide text-tg-hint">leaderboard</span>
-        <button onClick={onViewAll} className="text-xs font-bold text-tg-button">
+    <Card className="m-3 !px-[10px] !py-2">
+      <div className="mb-[6px] flex items-center justify-between">
+        <Label>leaderboard</Label>
+        <button
+          onClick={onViewAll}
+          className="font-mono text-[9px] font-bold uppercase tracking-[0.06em] text-accent"
+        >
           VIEW ALL ›
         </button>
       </div>
-      <div className="flex flex-col gap-1 text-xs">
+      <div className="flex flex-col gap-[3px] text-[11px]">
         {top.slice(0, 2).map((e) => (
           <Row key={e.entryId} entry={e} />
         ))}
         {userRow && !top.slice(0, 2).some((t) => t.entryId === userRow.entryId) && (
-          <div className="-mx-2 rounded bg-yellow-100/40 px-2 py-1">
+          <div className="-mx-1 rounded-[2px] bg-note px-1 py-[2px]">
             <Row entry={userRow} />
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -37,7 +42,7 @@ function Row({ entry }: { entry: LeaderboardEntry }) {
         <strong>#{entry.rank}</strong> {entry.displayName}
         {entry.isMe && ' (you)'}
       </span>
-      <span className={`font-bold ${entry.scorePct >= 0 ? 'text-green-600' : 'text-tg-error'}`}>
+      <span className={`font-bold ${entry.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
         {formatPct(entry.scorePct)}
       </span>
     </div>

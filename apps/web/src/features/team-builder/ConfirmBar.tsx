@@ -1,4 +1,5 @@
 import { Button } from '../../components/ui/Button.js';
+import { Label } from '../../components/ui/Label.js';
 import { formatCents } from '../../lib/format.js';
 import { isValid, type LineupPick } from './lineupReducer.js';
 
@@ -41,15 +42,15 @@ export function ConfirmBar({
   }
 
   return (
-    <div className="sticky bottom-0 border-t border-tg-text/10 bg-tg-bg p-3">
-      <div className="mb-2 flex items-center justify-between text-xs">
+    <div className="sticky bottom-0 border-t-[1.5px] border-ink bg-paper px-[12px] py-[10px]">
+      <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-tg-hint">entry fee</div>
-          <div className="font-bold">{formatCents(entryFeeCents)}</div>
+          <Label>entry fee</Label>
+          <div className="text-[12px] font-bold">{formatCents(entryFeeCents)}</div>
         </div>
         <div className="text-right">
-          <div className="text-tg-hint">your balance</div>
-          <div className="font-bold">{formatCents(balanceCents)}</div>
+          <Label>your balance</Label>
+          <div className="text-[12px] font-bold">{formatCents(balanceCents)}</div>
         </div>
       </div>
       <Button variant="primary" className="w-full" onClick={cta.onClick} disabled={cta.disabled}>

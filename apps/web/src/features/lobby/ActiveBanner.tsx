@@ -8,27 +8,17 @@ export interface ActiveBannerProps {
 
 export function ActiveBanner({ active, onView }: ActiveBannerProps) {
   if (active.length === 0) return null;
-  if (active.length === 1) {
-    const c = active[0]!;
-    return (
-      <div className="flex items-center justify-between bg-tg-button/10 px-4 py-2">
-        <div>
-          <div className="text-xs font-bold uppercase text-tg-button">▶ Live now</div>
-          <div className="text-sm">{c.name}</div>
-        </div>
-        <Button variant="primary" size="sm" onClick={() => onView(c.id)}>
-          VIEW
-        </Button>
-      </div>
-    );
-  }
+  const isMulti = active.length > 1;
+  const c = active[0]!;
   return (
-    <div className="flex items-center justify-between bg-tg-button/10 px-4 py-2">
+    <div className="m-3 flex items-center justify-between rounded-[4px] border-[1.5px] border-ink bg-paper-dim px-3 py-2">
       <div>
-        <div className="text-xs font-bold uppercase text-tg-button">▶ Live now</div>
-        <div className="text-sm">{active.length} contests live</div>
+        <div className="font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-accent">
+          ▶ LIVE NOW · contest {isMulti ? `${active.length} live` : '1 of 1'}
+        </div>
+        <div className="text-[12px] font-bold">{c.name}</div>
       </div>
-      <Button variant="primary" size="sm" onClick={() => onView(active[0]!.id)}>
+      <Button size="sm" onClick={() => onView(c.id)}>
         VIEW
       </Button>
     </div>

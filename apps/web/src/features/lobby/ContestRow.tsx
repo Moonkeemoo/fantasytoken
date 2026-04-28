@@ -15,32 +15,42 @@ export function ContestRow({ contest, balanceCents, onJoin, onTopUp }: ContestRo
   const ms = useCountdown(contest.startsAt);
   const isFull = contest.spotsFilled >= contest.maxCapacity;
   const cantAfford = balanceCents < contest.entryFeeCents;
-  const fee = contest.entryFeeCents === 0 ? 'FREE' : formatCents(contest.entryFeeCents);
+  const fee = contest.entryFeeCents === 0 ? 'FR' : `$${Math.floor(contest.entryFeeCents / 100)}`;
 
-  let cta: { label: string; onClick: () => void; disabled?: boolean };
+  let cta: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    variant?: 'primary' | 'ghost';
+  };
   if (isFull) {
-    cta = { label: 'FULL', onClick: () => {}, disabled: true };
+    cta = { label: 'FULL', onClick: () => {}, disabled: true, variant: 'ghost' };
   } else if (cantAfford && contest.entryFeeCents > 0) {
-    cta = { label: 'Top up', onClick: onTopUp };
+    cta = { label: 'Top up', onClick: onTopUp, variant: 'ghost' };
   } else if (contest.userHasEntered) {
-    cta = { label: 'Joined', onClick: () => onJoin(contest.id) };
+    cta = { label: 'JOINED', onClick: () => onJoin(contest.id), variant: 'ghost' };
   } else {
-    cta = { label: 'JOIN', onClick: () => onJoin(contest.id) };
+    cta = { label: 'JOIN', onClick: () => onJoin(contest.id), variant: 'primary' };
   }
 
   return (
-    <Card className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-tg-bg text-xs">
+    <Card className="flex items-center gap-[10px] !px-[10px] !py-[6px]">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold">
         {fee}
       </div>
       <div className="flex-1">
-        <div className="text-sm font-bold">{contest.name}</div>
-        <div className="text-xs text-tg-hint">
+        <div className="text-[12px] font-bold leading-tight">{contest.name}</div>
+        <div className="text-[10px] text-muted">
           Win up to {formatCents(contest.prizePoolCents)} · {contest.spotsFilled}/
           {contest.maxCapacity} · {formatTimeLeft(ms)}
         </div>
       </div>
-      <Button variant="primary" size="sm" onClick={cta.onClick} disabled={cta.disabled}>
+      <Button
+        variant={cta.variant ?? 'primary'}
+        size="sm"
+        onClick={cta.onClick}
+        disabled={cta.disabled}
+      >
         {cta.label}
       </Button>
     </Card>

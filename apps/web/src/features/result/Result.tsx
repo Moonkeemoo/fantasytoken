@@ -1,5 +1,6 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button.js';
+import { Label } from '../../components/ui/Label.js';
 import { formatCents } from '../../lib/format.js';
 import { telegram } from '../../lib/telegram.js';
 import { Headline } from './Headline.js';
@@ -14,10 +15,10 @@ export function Result() {
   const entryId = search.get('entry') ?? undefined;
   const result = useResult(id, entryId);
 
-  if (!id) return <div className="p-6 text-tg-error">missing contest id</div>;
-  if (result.isLoading) return <div className="p-6 text-tg-hint">loading…</div>;
+  if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
+  if (result.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (result.isError || !result.data) {
-    return <div className="p-6 text-tg-error">result not ready (contest may still be active)</div>;
+    return <div className="p-6 text-hl-red">result not ready (contest may still be active)</div>;
   }
 
   const data = result.data;
@@ -27,22 +28,22 @@ export function Result() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-tg-bg text-tg-text">
-      <div className="flex items-center justify-between border-b border-tg-text/10 p-3">
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
+      <div className="flex items-center justify-between border-b-[1.5px] border-ink px-3 py-2">
         <button onClick={() => navigate('/lobby')} className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-tg-text/20">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper text-[14px] leading-none">
             ×
           </span>
           <div className="text-left">
-            <div className="text-sm font-bold">{data.contestName}</div>
-            <div className="text-xs text-tg-hint">final</div>
+            <div className="text-[12px] font-bold leading-tight">{data.contestName}</div>
+            <Label>final</Label>
           </div>
         </button>
       </div>
       <Headline result={data} onShare={onShare} />
       <Breakdown result={data} />
       <LineupRecap rows={data.lineupFinal} />
-      <div className="sticky bottom-0 mt-auto flex gap-2 border-t border-tg-text/10 bg-tg-bg p-3">
+      <div className="sticky bottom-0 mt-auto flex gap-[6px] border-t-[1.5px] border-ink bg-paper px-3 py-[10px]">
         <Button variant="ghost" className="flex-1" onClick={() => navigate('/lobby')}>
           Lobby
         </Button>

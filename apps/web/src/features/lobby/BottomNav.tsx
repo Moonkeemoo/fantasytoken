@@ -11,18 +11,21 @@ export function BottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   return (
-    <div className="sticky bottom-0 flex border-t border-tg-text/10 bg-tg-bg">
-      {ITEMS.map((it) => (
-        <button
-          key={it.path}
-          onClick={() => navigate(it.path)}
-          className={`flex-1 py-3 text-xs font-bold uppercase ${
-            pathname.startsWith(it.path) ? 'text-tg-button' : 'text-tg-hint'
-          }`}
-        >
-          {it.label}
-        </button>
-      ))}
+    <div className="sticky bottom-0 flex border-t-[1.5px] border-ink bg-paper">
+      {ITEMS.map((it) => {
+        const active = pathname.startsWith(it.path);
+        return (
+          <button
+            key={it.path}
+            onClick={() => navigate(it.path)}
+            className={`flex-1 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.08em] ${
+              active ? 'text-ink' : 'text-muted'
+            }`}
+          >
+            {it.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import type { ResultResponse } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
+import { Card } from '../../components/ui/Card.js';
+import { Label } from '../../components/ui/Label.js';
 import { formatCents, formatPct } from '../../lib/format.js';
 
 export interface HeadlineProps {
@@ -10,37 +12,43 @@ export interface HeadlineProps {
 export function Headline({ result, onShare }: HeadlineProps) {
   if (result.outcome === 'cancelled') {
     return (
-      <div className="m-3 rounded border border-tg-text/10 bg-tg-bg-secondary p-4 text-center">
-        <div className="text-xs uppercase tracking-wide text-tg-hint">contest cancelled</div>
-        <div className="my-2 text-2xl font-bold">refund issued</div>
-        <div className="text-xs text-tg-hint">+{formatCents(result.entryFeeCents)} returned</div>
-      </div>
+      <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
+        <Label>contest cancelled</Label>
+        <div className="my-2 text-[24px] font-bold leading-tight">refund issued</div>
+        <div className="text-[11px] text-muted">+{formatCents(result.entryFeeCents)} returned</div>
+      </Card>
     );
   }
   if (result.outcome === 'won') {
     return (
-      <div className="m-3 rounded border border-tg-text/10 bg-tg-bg-secondary p-4 text-center">
-        <div className="text-xs uppercase tracking-wide text-tg-hint">you won</div>
-        <div className="my-2 text-4xl font-extrabold">{formatCents(result.prizeCents)}</div>
-        <div className="text-xs text-tg-hint">
+      <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
+        <Label>you won</Label>
+        <div className="my-[6px] text-[42px] font-extrabold leading-none tracking-tight">
+          {formatCents(result.prizeCents)}
+        </div>
+        <div className="text-[11px] text-muted">
           final P/L: {formatPct(result.finalPlPct)} · rank #{result.finalRank ?? '—'} of{' '}
           {result.totalEntries}
         </div>
-        <div className="mt-3 flex justify-center gap-2">
+        <div className="mt-[10px] flex items-center justify-center gap-[6px]">
           <Button size="sm" variant="primary" onClick={onShare}>
             ▷ Share
           </Button>
+          <Button size="sm" variant="ghost">
+            View on chain
+          </Button>
         </div>
-      </div>
+      </Card>
     );
   }
+  // no_prize variant
   return (
-    <div className="m-3 rounded border border-tg-text/10 bg-tg-bg-secondary p-4 text-center">
-      <div className="text-xs uppercase tracking-wide text-tg-hint">no prize this time</div>
-      <div className="my-2 text-2xl font-bold">{formatPct(result.finalPlPct)}</div>
-      <div className="text-xs text-tg-hint">
+    <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
+      <Label>no prize this time</Label>
+      <div className="my-2 text-[24px] font-bold leading-tight">{formatPct(result.finalPlPct)}</div>
+      <div className="text-[11px] text-muted">
         rank #{result.finalRank ?? '—'} of {result.totalEntries}
       </div>
-    </div>
+    </Card>
   );
 }

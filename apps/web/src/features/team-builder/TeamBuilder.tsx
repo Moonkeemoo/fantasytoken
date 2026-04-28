@@ -62,14 +62,14 @@ export function TeamBuilder() {
     document.title = contest.data ? `Build · ${contest.data.name}` : 'Team Builder';
   }, [contest.data]);
 
-  if (!id) return <div className="p-6 text-tg-error">missing contest id</div>;
-  if (me.isLoading || contest.isLoading) return <div className="p-6 text-tg-hint">loading…</div>;
+  if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
+  if (me.isLoading || contest.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (contest.isError || !contest.data)
-    return <div className="p-6 text-tg-error">contest not found</div>;
-  if (!me.data) return <div className="p-6 text-tg-error">not authenticated</div>;
+    return <div className="p-6 text-hl-red">contest not found</div>;
+  if (!me.data) return <div className="p-6 text-hl-red">not authenticated</div>;
 
   return (
-    <div className="flex min-h-screen flex-col bg-tg-bg text-tg-text">
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
       <ContextBar
         name={contest.data.name}
         entryFeeCents={contest.data.entryFeeCents}
@@ -78,7 +78,7 @@ export function TeamBuilder() {
       />
       <LineupSummary picks={draft} onRemove={onRemove} />
       <TokenSearch picks={draft} onAdd={onAdd} onRemove={onRemove} onBump={onBump} />
-      {errMsg && <div className="m-3 text-xs text-tg-error">{errMsg}</div>}
+      {errMsg && <div className="m-3 text-[10px] text-hl-red">{errMsg}</div>}
       <ConfirmBar
         entryFeeCents={contest.data.entryFeeCents}
         balanceCents={me.data.balanceCents}
