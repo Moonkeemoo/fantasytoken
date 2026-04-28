@@ -23,8 +23,8 @@ S0 Foundation → S1 Catalog+Lobby → S2 Team Builder → S3 Live+Bots → S4 R
 | **S0 Foundation** — Drizzle schemas, CurrencyService, /me upsert, admin auth, FE router | [`2026-04-28-mvp-s0-foundation.md`](./2026-04-28-mvp-s0-foundation.md)     | 🟢 done (local merge `831814d`) |
 | **S1 Catalog+Lobby** — CoinGecko sync, /tokens, /contests, Lobby UI                     | [`2026-04-28-mvp-s1-lobby.md`](./2026-04-28-mvp-s1-lobby.md)               | 🟢 done (local merge `f937f84`) |
 | **S2 Team Builder** — /tokens/search, /entries, builder UI                              | [`2026-04-28-mvp-s2-team-builder.md`](./2026-04-28-mvp-s2-team-builder.md) | 🟢 done (local merge `e005769`) |
-| **S3 Live+Bots** — contests.tick cron, bot spawn, leaderboard, Live UI                  | [`2026-04-28-mvp-s3-live-bots.md`](./2026-04-28-mvp-s3-live-bots.md)       | 🟢 ready to execute             |
-| **S4 Result+Finalization** — finalization tx, prize-curve payout, Result UI             | _to be written when S3 merged_                                             | 🔴                              |
+| **S3 Live+Bots** — contests.tick cron, bot spawn, leaderboard, Live UI                  | [`2026-04-28-mvp-s3-live-bots.md`](./2026-04-28-mvp-s3-live-bots.md)       | 🟢 done (local merge `d3e93ce`) |
+| **S4 Result+Finalization** — finalization tx, prize-curve payout, Result UI             | _to be written when S3 merged_                                             | 🟡 ready to plan                |
 
 ## Чому slice-плани пишуться поетапно (не всі зараз)
 
