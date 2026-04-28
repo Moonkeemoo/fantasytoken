@@ -15,9 +15,9 @@
 
 **INV-2** — Snapshot цін на старті та фініші контесту immutable після запису в `price_snapshots`. Якщо API повернув ціну — вона зафіксована, навіть якщо джерело потім "виправило". Consequence: disputed payouts, гравці не довіряють результатам.
 
-**INV-3** — Allocation портфеля sums рівно до $100K (не більше, не менше). Рівно 5 токенів, кожен з allocation > 0. Валідація на frontend і backend — backend є source of truth. Consequence: гравець з $200K портфелем виграє нечесно, leaderboard ламається.
+**INV-3** — Allocation портфеля: рівно 5 токенів, кожен % є multiple of 5, range 5–80%, сума всіх часток рівно 100%. Frontend валідує UX, backend є source of truth. Consequence: гравець з 110% портфелем виграє нечесно, leaderboard ламається. Replaces 2026-04-27 версію (бюджет $100K) — див. ADR-0002.
 
-**INV-4** — Bear league score = `-1 × pct_change × weight`. Не `abs(pct_change)`, не `1 / pct_change`. Падіння −50% = +50 × weight, зростання +10% = −10 × weight. Consequence: поламана ключова диференціююча механіка продукту.
+**INV-4** _(FROZEN for MVP — Bull-only; код preserved)_ — Bear league score = `-1 × pct_change × weight`. Не `abs(pct_change)`, не `1 / pct_change`. Падіння −50% = +50 × weight, зростання +10% = −10 × weight. Consequence: поламана ключова диференціююча механіка продукту.
 
 **INV-5** — Платежі тільки через Telegram Stars або TON Connect 2.0. Жодних card payments, EVM транзакцій, external wallet APIs. Виплати — тільки Stars або TON. Consequence: ban з Telegram Mini App store, юридичні проблеми.
 
@@ -26,6 +26,10 @@
 **INV-7** — Будь-який caught exception залишає слід. Мінімум `logger.warn` з контекстом, краще counter або alert. `catch (e) {}` заборонено code review-ом. Consequence: тихий fail у "best-effort" коді, баг живе тижнями (історично топ-1 причина продакшн-болю).
 
 **INV-8** — Wallet addresses, telegram_id, і token allocations — PII/sensitive. Не логуються в plaintext. Або hash, або останні 4 символи, або зовсім не логуй. Consequence: leak у логах → GDPR + втрата довіри.
+
+**INV-9** — Зміни balance відбуваються тільки через `CurrencyService.transact()` в одній DB-транзакції: insert `transactions` row → upsert `balances` → check `amount_cents >= 0` → rollback при overdraft. Direct `UPDATE balances` заборонено code review-ом. `balances` — denormalized cache; `transactions` — source of truth. Consequence: drift балансу від audit log, неможливість відтворити стан, втрачені/дубльовані виплати.
+
+**INV-10** — Lineup picks (5 токенів і їх allocations) immutable після `entries.submitted_at`. Жодного UPDATE на `entries.picks` після submit. Consequence: гравець перебудовує lineup ретроспективно, ламає чесність контесту.
 
 ## Maintenance
 
