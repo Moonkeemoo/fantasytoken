@@ -4,6 +4,7 @@ import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
 import { useMe } from './features/me/useMe.js';
 import { formatCents } from './lib/format.js';
 import { StatusPage } from './features/status/StatusPage.js';
+import { Live } from './features/live/Live.js';
 
 function ScreenPlaceholder({ title }: { title: string }) {
   const me = useMe();
@@ -27,7 +28,7 @@ export function App() {
       <Route path="/" element={<Navigate to="/lobby" replace />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/contests/:id/build" element={<TeamBuilder />} />
-      <Route path="/contests/:id/live" element={<ScreenPlaceholder title="Live Event (S3)" />} />
+      <Route path="/contests/:id/live" element={<Live />} />
       <Route path="/contests/:id/result" element={<ScreenPlaceholder title="Result (S4)" />} />
       <Route path="/live" element={<ScreenPlaceholder title="Live (stub)" />} />
       <Route path="/wallet" element={<ScreenPlaceholder title="Wallet (stub)" />} />
