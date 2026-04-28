@@ -29,7 +29,11 @@ export const entries = pgTable(
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     currentScore: numeric('current_score', { precision: 15, scale: 9 }),
     finalScore: numeric('final_score', { precision: 15, scale: 9 }),
-    prizeCents: bigint('prize_cents', { mode: 'number' }).notNull().default(0),
+    // mode:'bigint' for INV-9 — CurrencyService operates on bigint end-to-end.
+    // default uses sql`0` not 0n because drizzle-kit 0.28 cannot serialize BigInt literals.
+    prizeCents: bigint('prize_cents', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
     status: varchar('status', { length: 16 }).notNull().default('submitted'),
   },
   (t) => ({
