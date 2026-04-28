@@ -46,6 +46,7 @@ export function LiveList() {
     <div className="flex min-h-screen flex-col bg-paper text-ink">
       <Header
         firstName={me.data.user.first_name}
+        photoUrl={me.data.user.photo_url}
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
