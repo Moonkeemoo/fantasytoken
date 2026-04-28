@@ -6,10 +6,21 @@ export interface ContestListProps {
   items: ContestListItem[];
   balanceCents: number;
   onJoin: (id: string) => void;
+  onView: (id: string) => void;
+  onResult: (id: string) => void;
   onTopUp: () => void;
+  heading?: string;
 }
 
-export function ContestList({ items, balanceCents, onJoin, onTopUp }: ContestListProps) {
+export function ContestList({
+  items,
+  balanceCents,
+  onJoin,
+  onView,
+  onResult,
+  onTopUp,
+  heading = 'All contests',
+}: ContestListProps) {
   if (items.length === 0) {
     return (
       <div className="px-4 py-6 text-center text-[11px] text-muted">
@@ -19,13 +30,15 @@ export function ContestList({ items, balanceCents, onJoin, onTopUp }: ContestLis
   }
   return (
     <div className="flex flex-col gap-[6px] px-3 py-2">
-      <Label>All contests</Label>
+      <Label>{heading}</Label>
       {items.map((c) => (
         <ContestRow
           key={c.id}
           contest={c}
           balanceCents={balanceCents}
           onJoin={onJoin}
+          onView={onView}
+          onResult={onResult}
           onTopUp={onTopUp}
         />
       ))}

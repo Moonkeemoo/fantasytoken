@@ -11,6 +11,8 @@ import { ActiveBanner } from './ActiveBanner.js';
 import { BottomNav } from './BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 
+const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
+
 export function Lobby() {
   const navigate = useNavigate();
   const me = useMe();
@@ -35,7 +37,8 @@ export function Lobby() {
     [items, featured],
   );
 
-  const active = (my.data?.items ?? []).filter((c) => c.status === 'active');
+  // Banner shows ANY user-entered contest that isn't yet finalized.
+  const myInProgress = (my.data?.items ?? []).filter((c) => IN_PROGRESS_STATUSES.has(c.status));
 
   if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (me.isError || !me.data)
@@ -43,6 +46,9 @@ export function Lobby() {
 
   const goTeamBuilder = (id: string) => navigate(`/contests/${id}/build`);
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
+  const goResult = (id: string) => navigate(`/contests/${id}/result`);
+
+  const heading = filter === 'my' ? 'Your contests' : 'All contests';
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
@@ -51,15 +57,18 @@ export function Lobby() {
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
+      <ActiveBanner inProgress={myInProgress} onView={goLive} />
       <Tabs active={filter} counts={counts} onChange={setFilter} />
       {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
       <ContestList
         items={others}
         balanceCents={me.data.balanceCents}
         onJoin={goTeamBuilder}
+        onView={goLive}
+        onResult={goResult}
         onTopUp={() => setTopUpOpen(true)}
+        heading={heading}
       />
-      <ActiveBanner active={active} onView={goLive} />
       <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>

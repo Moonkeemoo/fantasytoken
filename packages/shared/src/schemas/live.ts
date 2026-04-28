@@ -20,6 +20,7 @@ export type LeaderboardEntry = z.infer<typeof LeaderboardEntry>;
 
 export const LiveResponse = z.object({
   contestId: z.string().uuid(),
+  contestName: z.string(),
   status: z.enum(['scheduled', 'active', 'finalizing', 'finalized', 'cancelled']),
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),

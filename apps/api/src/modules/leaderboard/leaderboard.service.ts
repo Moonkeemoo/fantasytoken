@@ -16,6 +16,7 @@ export interface EntrySnapshot {
 
 export interface ContestSnapshot {
   id: string;
+  name: string;
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
   startsAt: Date;
   endsAt: Date;
@@ -131,6 +132,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
 
       return {
         contestId: contest.id,
+        contestName: contest.name,
         status: contest.status,
         startsAt: contest.startsAt.toISOString(),
         endsAt: contest.endsAt.toISOString(),
