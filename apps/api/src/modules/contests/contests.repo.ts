@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
 import type { ContestsRepo, ContestRowFromRepo, CreateContestArgs } from './contests.service.js';
@@ -35,23 +35,9 @@ function rowFromDbRow(
 export function createContestsRepo(db: Database): ContestsRepo {
   return {
     async list({ filter, userId }) {
-      const baseQuery = db
-        .select({
-          row: contests,
-          spotsFilled: sql<number>`(SELECT COUNT(*)::int FROM ${entries} WHERE ${entries.contestId} = ${contests.id})`,
-          userHasEntered: userId
-            ? sql<boolean>`EXISTS (SELECT 1 FROM ${entries} WHERE ${entries.contestId} = ${contests.id} AND ${entries.userId} = ${userId})`
-            : sql<boolean>`false`,
-        })
-        .from(contests)
-        .$dynamic();
+      const baseQuery = db.select({ row: contests }).from(contests).$dynamic();
 
-      let rows: Array<{
-        row: typeof contests.$inferSelect;
-        spotsFilled: number;
-        userHasEntered: boolean;
-      }>;
-
+      let rows: Array<{ row: typeof contests.$inferSelect }>;
       if (filter === 'cash') {
         rows = await baseQuery
           .where(and(eq(contests.status, 'scheduled'), sql`${contests.entryFeeCents} > 0`))
@@ -63,30 +49,35 @@ export function createContestsRepo(db: Database): ContestsRepo {
       } else {
         // 'my'
         if (!userId) return [];
+        const myContestIds = await db
+          .selectDistinct({ contestId: entries.contestId })
+          .from(entries)
+          .where(eq(entries.userId, userId));
+        const ids = myContestIds.map((r) => r.contestId);
+        if (ids.length === 0) return [];
         rows = await baseQuery
-          .where(
-            sql`EXISTS (SELECT 1 FROM ${entries} WHERE ${entries.contestId} = ${contests.id} AND ${entries.userId} = ${userId})`,
-          )
+          .where(inArray(contests.id, ids))
           .orderBy(sql`${contests.isFeatured} DESC`, sql`${contests.startsAt} ASC`);
       }
 
-      return rows.map((r) => rowFromDbRow(r.row, r.spotsFilled, r.userHasEntered));
+      const contestIds = rows.map((r) => r.row.id);
+      const counts = await countSpots(db, contestIds);
+      const enteredSet = userId ? await getEnteredSet(db, userId, contestIds) : new Set<string>();
+      return rows.map((r) =>
+        rowFromDbRow(r.row, counts.get(r.row.id) ?? 0, enteredSet.has(r.row.id)),
+      );
     },
 
     async getById(id, userId) {
       const [r] = await db
-        .select({
-          row: contests,
-          spotsFilled: sql<number>`(SELECT COUNT(*)::int FROM ${entries} WHERE ${entries.contestId} = ${contests.id})`,
-          userHasEntered: userId
-            ? sql<boolean>`EXISTS (SELECT 1 FROM ${entries} WHERE ${entries.contestId} = ${contests.id} AND ${entries.userId} = ${userId})`
-            : sql<boolean>`false`,
-        })
+        .select({ row: contests })
         .from(contests)
         .where(eq(contests.id, id))
         .limit(1);
       if (!r) return null;
-      return rowFromDbRow(r.row, r.spotsFilled, r.userHasEntered);
+      const counts = await countSpots(db, [id]);
+      const enteredSet = userId ? await getEnteredSet(db, userId, [id]) : new Set<string>();
+      return rowFromDbRow(r.row, counts.get(id) ?? 0, enteredSet.has(id));
     },
 
     async create(args: CreateContestArgs) {
@@ -107,4 +98,27 @@ export function createContestsRepo(db: Database): ContestsRepo {
       return row;
     },
   };
+}
+
+async function countSpots(db: Database, contestIds: string[]): Promise<Map<string, number>> {
+  if (contestIds.length === 0) return new Map();
+  const rows = await db
+    .select({ contestId: entries.contestId, n: sql<number>`COUNT(*)::int` })
+    .from(entries)
+    .where(inArray(entries.contestId, contestIds))
+    .groupBy(entries.contestId);
+  return new Map(rows.map((r) => [r.contestId, r.n]));
+}
+
+async function getEnteredSet(
+  db: Database,
+  userId: string,
+  contestIds: string[],
+): Promise<Set<string>> {
+  if (contestIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ contestId: entries.contestId })
+    .from(entries)
+    .where(and(eq(entries.userId, userId), inArray(entries.contestId, contestIds)));
+  return new Set(rows.map((r) => r.contestId));
 }
