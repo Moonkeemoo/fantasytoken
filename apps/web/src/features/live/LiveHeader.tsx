@@ -5,13 +5,16 @@ import { formatTimeLeft } from '../../lib/format.js';
 
 export interface LiveHeaderProps {
   contestName: string;
+  startsAt: string;
   endsAt: string;
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
 }
 
-export function LiveHeader({ contestName, endsAt, status }: LiveHeaderProps) {
+export function LiveHeader({ contestName, startsAt, endsAt, status }: LiveHeaderProps) {
   const navigate = useNavigate();
-  const ms = useCountdown(endsAt);
+  const isPreStart = status === 'scheduled';
+  const ms = useCountdown(isPreStart ? startsAt : endsAt);
+  const captionPrefix = isPreStart ? 'starts in' : 'ends in';
 
   return (
     <div className="flex items-center justify-between border-b-[1.5px] border-ink px-3 py-2">
@@ -21,7 +24,9 @@ export function LiveHeader({ contestName, endsAt, status }: LiveHeaderProps) {
         </span>
         <div className="text-left">
           <div className="text-[12px] font-bold leading-tight">{contestName}</div>
-          <Label>ends in {formatTimeLeft(ms)}</Label>
+          <Label>
+            {captionPrefix} {formatTimeLeft(ms)}
+          </Label>
         </div>
       </button>
       {status === 'active' && (

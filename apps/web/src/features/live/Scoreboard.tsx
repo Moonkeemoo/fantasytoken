@@ -10,7 +10,9 @@ export interface ScoreboardProps {
   rank: number | null;
   totalEntries: number;
   projectedPrizeCents: number;
+  startsAt: string;
   endsAt: string;
+  status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
 }
 
 export function Scoreboard({
@@ -20,9 +22,14 @@ export function Scoreboard({
   rank,
   totalEntries,
   projectedPrizeCents,
+  startsAt,
   endsAt,
+  status,
 }: ScoreboardProps) {
-  const ms = useCountdown(endsAt);
+  const isPreStart = status === 'scheduled';
+  const ms = useCountdown(isPreStart ? startsAt : endsAt);
+  const timeLabel = isPreStart ? 'starts in' : 'time left';
+
   return (
     <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
       <Label>your performance</Label>
@@ -39,7 +46,7 @@ export function Scoreboard({
           primary={formatCents(projectedPrizeCents)}
           sub="top 30% pays"
         />
-        <Stat label="time left" primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
+        <Stat label={timeLabel} primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
       </div>
     </Card>
   );
