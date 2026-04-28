@@ -5,6 +5,7 @@ import { useMe } from './features/me/useMe.js';
 import { formatCents } from './lib/format.js';
 import { StatusPage } from './features/status/StatusPage.js';
 import { Live } from './features/live/Live.js';
+import { LiveList } from './features/live-list/LiveList.js';
 import { Result } from './features/result/Result.js';
 
 function ScreenPlaceholder({ title }: { title: string }) {
@@ -43,7 +44,7 @@ export function App() {
       <Route path="/contests/:id/build" element={<TeamBuilder />} />
       <Route path="/contests/:id/live" element={<Live />} />
       <Route path="/contests/:id/result" element={<Result />} />
-      <Route path="/live" element={<ScreenPlaceholder title="Live (stub)" />} />
+      <Route path="/live" element={<LiveList />} />
       <Route path="/wallet" element={<ScreenPlaceholder title="Wallet (stub)" />} />
       <Route path="/me" element={<ScreenPlaceholder title="Profile (stub)" />} />
       <Route path="/status" element={<StatusPage />} />

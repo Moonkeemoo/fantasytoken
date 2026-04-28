@@ -1,22 +1,22 @@
-import type { ContestFilter } from '@fantasytoken/shared';
 import { Pill } from '../../components/ui/Pill.js';
 
+export type LobbyFilter = 'cash' | 'free';
+
 export interface TabsProps {
-  active: ContestFilter;
-  counts: Record<ContestFilter, number>;
-  onChange: (f: ContestFilter) => void;
+  active: LobbyFilter;
+  counts: Record<LobbyFilter, number>;
+  onChange: (f: LobbyFilter) => void;
 }
 
-const LABELS: Record<ContestFilter, string> = {
+const LABELS: Record<LobbyFilter, string> = {
   cash: 'Cash',
   free: 'Free',
-  my: 'Live',
 };
 
 export function Tabs({ active, counts, onChange }: TabsProps) {
   return (
     <div className="flex gap-2 px-3 py-2">
-      {(Object.keys(LABELS) as ContestFilter[]).map((f) => (
+      {(Object.keys(LABELS) as LobbyFilter[]).map((f) => (
         <Pill key={f} active={active === f} onClick={() => onChange(f)}>
           {LABELS[f]} · {counts[f]}
         </Pill>
