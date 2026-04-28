@@ -37,8 +37,16 @@ export function Lobby() {
     [items, featured],
   );
 
-  // Banner shows ANY user-entered contest that isn't yet finalized.
-  const myInProgress = (my.data?.items ?? []).filter((c) => IN_PROGRESS_STATUSES.has(c.status));
+  const myItems = my.data?.items ?? [];
+  const myInProgress = myItems.filter((c) => IN_PROGRESS_STATUSES.has(c.status));
+  const myHistory = useMemo(
+    () =>
+      myItems
+        .filter((c) => c.status === 'finalized' || c.status === 'cancelled')
+        .slice()
+        .sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)),
+    [myItems],
+  );
 
   if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (me.isError || !me.data)
@@ -48,7 +56,7 @@ export function Lobby() {
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
 
-  const heading = filter === 'my' ? 'Your contests' : 'All contests';
+  const isLiveTab = filter === 'my';
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
@@ -57,18 +65,53 @@ export function Lobby() {
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
-      <ActiveBanner inProgress={myInProgress} onView={goLive} />
+      {!isLiveTab && <ActiveBanner inProgress={myInProgress} onView={goLive} />}
       <Tabs active={filter} counts={counts} onChange={setFilter} />
-      {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
-      <ContestList
-        items={others}
-        balanceCents={me.data.balanceCents}
-        onJoin={goTeamBuilder}
-        onView={goLive}
-        onResult={goResult}
-        onTopUp={() => setTopUpOpen(true)}
-        heading={heading}
-      />
+      {isLiveTab ? (
+        myInProgress.length === 0 && myHistory.length === 0 ? (
+          <div className="px-4 py-6 text-center text-[11px] text-muted">
+            No contests yet — pick one from <strong>Cash</strong> or <strong>Free</strong>.
+          </div>
+        ) : (
+          <>
+            {myInProgress.length > 0 && (
+              <ContestList
+                items={myInProgress}
+                balanceCents={me.data.balanceCents}
+                onJoin={goTeamBuilder}
+                onView={goLive}
+                onResult={goResult}
+                onTopUp={() => setTopUpOpen(true)}
+                heading="Live now"
+              />
+            )}
+            {myHistory.length > 0 && (
+              <ContestList
+                items={myHistory}
+                balanceCents={me.data.balanceCents}
+                onJoin={goTeamBuilder}
+                onView={goLive}
+                onResult={goResult}
+                onTopUp={() => setTopUpOpen(true)}
+                heading="History"
+              />
+            )}
+          </>
+        )
+      ) : (
+        <>
+          {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
+          <ContestList
+            items={others}
+            balanceCents={me.data.balanceCents}
+            onJoin={goTeamBuilder}
+            onView={goLive}
+            onResult={goResult}
+            onTopUp={() => setTopUpOpen(true)}
+            heading="All contests"
+          />
+        </>
+      )}
       <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>

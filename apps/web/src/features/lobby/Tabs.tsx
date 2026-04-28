@@ -10,7 +10,7 @@ export interface TabsProps {
 const LABELS: Record<ContestFilter, string> = {
   cash: 'Cash',
   free: 'Free',
-  my: 'My',
+  my: 'Live',
 };
 
 export function Tabs({ active, counts, onChange }: TabsProps) {
