@@ -56,7 +56,7 @@ export function Live() {
       <LeaderboardModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        entries={data.leaderboardTop}
+        entries={data.leaderboardAll}
       />
     </div>
   );

@@ -20,6 +20,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async listActiveSymbols() {
       return [];
     },
+    async listActiveCoingeckoIds() {
+      return [];
+    },
   };
 }
 
@@ -28,6 +31,7 @@ const noopLog = { error: () => {}, warn: () => {}, info: () => {}, debug: () => 
 describe('TokensService.syncCatalog', () => {
   it('fetches 2 CoinGecko pages and upserts their union', async () => {
     const client: CoinGeckoClient = {
+      marketsByIds: vi.fn().mockResolvedValue([]),
       topMarkets: vi.fn().mockImplementation(async ({ page }) => {
         if (page === 1) {
           return [
@@ -57,7 +61,7 @@ describe('TokensService.syncCatalog', () => {
     };
     const repo = makeFakeRepo();
     const svc = createTokensService({ repo, client, log: noopLog });
-    const n = await svc.syncCatalog({ pages: 2, perPage: 250 });
+    const n = await svc.syncCatalog({ pages: 2, perPage: 250, pageDelayMs: 0 });
     expect(client.topMarkets).toHaveBeenCalledTimes(2);
     expect(repo.upserted).toBe(2);
     expect(n).toBe(2);
@@ -66,6 +70,7 @@ describe('TokensService.syncCatalog', () => {
   it('survives a single-page failure and reports partial', async () => {
     let calls = 0;
     const client: CoinGeckoClient = {
+      marketsByIds: vi.fn().mockResolvedValue([]),
       topMarkets: vi.fn().mockImplementation(async () => {
         calls += 1;
         if (calls === 2) throw new Error('rate limited');
@@ -84,7 +89,7 @@ describe('TokensService.syncCatalog', () => {
     };
     const repo = makeFakeRepo();
     const svc = createTokensService({ repo, client, log: noopLog });
-    const n = await svc.syncCatalog({ pages: 2, perPage: 250 });
+    const n = await svc.syncCatalog({ pages: 2, perPage: 250, pageDelayMs: 0 });
     // Page 1 succeeded, page 2 failed → only page 1 upserted.
     expect(repo.upserted).toBe(1);
     expect(n).toBe(1);

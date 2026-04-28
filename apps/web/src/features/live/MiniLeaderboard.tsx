@@ -22,10 +22,10 @@ export function MiniLeaderboard({ top, userRow, onViewAll }: MiniLeaderboardProp
         </button>
       </div>
       <div className="flex flex-col gap-[3px] text-[11px]">
-        {top.slice(0, 2).map((e) => (
+        {top.slice(0, 3).map((e) => (
           <Row key={e.entryId} entry={e} />
         ))}
-        {userRow && !top.slice(0, 2).some((t) => t.entryId === userRow.entryId) && (
+        {userRow && !top.slice(0, 3).some((t) => t.entryId === userRow.entryId) && (
           <div className="-mx-1 rounded-[2px] bg-note px-1 py-[2px]">
             <Row entry={userRow} />
           </div>
