@@ -14,6 +14,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async listPage() {
       return { items: [], total: 0 };
     },
+    async search() {
+      return [];
+    },
   };
 }
 

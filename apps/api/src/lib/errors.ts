@@ -4,6 +4,9 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION_FAILED'
+  | 'INVALID_LINEUP'
+  | 'INSUFFICIENT_BALANCE'
+  | 'CONTEST_CLOSED'
   | 'CONTEST_NOT_OPEN'
   | 'INTERNAL';
 
@@ -27,4 +30,7 @@ export const errors = {
   forbidden: () => new AppError('FORBIDDEN', 'Forbidden', 403),
   notFound: (resource: string) => new AppError('NOT_FOUND', `${resource} not found`, 404),
   contestNotOpen: () => new AppError('CONTEST_NOT_OPEN', 'Contest is not open for entries', 409),
+  invalidLineup: (cause?: unknown) => new AppError('INVALID_LINEUP', 'Invalid lineup', 400, cause),
+  insufficientBalance: () => new AppError('INSUFFICIENT_BALANCE', 'Insufficient balance', 402),
+  contestClosed: () => new AppError('CONTEST_CLOSED', 'Contest is closed for entries', 409),
 };

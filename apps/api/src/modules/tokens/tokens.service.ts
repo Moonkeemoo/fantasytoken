@@ -23,6 +23,15 @@ export interface TokensRepo {
     }>;
     total: number;
   }>;
+  search(args: { q: string; limit: number }): Promise<
+    Array<{
+      symbol: string;
+      name: string;
+      currentPriceUsd: string | null;
+      pctChange24h: string | null;
+      marketCapUsd: string | null;
+    }>
+  >;
 }
 
 export interface TokensServiceDeps {
@@ -34,6 +43,7 @@ export interface TokensServiceDeps {
 export interface TokensService {
   syncCatalog(args: { pages: number; perPage: number }): Promise<number>;
   listPage(args: { page: number; limit: number }): ReturnType<TokensRepo['listPage']>;
+  search(args: { q: string; limit: number }): ReturnType<TokensRepo['search']>;
 }
 
 export function createTokensService(deps: TokensServiceDeps): TokensService {
@@ -57,6 +67,12 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
 
     async listPage(args) {
       return deps.repo.listPage(args);
+    },
+
+    async search(args) {
+      const trimmed = args.q.trim();
+      if (trimmed.length === 0) return [];
+      return deps.repo.search({ q: trimmed, limit: args.limit });
     },
   };
 }

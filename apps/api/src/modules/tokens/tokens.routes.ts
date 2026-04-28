@@ -8,6 +8,11 @@ const QuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(250).default(50),
 });
 
+const SearchQuery = z.object({
+  q: z.string().min(1).max(40),
+  limit: z.coerce.number().int().positive().max(50).default(20),
+});
+
 export interface TokensRoutesDeps {
   tokens: TokensService;
 }
@@ -23,6 +28,12 @@ export function makeTokensRoutes(deps: TokensRoutesDeps): FastifyPluginAsync {
         total: page.total,
       };
       return response;
+    });
+
+    app.get('/search', async (req) => {
+      const q = SearchQuery.parse(req.query);
+      const items = await deps.tokens.search({ q: q.q, limit: q.limit });
+      return { items };
     });
   };
 }

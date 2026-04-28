@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Lobby } from './features/lobby/Lobby.js';
+import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
 import { useMe } from './features/me/useMe.js';
 import { formatCents } from './lib/format.js';
 import { StatusPage } from './features/status/StatusPage.js';
@@ -25,7 +26,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/lobby" replace />} />
       <Route path="/lobby" element={<Lobby />} />
-      <Route path="/contests/:id/build" element={<ScreenPlaceholder title="Team Builder (S2)" />} />
+      <Route path="/contests/:id/build" element={<TeamBuilder />} />
       <Route path="/contests/:id/live" element={<ScreenPlaceholder title="Live Event (S3)" />} />
       <Route path="/contests/:id/result" element={<ScreenPlaceholder title="Result (S4)" />} />
       <Route path="/live" element={<ScreenPlaceholder title="Live (stub)" />} />
