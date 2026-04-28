@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<title>MVP Wireframes — Fantasy Token</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --paper: #f6f1e8;
+    --paper-dim: #eee5d2;
+    --ink: #1a1814;
+    --ink-soft: #4a4540;
+    --muted: #8a8478;
+    --rule: #d0c5b0;
+    --rule-soft: #e3d9c4;
+    --accent: #d4441c;
+    --note: #fef08a;
+    --code-bg: #f0e6d0;
+    --hl-blue: #2563eb;
+    --hl-green: #16a34a;
+    --hl-red: #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; }
+
+  /* ── canvas ──────────────────────────────────────── */
+  body {
+    padding: 60px 40px 120px;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(26,24,20,0.08) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  .page-title {
+    max-width: 1320px;
+    margin: 0 auto 40px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .page-title h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .page-title .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .page-title .lede {
+    flex-basis: 100%;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    max-width: 760px;
+  }
+  .page-title .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--note);
+    border: 1.5px solid var(--ink);
+    padding: 3px 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── flow strip ──────────────────────────────────── */
+  .flow-strip {
+    max-width: 1320px;
+    margin: 0 auto 56px;
+    background: var(--paper-dim);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow-x: auto;
+  }
+  .flow-strip .step {
+    flex-shrink: 0;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-strip .step .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--ink);
+    color: var(--paper);
+    width: 18px; height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 2px;
+    font-weight: 700;
+  }
+  .flow-strip .step .name { font-weight: 600; font-size: 13px; }
+  .flow-strip .step .role { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-left: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .flow-strip .arrow { font-family: 'JetBrains Mono', monospace; color: var(--muted); font-size: 14px; }
+  .flow-strip .branch {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    border-left: 1px dashed var(--rule);
+    padding-left: 12px;
+    margin-left: 4px;
+  }
+
+  /* ── screen section ──────────────────────────────── */
+  .screen {
+    max-width: 1320px;
+    margin: 0 auto 80px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .screen-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 16px 24px;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .screen-header .left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .screen-header .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--note);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .screen-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .screen-header .purpose {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    max-width: 600px;
+    line-height: 1.4;
+  }
+  .screen-header .url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.1);
+    padding: 4px 8px;
+    border-radius: 3px;
+    color: var(--note);
+  }
+
+  .screen-body {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  /* ── wireframe column ────────────────────────────── */
+  .wf-col {
+    padding: 32px 20px;
+    border-right: 1.5px dashed var(--rule);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper-dim);
+  }
+  .wf-frame {
+    width: 420px;
+    height: 760px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 36px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 0 var(--ink);
+  }
+  .wf-status {
+    height: 32px;
+    border-bottom: 1px dashed var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .wf-canvas {
+    position: absolute;
+    top: 32px; left: 0; right: 0; bottom: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* wireframe primitives */
+  .wf-box {
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 10px 12px;
+    position: relative;
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .wf-box.dim { border-style: dashed; color: var(--muted); }
+  .wf-box.tall { padding: 16px 14px; }
+  .wf-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .wf-h {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .wf-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wf-row > * { flex-shrink: 0; }
+  .wf-row.between { justify-content: space-between; }
+  .wf-row.grow > * { flex: 1; }
+  .wf-circle {
+    width: 32px; height: 32px;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .wf-pic {
+    border: 1.5px dashed var(--rule);
+    background:
+      linear-gradient(135deg, transparent 49%, var(--rule) 49%, var(--rule) 51%, transparent 51%),
+      linear-gradient(45deg,  transparent 49%, var(--rule) 49%, var(--rule) 51%, transparent 51%);
+    color: var(--muted);
+    display: grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+  }
+  .wf-btn {
+    border: 1.5px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 4px;
+    padding: 10px 14px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: 2px 2px 0 var(--muted);
+  }
+  .wf-btn.ghost { background: var(--paper); color: var(--ink); }
+  .wf-btn.sm { padding: 5px 10px; font-size: 10px; box-shadow: 1px 1px 0 var(--muted); }
+  .wf-bar {
+    height: 6px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    position: relative;
+  }
+  .wf-bar > span {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--ink);
+  }
+  .wf-divider {
+    height: 1px;
+    background: var(--rule);
+  }
+  .wf-divider.dash {
+    background: none;
+    border-top: 1px dashed var(--rule);
+  }
+  .wf-tab {
+    flex: 1;
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 3px;
+  }
+  .wf-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .wf-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    border-top: 1.5px solid var(--ink);
+    display: flex;
+    background: var(--paper-dim);
+  }
+  .wf-nav .item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--muted);
+    border-right: 1px solid var(--rule);
+  }
+  .wf-nav .item:last-child { border-right: none; }
+  .wf-nav .item.active { color: var(--ink); font-weight: 700; }
+  .wf-nav .item .ic {
+    width: 18px; height: 18px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+  }
+
+  /* numbered annotation pin */
+  .pin {
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 2px solid var(--accent);
+    background: var(--note);
+    color: var(--ink);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 5;
+    box-shadow: 0 2px 0 var(--accent);
+  }
+  .wf-attach {
+    position: relative;
+  }
+  .wf-attach > .pin {
+    top: -10px;
+    right: -10px;
+  }
+
+  /* caption beneath frame */
+  .wf-caption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* ── spec column ─────────────────────────────────── */
+  .spec-col {
+    padding: 32px 32px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .spec-block h3 {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 4px;
+  }
+  .spec-block table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .spec-block table td {
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--rule);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  .spec-block table td:first-child {
+    width: 32px;
+    padding-right: 12px;
+  }
+  .spec-block .num-pin {
+    width: 22px; height: 22px;
+    border: 2px solid var(--accent);
+    background: var(--note);
+    color: var(--ink);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .spec-block .name {
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-bottom: 2px;
+  }
+  .spec-block .desc {
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .spec-block .behavior {
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  /* states / data tables */
+  .table-grid {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .table-grid .k, .table-grid .v {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .table-grid .k {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .table-grid .v code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  /* state list */
+  .state-list { display: flex; flex-direction: column; gap: 8px; }
+  .state-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 13px;
+  }
+  .state-row .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+  }
+  .state-row.ok .label { color: var(--hl-green); }
+  .state-row.warn .label { color: var(--accent); }
+  .state-row.err .label { color: var(--hl-red); }
+  .state-row.info .label { color: var(--hl-blue); }
+
+  /* open questions */
+  .questions {
+    background: var(--note);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 14px 18px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .questions ol {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .questions ol li { margin-bottom: 4px; }
+
+  /* TLDR / summary card */
+  .tldr-grid {
+    max-width: 1320px;
+    margin: 0 auto 56px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .tldr-card {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 16px 18px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .tldr-card .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .tldr-card .step-name {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  .tldr-card .step-job {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+  .tldr-card .step-success {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-top: 1px dashed var(--rule);
+    padding-top: 8px;
+  }
+  .tldr-card .step-success strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* footer note */
+  .footnote {
+    max-width: 1320px;
+    margin: 0 auto;
+    border-top: 2px solid var(--ink);
+    padding-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .footnote strong { color: var(--ink); }
+
+  @media (max-width: 1200px) {
+    .screen-body { grid-template-columns: 1fr; }
+    .wf-col { border-right: none; border-bottom: 1.5px dashed var(--rule); }
+    .tldr-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+      <span class="tag">MVP SPEC · v1</span>
+      <span class="meta">04 screens · functional wireframes · ТЗ</span>
+    </div>
+    <h1>Fantasy Token — MVP Wireframes</h1>
+  </div>
+  <div class="meta">draft · for implementation</div>
+  <p class="lede">
+    Функціональні low-fi варфрейми для 4 ключових екранів MVP: <strong>Lobby → Team Builder → Live Event → Result</strong>.
+    Без візуалу, кольору й декору — лише структура, поведінка, дані й edge cases.
+    Кожен екран = варфрейм + анотації по компонентах + state matrix + data spec + open questions.
+    Візуальна оболонка — окремо (див. Design Research).
+  </p>
+</div>
+
+<!-- ── FLOW STRIP ─────────────────────────────────── -->
+<div class="flow-strip">
+  <div class="step"><span class="num">1</span><span class="name">Lobby</span><span class="role">browse · pick contest</span></div>
+  <span class="arrow">▶</span>
+  <div class="step"><span class="num">2</span><span class="name">Team Builder</span><span class="role">build lineup · pay entry</span></div>
+  <span class="arrow">▶</span>
+  <div class="step"><span class="num">3</span><span class="name">Live Event</span><span class="role">watch P/L · rank</span></div>
+  <span class="arrow">▶</span>
+  <div class="step"><span class="num">4</span><span class="name">Result</span><span class="role">payout · share · replay</span></div>
+  <span class="branch">Edge: contest sold out · payment fail · contest cancelled · 0 spots prize-won → see per-screen edge cases</span>
+</div>
+
+<!-- ── TL;DR ─────────────────────────────────────── -->
+<div class="tldr-grid">
+  <div class="tldr-card">
+    <div class="step-num">01 · LOBBY</div>
+    <div class="step-name">Browse contests</div>
+    <div class="step-job">User scans available contests, filters free/paid, sees prize, entry fee, time left, spots filled. Picks one.</div>
+    <div class="step-success">Success: <strong>tap a contest</strong> → opens Team Builder pre-loaded with that contest context.</div>
+  </div>
+  <div class="tldr-card">
+    <div class="step-num">02 · TEAM BUILDER</div>
+    <div class="step-name">Build a lineup</div>
+    <div class="step-job">Pick 5 tokens from a list, allocate 100% across them, optionally name the team. Confirm entry → debit balance / open top-up.</div>
+    <div class="step-success">Success: <strong>entry confirmed</strong> → enters Live Event in waiting state until contest starts.</div>
+  </div>
+  <div class="tldr-card">
+    <div class="step-num">03 · LIVE EVENT</div>
+    <div class="step-name">Watch performance</div>
+    <div class="step-job">Live P/L, rank, time left, per-token contribution. Refresh every ~30 s. Read-only — no changes after lock.</div>
+    <div class="step-success">Success: <strong>contest ends</strong> → auto-advance to Result.</div>
+  </div>
+  <div class="tldr-card">
+    <div class="step-num">04 · RESULT</div>
+    <div class="step-name">Payout & share</div>
+    <div class="step-job">Final P/L, final rank, prize won (or zero), per-token breakdown, share-card, "Play again" CTA.</div>
+    <div class="step-success">Success: <strong>prize credited</strong> + user shares OR enters new contest.</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- ── SCREEN 1 · LOBBY ─────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════ -->
+<section class="screen">
+  <header class="screen-header">
+    <div class="left">
+      <span class="num">01</span>
+      <h2>Lobby</h2>
+      <span class="purpose">Browse available contests, pick one to enter.</span>
+    </div>
+    <span class="url">/lobby</span>
+  </header>
+
+  <div class="screen-body">
+    <!-- WIREFRAME -->
+    <div class="wf-col">
+      <div class="wf-frame">
+        <div class="wf-status"><span>9:41</span><span>● ● ●</span></div>
+        <div class="wf-canvas">
+
+          <!-- 1. header -->
+          <div class="wf-row between wf-attach">
+            <div class="wf-row">
+              <div class="wf-circle">A</div>
+              <div>
+                <div style="font-size:11px; font-weight:700;">Hi, alex_99</div>
+                <div style="font-size:9px; color:var(--muted);">balance · $48.20</div>
+              </div>
+            </div>
+            <div class="wf-btn ghost sm">+ Top up</div>
+            <span class="pin" style="top:-10px; right:-10px;">1</span>
+          </div>
+
+          <!-- 2. tab filter -->
+          <div class="wf-row grow wf-attach">
+            <div class="wf-tab active">Cash · 12</div>
+            <div class="wf-tab">Free · 4</div>
+            <div class="wf-tab">My · 2</div>
+            <span class="pin" style="top:-10px; right:-10px;">2</span>
+          </div>
+
+          <!-- 3. featured contest hero -->
+          <div class="wf-box tall wf-attach">
+            <div class="wf-label">★ FEATURED CONTEST</div>
+            <div class="wf-h" style="font-size:15px;">Memecoin Madness</div>
+            <div class="wf-row between" style="margin-top:8px;">
+              <div>
+                <div class="wf-label">prize pool</div>
+                <div style="font-weight:700; font-size:18px;">$10,000</div>
+              </div>
+              <div>
+                <div class="wf-label">entry</div>
+                <div style="font-weight:700;">$5</div>
+              </div>
+              <div>
+                <div class="wf-label">time</div>
+                <div style="font-weight:700;">3h 47m</div>
+              </div>
+            </div>
+            <div class="wf-row" style="margin-top:8px; gap:6px;">
+              <span style="font-size:10px; color:var(--muted);">spots</span>
+              <div class="wf-bar" style="flex:1;"><span style="width:25%;"></span></div>
+              <span style="font-size:10px; font-family:'JetBrains Mono',monospace;">247/1k</span>
+            </div>
+            <div class="wf-btn" style="margin-top:10px;">Enter contest →</div>
+            <span class="pin" style="top:-10px; right:-10px;">3</span>
+          </div>
+
+          <!-- 4. contest list -->
+          <div class="wf-attach" style="display:flex; flex-direction:column; gap:6px;">
+            <div class="wf-label" style="margin-top:4px;">All contests</div>
+            <div class="wf-box" style="display:flex; align-items:center; gap:10px;">
+              <div class="wf-circle" style="font-size:9px;">$1</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:12px;">Quick Match</div>
+                <div style="font-size:10px; color:var(--muted);">Win up to $200 · 88/500 · 1h</div>
+              </div>
+              <div class="wf-btn sm">JOIN</div>
+            </div>
+            <div class="wf-box" style="display:flex; align-items:center; gap:10px;">
+              <div class="wf-circle" style="font-size:9px;">FR</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:12px;">Free Roll</div>
+                <div style="font-size:10px; color:var(--muted);">Win up to $50 · 420/2k · 2h</div>
+              </div>
+              <div class="wf-btn sm">JOIN</div>
+            </div>
+            <div class="wf-box dim" style="display:flex; align-items:center; gap:10px;">
+              <div class="wf-circle" style="font-size:9px;">$25</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:12px;">High Stakes</div>
+                <div style="font-size:10px; color:var(--muted);">Win up to $2,500 · 34/100 · 4h</div>
+              </div>
+              <div class="wf-btn sm ghost">JOIN</div>
+            </div>
+            <span class="pin" style="top:-2px; right:-10px;">4</span>
+          </div>
+
+          <!-- 5. live banner (if user has active contest) -->
+          <div class="wf-box dim wf-attach" style="border-style:solid; background:var(--paper-dim);">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div class="wf-label" style="color:var(--accent);">▶ LIVE NOW · contest 1 of 1</div>
+                <div style="font-weight:700; font-size:12px;">Memecoin Madness · rank #47 · +18.4%</div>
+              </div>
+              <div class="wf-btn sm">VIEW</div>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">5</span>
+          </div>
+
+          <!-- 6. bottom nav -->
+          <div class="wf-nav wf-attach">
+            <div class="item active"><div class="ic"></div>Play</div>
+            <div class="item"><div class="ic"></div>Live</div>
+            <div class="item"><div class="ic"></div>Wallet</div>
+            <div class="item"><div class="ic"></div>Me</div>
+            <span class="pin" style="top:-10px; right:8px;">6</span>
+          </div>
+
+        </div>
+      </div>
+      <div class="wf-caption">screen 01 · lobby</div>
+    </div>
+
+    <!-- SPEC -->
+    <div class="spec-col">
+
+      <div class="spec-block">
+        <h3>Components</h3>
+        <table>
+          <tr><td><div class="num-pin">1</div></td><td>
+            <div class="name">Header — identity + balance + top-up</div>
+            <div class="desc">Avatar, username, current cash balance, "+ Top up" CTA. Always visible. Tap balance → opens Wallet screen (out of MVP).</div>
+            <div class="behavior">tap "+ Top up" → opens TopUpModal</div>
+          </td></tr>
+          <tr><td><div class="num-pin">2</div></td><td>
+            <div class="name">Filter tabs</div>
+            <div class="desc">Three filters with counts: <code>Cash</code> (paid contests), <code>Free</code> (no entry fee), <code>My</code> (user's active + upcoming). Default: Cash.</div>
+            <div class="behavior">tap → re-fetch list with filter</div>
+          </td></tr>
+          <tr><td><div class="num-pin">3</div></td><td>
+            <div class="name">Featured contest card (hero)</div>
+            <div class="desc">One main contest, picked by backend (highest pool / nearest start). Shows: name, prize pool, entry fee, time-left countdown, spots-filled bar with "x/y" label, primary CTA.</div>
+            <div class="behavior">tap card or CTA → open Team Builder with this contest pre-selected</div>
+          </td></tr>
+          <tr><td><div class="num-pin">4</div></td><td>
+            <div class="name">Contest list</div>
+            <div class="desc">Scrollable list of remaining contests in selected filter. Each row: entry-fee badge, name, "Win up to $X · spots · time-left", JOIN button. Same tap target as hero card.</div>
+            <div class="behavior">tap row → Team Builder; tap JOIN → Team Builder (same)</div>
+          </td></tr>
+          <tr><td><div class="num-pin">5</div></td><td>
+            <div class="name">Active-contest banner (conditional)</div>
+            <div class="desc">Shown only if user has ≥1 contest currently live. Pinned above bottom nav. Tap → jump to Live Event for that contest (if multiple, opens picker).</div>
+            <div class="behavior">visible only if liveContestCount > 0</div>
+          </td></tr>
+          <tr><td><div class="num-pin">6</div></td><td>
+            <div class="name">Bottom nav (4 tabs)</div>
+            <div class="desc">Play (Lobby), Live (active contests list), Wallet, Me. MVP scope = first 2 functional; Wallet + Me can be stubs that link to a profile screen.</div>
+            <div class="behavior">Play = current; Live = list of user's active contests</div>
+          </td></tr>
+        </table>
+      </div>
+
+      <div class="spec-block">
+        <h3>States</h3>
+        <div class="state-list">
+          <div class="state-row info"><div class="label">Default</div><div>≥ 1 contest available; user has balance ≥ 0; balance shown.</div></div>
+          <div class="state-row info"><div class="label">First-time</div><div>User has $0 balance. Show small banner above tabs: "Get $5 free credit" → onboarding flow.</div></div>
+          <div class="state-row warn"><div class="label">No contests</div><div>Empty state: "No contests right now — check back in [next start time]" + CTA "Notify me".</div></div>
+          <div class="state-row err"><div class="label">Network fail</div><div>Skeleton loaders for hero + list. Retry button after 8 s timeout.</div></div>
+          <div class="state-row warn"><div class="label">Contest sold out</div><div>List row shows JOIN disabled + "FULL" badge. Hero auto-replaces with next available.</div></div>
+          <div class="state-row ok"><div class="label">Active contest</div><div>Banner #5 visible. If multiple active, banner says "X live now".</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Data — what backend provides</h3>
+        <div class="table-grid">
+          <div class="k">GET</div><div class="v"><code>/contests?filter=cash|free|my</code></div>
+          <div class="k">Returns</div><div class="v">Array of <code>Contest { id, name, entryFee, prizePool, spotsFilled, spotsTotal, startsAt, endsAt, status, isFeatured }</code></div>
+          <div class="k">User</div><div class="v"><code>GET /me</code> → <code>{ id, username, balance, activeContestIds[] }</code></div>
+          <div class="k">Refresh</div><div class="v">Poll every 30 s for spots-filled + time-left. Or single SSE stream.</div>
+          <div class="k">Sort</div><div class="v">Hero = isFeatured. List = startsAt ASC.</div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Edge cases</h3>
+        <div class="state-list">
+          <div class="state-row err"><div class="label">Tap full</div><div>Toast: "This contest is full" — list refreshes. Don't navigate.</div></div>
+          <div class="state-row err"><div class="label">Tap closed</div><div>If startsAt has passed and lock is on, route to Live Event (read-only) instead of Team Builder.</div></div>
+          <div class="state-row warn"><div class="label">Cash tab, $0 balance</div><div>Contest rows show CTA as "Top up to join" instead of JOIN.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block questions">
+        <h3 style="border:none; padding:0; margin-bottom:8px;">Open questions for product</h3>
+        <ol>
+          <li>Чи потрібен пошук/фільтр по назві в MVP, чи 12-15 контестів читабельно скролом?</li>
+          <li>Як обираємо "Featured" — алгоритм (next start + highest pool) чи редактор?</li>
+          <li>Скільки контестів одночасно гравець може мати? Affects banner #5 logic.</li>
+          <li>Чи показуємо "your team is in" індикатор поряд з контестом, де вже зайшов?</li>
+          <li>Чи валідне правило "якщо нема балансу — показати Top up" чи краще "Free roll" як єдиний CTA?</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- ── SCREEN 2 · TEAM BUILDER ──────────────────────── -->
+<!-- ════════════════════════════════════════════════════ -->
+<section class="screen">
+  <header class="screen-header">
+    <div class="left">
+      <span class="num">02</span>
+      <h2>Team Builder</h2>
+      <span class="purpose">Pick 5 tokens, allocate 100%, confirm & pay entry.</span>
+    </div>
+    <span class="url">/contests/:id/build</span>
+  </header>
+
+  <div class="screen-body">
+
+    <div class="wf-col">
+      <div class="wf-frame">
+        <div class="wf-status"><span>9:41</span><span>● ● ●</span></div>
+        <div class="wf-canvas">
+
+          <!-- 1. header w/ contest context -->
+          <div class="wf-row between wf-attach">
+            <div class="wf-row" style="gap:8px;">
+              <div class="wf-circle" style="width:24px; height:24px;">‹</div>
+              <div>
+                <div style="font-size:12px; font-weight:700;">Memecoin Madness</div>
+                <div style="font-size:9px; color:var(--muted);">$5 entry · pool $10k · 4h</div>
+              </div>
+            </div>
+            <div style="font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace;">step 1/2</div>
+            <span class="pin" style="top:-10px; right:-10px;">1</span>
+          </div>
+
+          <!-- 2. allocation summary -->
+          <div class="wf-box wf-attach">
+            <div class="wf-label">your lineup · 3 of 5 picked</div>
+            <div class="wf-row" style="gap:4px; margin-top:6px;">
+              <div class="wf-circle" style="width:36px; height:36px; font-size:9px;">WIF<br><span style="font-size:8px;">40%</span></div>
+              <div class="wf-circle" style="width:36px; height:36px; font-size:9px;">PEPE<br><span style="font-size:8px;">35%</span></div>
+              <div class="wf-circle" style="width:36px; height:36px; font-size:9px;">BONK<br><span style="font-size:8px;">25%</span></div>
+              <div class="wf-circle dim" style="width:36px; height:36px; border-style:dashed; font-size:18px;">+</div>
+              <div class="wf-circle dim" style="width:36px; height:36px; border-style:dashed; font-size:18px;">+</div>
+            </div>
+            <div class="wf-row" style="margin-top:8px; gap:6px;">
+              <span style="font-size:10px; font-family:'JetBrains Mono',monospace;">100%</span>
+              <div class="wf-bar" style="flex:1;"><span style="width:100%;"></span></div>
+              <span style="font-size:10px; color:var(--hl-green); font-weight:700;">✓ valid</span>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">2</span>
+          </div>
+
+          <!-- 3. token picker -->
+          <div class="wf-attach" style="display:flex; flex-direction:column; gap:6px;">
+            <div class="wf-row between" style="margin-top:4px;">
+              <div class="wf-label">pick tokens · sort by 24h ▼</div>
+              <div style="font-size:9px; color:var(--muted);">10 available</div>
+            </div>
+            <div class="wf-box" style="display:flex; align-items:center; gap:8px; padding:6px 10px;">
+              <div class="wf-circle" style="width:24px; height:24px; font-size:8px;">WIF</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:11px;">dogwifhat <span style="color:var(--muted); font-weight:400;">+12.4%</span></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <div class="wf-btn sm ghost" style="width:24px; padding:2px;">−</div>
+                <span style="font-size:11px; font-weight:700; min-width:30px; text-align:center;">40%</span>
+                <div class="wf-btn sm" style="width:24px; padding:2px;">+</div>
+              </div>
+            </div>
+            <div class="wf-box" style="display:flex; align-items:center; gap:8px; padding:6px 10px;">
+              <div class="wf-circle" style="width:24px; height:24px; font-size:8px;">SOL</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:11px;">Solana <span style="color:var(--muted); font-weight:400;">+3.1%</span></div>
+              </div>
+              <div class="wf-btn sm ghost">+ Add</div>
+            </div>
+            <div class="wf-box dim" style="display:flex; align-items:center; gap:8px; padding:6px 10px;">
+              <div class="wf-circle" style="width:24px; height:24px; font-size:8px;">DOGE</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:11px;">Dogecoin <span style="color:var(--muted); font-weight:400;">−1.2%</span></div>
+              </div>
+              <div class="wf-btn sm ghost">+ Add</div>
+            </div>
+            <div class="wf-box dim" style="display:flex; align-items:center; gap:8px; padding:6px 10px;">
+              <div class="wf-circle" style="width:24px; height:24px; font-size:8px;">SHIB</div>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:11px;">Shiba <span style="color:var(--muted); font-weight:400;">−4.8%</span></div>
+              </div>
+              <div class="wf-btn sm ghost">+ Add</div>
+            </div>
+            <span class="pin" style="top:-2px; right:-10px;">3</span>
+          </div>
+
+          <!-- 4. confirm bar pinned to bottom -->
+          <div style="position:absolute; bottom:0; left:0; right:0; border-top:1.5px solid var(--ink); background:var(--paper); padding:10px 12px;" class="wf-attach">
+            <div class="wf-row between" style="margin-bottom:8px;">
+              <div>
+                <div style="font-size:10px; color:var(--muted);">entry fee</div>
+                <div style="font-weight:700;">$5.00</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:10px; color:var(--muted);">your balance</div>
+                <div style="font-weight:700;">$48.20</div>
+              </div>
+            </div>
+            <div class="wf-btn">Confirm & Enter contest →</div>
+            <span class="pin" style="top:-10px; right:-10px;">4</span>
+          </div>
+
+        </div>
+      </div>
+      <div class="wf-caption">screen 02 · team builder</div>
+    </div>
+
+    <div class="spec-col">
+
+      <div class="spec-block">
+        <h3>Components</h3>
+        <table>
+          <tr><td><div class="num-pin">1</div></td><td>
+            <div class="name">Context bar</div>
+            <div class="desc">Back arrow, contest name, entry fee, prize pool, time-left, step indicator (1/2 — picking, 2/2 — confirming if we split). Static during this screen.</div>
+            <div class="behavior">back → returns to Lobby (warns if any picks made)</div>
+          </td></tr>
+          <tr><td><div class="num-pin">2</div></td><td>
+            <div class="name">Lineup summary</div>
+            <div class="desc">5 slots. Each filled slot = token symbol + allocation %. Empty slots show dashed "+". Allocation bar below shows total %; turns green at exactly 100%.</div>
+            <div class="behavior">tap empty slot → scrolls picker into focus; tap filled → opens edit/remove sheet</div>
+          </td></tr>
+          <tr><td><div class="num-pin">3</div></td><td>
+            <div class="name">Token picker list</div>
+            <div class="desc">Available tokens (curated by backend per contest). Each row: symbol, name, 24h change, action. Action = <code>+ Add</code> (auto-allocates equal share rebalance) OR stepper <code>− % +</code> when already added. Sort by 24h change default; toggle to alpha.</div>
+            <div class="behavior">+ Add: rebalances all picks to equal split UP TO 5; stepper: ±5% per tap, never exceeds 100% total</div>
+          </td></tr>
+          <tr><td><div class="num-pin">4</div></td><td>
+            <div class="name">Sticky confirm bar</div>
+            <div class="desc">Always-visible at bottom: entry fee, current balance, primary CTA. CTA disabled until lineup is valid (5 tokens AND total = 100%).</div>
+            <div class="behavior">tap CTA → if balance &lt; entryFee opens TopUpModal; else POST entry, debit, route to Live (waiting state)</div>
+          </td></tr>
+        </table>
+      </div>
+
+      <div class="spec-block">
+        <h3>Validation rules</h3>
+        <div class="state-list">
+          <div class="state-row info"><div class="label">Pick count</div><div>Exactly 5 tokens. Less → bar shows "X of 5". More → blocked at picker.</div></div>
+          <div class="state-row info"><div class="label">Allocation</div><div>Sum of allocations = 100%. Stepper increments are 5%. Min per token = 5%, max = 80%.</div></div>
+          <div class="state-row warn"><div class="label">Balance</div><div>If balance &lt; entryFee → CTA becomes "Top up $X to enter"; opens TopUpModal first, returns here on success.</div></div>
+          <div class="state-row warn"><div class="label">Contest still open</div><div>Re-check on confirm; if startsAt passed during build → block + toast "Contest started — try another".</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>States</h3>
+        <div class="state-list">
+          <div class="state-row info"><div class="label">Empty</div><div>0 picks. CTA disabled, summary shows 5 dashed slots.</div></div>
+          <div class="state-row info"><div class="label">Building</div><div>1-4 picks. Summary fills, allocations stay valid via auto-rebalance.</div></div>
+          <div class="state-row ok"><div class="label">Valid</div><div>5 picks, 100% allocated. CTA enabled, "✓ valid" indicator.</div></div>
+          <div class="state-row warn"><div class="label">Over-allocated</div><div>If user manually adjusts and total != 100% → red bar + "needs Y%" copy. CTA disabled.</div></div>
+          <div class="state-row err"><div class="label">Insufficient balance</div><div>CTA copy: "Top up $X to enter". Tap → modal.</div></div>
+          <div class="state-row err"><div class="label">Contest closed mid-build</div><div>Show modal "Contest already started" + return to Lobby button.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Data</h3>
+        <div class="table-grid">
+          <div class="k">GET</div><div class="v"><code>/contests/:id</code> → full contest + <code>availableTokens[]</code></div>
+          <div class="k">Token shape</div><div class="v"><code>Token { sym, name, change24h, priceUsd, iconUrl }</code></div>
+          <div class="k">POST entry</div><div class="v"><code>POST /contests/:id/enter</code> body: <code>{ picks: [{sym, alloc}] }</code> → <code>{ entryId, lockedAt }</code></div>
+          <div class="k">Returns</div><div class="v">On success: redirect to <code>/contests/:id/live?entry=:entryId</code></div>
+          <div class="k">Errors</div><div class="v"><code>409 closed</code>, <code>402 insufficient_balance</code>, <code>400 invalid_lineup</code></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Edge cases</h3>
+        <div class="state-list">
+          <div class="state-row err"><div class="label">Already entered</div><div>Backend returns 409 with existing entryId → route to Live with that entry. No double-entry in MVP.</div></div>
+          <div class="state-row warn"><div class="label">Back during build</div><div>If picks &gt; 0 → confirm sheet "Discard lineup?". Else navigate freely.</div></div>
+          <div class="state-row warn"><div class="label">App closed mid-build</div><div>Persist draft locally (localStorage) for the active contest until contest startsAt. Re-open restores picks.</div></div>
+          <div class="state-row info"><div class="label">5th pick auto-fill</div><div>"Equal split" smart action when user adds 5th token: distributes remaining %.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block questions">
+        <h3 style="border:none; padding:0; margin-bottom:8px;">Open questions for product</h3>
+        <ol>
+          <li><strong>Чи фіксована к-сть токенів = 5?</strong> Чи варіюється per contest (3–10)?</li>
+          <li><strong>Allocation step</strong> — 5% чи 1%? 5% простіше, але обмежує тонке налаштування.</li>
+          <li><strong>Min/max per token</strong> — чи треба обмежувати? 5–80% запропоновано, але можливо free-for-all?</li>
+          <li><strong>"Equal split" як дефолт</strong> — додавання токена авто-балансує до рівних %, чи лишає решту на ручне?</li>
+          <li><strong>Може гравець заходити кілька разів</strong> в один контест з різними lineup'ами (paid feature)? Якщо так — фактично тут break-glass для multi-team.</li>
+          <li><strong>Available tokens</strong> — куратор list per contest чи один глобальний на всі?</li>
+          <li><strong>Lock time</strong> — entry закривається з startsAt чи раніше (e.g. 5 min before)?</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- ── SCREEN 3 · LIVE EVENT ────────────────────────── -->
+<!-- ════════════════════════════════════════════════════ -->
+<section class="screen">
+  <header class="screen-header">
+    <div class="left">
+      <span class="num">03</span>
+      <h2>Live Event</h2>
+      <span class="purpose">Watch your team perform — P/L, rank, per-token contribution. Read-only.</span>
+    </div>
+    <span class="url">/contests/:id/live</span>
+  </header>
+
+  <div class="screen-body">
+
+    <div class="wf-col">
+      <div class="wf-frame">
+        <div class="wf-status"><span>9:41</span><span>● ● ●</span></div>
+        <div class="wf-canvas">
+
+          <!-- 1. header w/ live indicator -->
+          <div class="wf-row between wf-attach">
+            <div class="wf-row" style="gap:8px;">
+              <div class="wf-circle" style="width:24px; height:24px;">‹</div>
+              <div>
+                <div style="font-size:12px; font-weight:700;">Memecoin Madness</div>
+                <div style="font-size:9px; color:var(--muted);">ends in 02:47:13</div>
+              </div>
+            </div>
+            <div class="wf-btn sm" style="background:var(--accent); border-color:var(--accent);">● LIVE</div>
+            <span class="pin" style="top:-10px; right:-10px;">1</span>
+          </div>
+
+          <!-- 2. main scoreboard -->
+          <div class="wf-box tall wf-attach" style="text-align:center;">
+            <div class="wf-label">your performance</div>
+            <div style="font-size:36px; font-weight:800; letter-spacing:-0.02em; margin:6px 0;">+18.4%</div>
+            <div style="font-size:11px; color:var(--muted);">portfolio: $100 → $118.40</div>
+
+            <div class="wf-row between" style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--rule);">
+              <div>
+                <div class="wf-label">rank</div>
+                <div style="font-weight:700; font-size:18px;">#47 <span style="font-size:10px; color:var(--hl-green);">▲ 12</span></div>
+                <div style="font-size:9px; color:var(--muted);">of 247</div>
+              </div>
+              <div>
+                <div class="wf-label">prize if end now</div>
+                <div style="font-weight:700; font-size:18px;">$5.40</div>
+                <div style="font-size:9px; color:var(--muted);">top 30% pays</div>
+              </div>
+              <div>
+                <div class="wf-label">time left</div>
+                <div style="font-weight:700; font-size:18px; font-family:'JetBrains Mono',monospace;">02:47</div>
+                <div style="font-size:9px; color:var(--muted);">hh:mm</div>
+              </div>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">2</span>
+          </div>
+
+          <!-- 3. lineup performance -->
+          <div class="wf-attach" style="display:flex; flex-direction:column; gap:5px;">
+            <div class="wf-label" style="margin-top:2px;">your lineup · live</div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">WIF</div>
+              <div style="flex:1; font-size:11px;">
+                <div style="font-weight:700;">dogwifhat <span style="font-weight:400; color:var(--muted);">40%</span></div>
+                <div class="wf-bar" style="margin-top:3px; height:4px;"><span style="width:80%; background:var(--hl-green);"></span></div>
+              </div>
+              <div style="text-align:right; font-size:11px;">
+                <div style="font-weight:700; color:var(--hl-green);">+24.2%</div>
+                <div style="font-size:9px; color:var(--muted);">+$9.68 contrib</div>
+              </div>
+            </div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">PEPE</div>
+              <div style="flex:1; font-size:11px;">
+                <div style="font-weight:700;">Pepe <span style="font-weight:400; color:var(--muted);">35%</span></div>
+                <div class="wf-bar" style="margin-top:3px; height:4px;"><span style="width:55%; background:var(--hl-green);"></span></div>
+              </div>
+              <div style="text-align:right; font-size:11px;">
+                <div style="font-weight:700; color:var(--hl-green);">+15.1%</div>
+                <div style="font-size:9px; color:var(--muted);">+$5.29 contrib</div>
+              </div>
+            </div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">BONK</div>
+              <div style="flex:1; font-size:11px;">
+                <div style="font-weight:700;">Bonk <span style="font-weight:400; color:var(--muted);">25%</span></div>
+                <div class="wf-bar" style="margin-top:3px; height:4px;"><span style="width:25%; background:var(--hl-red);"></span></div>
+              </div>
+              <div style="text-align:right; font-size:11px;">
+                <div style="font-weight:700; color:var(--hl-red);">−2.5%</div>
+                <div style="font-size:9px; color:var(--muted);">−$0.62 contrib</div>
+              </div>
+            </div>
+            <span class="pin" style="top:-2px; right:-10px;">3</span>
+          </div>
+
+          <!-- 4. mini leaderboard -->
+          <div class="wf-box wf-attach" style="padding:8px 10px;">
+            <div class="wf-row between" style="margin-bottom:6px;">
+              <div class="wf-label">leaderboard</div>
+              <div style="font-size:9px; color:var(--accent); font-weight:700;">VIEW ALL ›</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:3px; font-size:11px;">
+              <div class="wf-row between"><span><strong>#1</strong> Bjorn_99</span><span style="color:var(--hl-green); font-weight:700;">+42.1%</span></div>
+              <div class="wf-row between"><span><strong>#2</strong> ValkyrieX</span><span style="color:var(--hl-green); font-weight:700;">+38.7%</span></div>
+              <div class="wf-row between" style="background:var(--note); padding:2px 4px; margin:0 -4px; border-radius:2px;"><span><strong>#47</strong> alex_99 (you)</span><span style="color:var(--hl-green); font-weight:700;">+18.4%</span></div>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">4</span>
+          </div>
+
+        </div>
+      </div>
+      <div class="wf-caption">screen 03 · live event</div>
+    </div>
+
+    <div class="spec-col">
+
+      <div class="spec-block">
+        <h3>Components</h3>
+        <table>
+          <tr><td><div class="num-pin">1</div></td><td>
+            <div class="name">Header w/ live indicator</div>
+            <div class="desc">Back, contest name, time-left compact, big "● LIVE" badge. Time-left ticks every second client-side.</div>
+            <div class="behavior">back → Lobby (no warning, this is read-only)</div>
+          </td></tr>
+          <tr><td><div class="num-pin">2</div></td><td>
+            <div class="name">Main scoreboard</div>
+            <div class="desc">The hero. Big P/L number, original/current portfolio reference. Three sub-metrics: rank (delta vs last poll), projected prize, time-left.</div>
+            <div class="behavior">refresh every 30 s; animate number tick on change</div>
+          </td></tr>
+          <tr><td><div class="num-pin">3</div></td><td>
+            <div class="name">Lineup performance rows</div>
+            <div class="desc">5 rows = picks. Each shows: token, allocation, contribution bar (positive/negative), perf %, contribution $.</div>
+            <div class="behavior">read-only in MVP; tap could open token-detail sheet (out of scope)</div>
+          </td></tr>
+          <tr><td><div class="num-pin">4</div></td><td>
+            <div class="name">Mini leaderboard</div>
+            <div class="desc">Top 2 + user's row (highlighted). "VIEW ALL" → full leaderboard sheet (out of MVP scope OR included as simple modal).</div>
+            <div class="behavior">tap "VIEW ALL" → leaderboard modal w/ all 247 rows</div>
+          </td></tr>
+        </table>
+      </div>
+
+      <div class="spec-block">
+        <h3>States</h3>
+        <div class="state-list">
+          <div class="state-row info"><div class="label">Waiting (pre-start)</div><div>If user enters before <code>startsAt</code>: scoreboard shows "Starts in MM:SS" instead of P/L. Lineup visible but no perf %.</div></div>
+          <div class="state-row ok"><div class="label">Active</div><div>Live values updating every 30 s. Standard layout.</div></div>
+          <div class="state-row warn"><div class="label">Stale data</div><div>If last poll &gt; 90 s ago: subtle "Reconnecting…" pill near LIVE badge.</div></div>
+          <div class="state-row err"><div class="label">Connection lost</div><div>Banner: "Showing last known values · X min ago" + Retry.</div></div>
+          <div class="state-row info"><div class="label">Ended</div><div>On <code>endsAt</code>: auto-redirect to Result screen after 2 s celebratory state OR show "Final results coming up…" then redirect.</div></div>
+          <div class="state-row warn"><div class="label">Cancelled by ops</div><div>Modal: "Contest cancelled — full refund issued" → return to Lobby.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Data</h3>
+        <div class="table-grid">
+          <div class="k">GET</div><div class="v"><code>/contests/:id/live?entryId=…</code> every 30 s</div>
+          <div class="k">Returns</div><div class="v"><code>{ portfolio: { startUsd, currentUsd, plPct }, rank, rankDelta, projectedPrize, lineup: [{sym, alloc, plPct, contribUsd}], leaderboardTop3, userRow }</code></div>
+          <div class="k">Refresh</div><div class="v">Polling 30 s. Future: SSE for real-time tick. Time-left ticks client-side off <code>endsAt</code>.</div>
+          <div class="k">Auto-route</div><div class="v">When <code>endsAt</code> &le; now → fetch <code>/result</code> → push to /result screen.</div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Edge cases</h3>
+        <div class="state-list">
+          <div class="state-row warn"><div class="label">Backgrounded</div><div>On foreground: force fresh poll within 1 s; if &gt; 60 s gap show "catching up…" splash for max 3 s.</div></div>
+          <div class="state-row warn"><div class="label">Tied rank</div><div>Display "T-#47" prefix when other entries share P/L exactly.</div></div>
+          <div class="state-row info"><div class="label">No projected prize</div><div>If user is below paying threshold: show "—" instead of $ value, with caption "top 30% pays".</div></div>
+          <div class="state-row warn"><div class="label">Server time skew</div><div>Use server-provided <code>endsAt</code> always; never trust client clock for cutoff.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block questions">
+        <h3 style="border:none; padding:0; margin-bottom:8px;">Open questions for product</h3>
+        <ol>
+          <li><strong>Polling vs SSE</strong> — для MVP polling 30s OK? чи на старті треба live-feel (5–10 s)?</li>
+          <li><strong>Projected prize math</strong> — реальний (за поточним rank+payout структурою) чи прихований до фіналу?</li>
+          <li><strong>Можна ділитись в Live</strong> (share P/L) чи тільки на Result екрані?</li>
+          <li><strong>Push-нотифікації</strong> в MVP? E.g. "rank changed", "5 min left", "you're paying".</li>
+          <li><strong>Full leaderboard</strong> — модалка чи окремий екран?</li>
+          <li><strong>Boost/skip</strong> — чи плануємо micro-actions (e.g. swap one token за rebuy fee)? Якщо так — frame це у фічу/non-MVP.</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- ── SCREEN 4 · RESULT ────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════ -->
+<section class="screen">
+  <header class="screen-header">
+    <div class="left">
+      <span class="num">04</span>
+      <h2>Result</h2>
+      <span class="purpose">Final outcome — payout, rank, breakdown, share, replay.</span>
+    </div>
+    <span class="url">/contests/:id/result</span>
+  </header>
+
+  <div class="screen-body">
+
+    <div class="wf-col">
+      <div class="wf-frame">
+        <div class="wf-status"><span>9:41</span><span>● ● ●</span></div>
+        <div class="wf-canvas">
+
+          <!-- 1. header -->
+          <div class="wf-row between wf-attach">
+            <div class="wf-row" style="gap:8px;">
+              <div class="wf-circle" style="width:24px; height:24px;">×</div>
+              <div>
+                <div style="font-size:12px; font-weight:700;">Memecoin Madness</div>
+                <div style="font-size:9px; color:var(--muted);">ended · 4h ago</div>
+              </div>
+            </div>
+            <div style="font-size:9px; color:var(--muted); font-family:'JetBrains Mono',monospace;">final</div>
+            <span class="pin" style="top:-10px; right:-10px;">1</span>
+          </div>
+
+          <!-- 2. headline result -->
+          <div class="wf-box tall wf-attach" style="text-align:center;">
+            <div class="wf-label">you won</div>
+            <div style="font-size:42px; font-weight:800; letter-spacing:-0.02em; margin:6px 0;">$8.60</div>
+            <div style="font-size:11px; color:var(--muted);">final P/L: +24.8% · rank #29 of 247</div>
+            <div class="wf-row" style="justify-content:center; gap:6px; margin-top:10px;">
+              <div class="wf-btn sm">▷ Share</div>
+              <div class="wf-btn sm ghost">View on chain</div>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">2</span>
+          </div>
+
+          <!-- 3. breakdown -->
+          <div class="wf-box wf-attach">
+            <div class="wf-label">breakdown</div>
+            <div class="wf-row between" style="margin-top:4px; font-size:11px;"><span style="color:var(--muted);">entry fee</span><span>−$5.00</span></div>
+            <div class="wf-row between" style="font-size:11px;"><span style="color:var(--muted);">prize won</span><span style="color:var(--hl-green); font-weight:700;">+$13.60</span></div>
+            <div class="wf-divider dash" style="margin:6px 0;"></div>
+            <div class="wf-row between" style="font-size:12px; font-weight:700;"><span>net</span><span style="color:var(--hl-green);">+$8.60</span></div>
+            <span class="pin" style="top:-10px; right:-10px;">3</span>
+          </div>
+
+          <!-- 4. lineup recap -->
+          <div class="wf-attach" style="display:flex; flex-direction:column; gap:5px;">
+            <div class="wf-label" style="margin-top:2px;">your lineup · final</div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">WIF</div>
+              <div style="flex:1; font-size:11px; font-weight:700;">dogwifhat <span style="font-weight:400; color:var(--muted);">40%</span></div>
+              <div style="font-weight:700; color:var(--hl-green); font-size:11px;">+32.4%</div>
+            </div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">PEPE</div>
+              <div style="flex:1; font-size:11px; font-weight:700;">Pepe <span style="font-weight:400; color:var(--muted);">35%</span></div>
+              <div style="font-weight:700; color:var(--hl-green); font-size:11px;">+22.1%</div>
+            </div>
+            <div class="wf-box" style="padding:6px 10px; display:flex; align-items:center; gap:8px;">
+              <div class="wf-circle" style="width:22px; height:22px; font-size:8px;">BONK</div>
+              <div style="flex:1; font-size:11px; font-weight:700;">Bonk <span style="font-weight:400; color:var(--muted);">25%</span></div>
+              <div style="font-weight:700; color:var(--hl-red); font-size:11px;">−4.5%</div>
+            </div>
+            <span class="pin" style="top:-2px; right:-10px;">4</span>
+          </div>
+
+          <!-- 5. CTA row -->
+          <div style="position:absolute; bottom:0; left:0; right:0; border-top:1.5px solid var(--ink); background:var(--paper); padding:10px 12px;" class="wf-attach">
+            <div class="wf-row" style="gap:6px;">
+              <div class="wf-btn ghost sm" style="flex:1;">Lobby</div>
+              <div class="wf-btn" style="flex:2;">Play again →</div>
+            </div>
+            <span class="pin" style="top:-10px; right:-10px;">5</span>
+          </div>
+
+        </div>
+      </div>
+      <div class="wf-caption">screen 04 · result</div>
+    </div>
+
+    <div class="spec-col">
+
+      <div class="spec-block">
+        <h3>Components</h3>
+        <table>
+          <tr><td><div class="num-pin">1</div></td><td>
+            <div class="name">Header — context</div>
+            <div class="desc">Close (×), contest name, "ended · X ago". "Final" tag clarifies snapshot.</div>
+            <div class="behavior">× → Lobby</div>
+          </td></tr>
+          <tr><td><div class="num-pin">2</div></td><td>
+            <div class="name">Headline result</div>
+            <div class="desc">Big number = NET (prize − entry). Caption: final P/L %, final rank "/of N". Share + "View on chain" actions.</div>
+            <div class="behavior">Share → opens native share sheet w/ pre-rendered share-card image + URL; View on chain → opens block explorer for prize tx (out of MVP if no on-chain payout)</div>
+          </td></tr>
+          <tr><td><div class="num-pin">3</div></td><td>
+            <div class="name">Breakdown</div>
+            <div class="desc">Hairline list: entry fee (−), prize won (+), net (highlighted). Plain math.</div>
+            <div class="behavior">none — read-only</div>
+          </td></tr>
+          <tr><td><div class="num-pin">4</div></td><td>
+            <div class="name">Lineup recap</div>
+            <div class="desc">5 rows showing each token's final P/L %. Same layout as Live, but without contribution bar — just final number.</div>
+            <div class="behavior">none in MVP</div>
+          </td></tr>
+          <tr><td><div class="num-pin">5</div></td><td>
+            <div class="name">Bottom CTAs</div>
+            <div class="desc">Two buttons: "Lobby" (ghost) and "Play again" (primary). "Play again" → routes to Lobby with the same contest type filter pre-selected, OR if the same contest has a "next session" → directly to Team Builder for the next one.</div>
+            <div class="behavior">Lobby → / ; Play again → /lobby?prefill=:filter or directly to next session</div>
+          </td></tr>
+        </table>
+      </div>
+
+      <div class="spec-block">
+        <h3>Result variants</h3>
+        <div class="state-list">
+          <div class="state-row ok"><div class="label">Won (in money)</div><div>NET &gt; 0. Headline: "you won $X". Confetti / celebration moment (small, 1 s).</div></div>
+          <div class="state-row warn"><div class="label">Won prize, net loss</div><div>Won &lt; entry fee — rare but possible (e.g. tiered tail prize). Headline: "you won $X · net −$Y". No celebration.</div></div>
+          <div class="state-row err"><div class="label">No prize</div><div>Below cutoff. Headline: "no prize this time". Show "you were close" copy if rank ≤ cutoff + 10. Highlight free roll suggestion.</div></div>
+          <div class="state-row info"><div class="label">Cancelled</div><div>Headline: "contest cancelled · refund $X". Same layout but no rank/perf. Single CTA: "Back to Lobby".</div></div>
+          <div class="state-row info"><div class="label">First-place</div><div>Special hero state: "you won 🏆 · $X" + bigger share emphasis. (Spec for visual layer; functionally same.)</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Data</h3>
+        <div class="table-grid">
+          <div class="k">GET</div><div class="v"><code>/contests/:id/result?entryId=…</code></div>
+          <div class="k">Returns</div><div class="v"><code>{ outcome: 'won'|'no_prize'|'cancelled', prizeUsd, entryFeeUsd, netUsd, finalPlPct, finalRank, totalEntries, lineupFinal: [{sym, alloc, finalPlPct}], shareCardUrl, txHash }</code></div>
+          <div class="k">Idempotent</div><div class="v">Stable result — once written, won't change. Safe to cache aggressively.</div>
+          <div class="k">Share-card</div><div class="v">Pre-rendered PNG generated server-side at result time, URL returned. Used in Share intent.</div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <h3>Edge cases</h3>
+        <div class="state-list">
+          <div class="state-row warn"><div class="label">Direct nav before end</div><div>If user opens /result before <code>endsAt</code> → redirect to /live.</div></div>
+          <div class="state-row warn"><div class="label">Refund pending</div><div>If <code>cancelled</code> and refund not yet posted: show "refund processing · X min" + retry mechanism.</div></div>
+          <div class="state-row info"><div class="label">No share card</div><div>If shareCardUrl missing → fall back to native share with text only.</div></div>
+          <div class="state-row info"><div class="label">Replay context</div><div>"Play again" must read which filter (cash/free) the original contest belonged to. If contest type no longer exists → land on default Lobby.</div></div>
+        </div>
+      </div>
+
+      <div class="spec-block questions">
+        <h3 style="border:none; padding:0; margin-bottom:8px;">Open questions for product</h3>
+        <ol>
+          <li><strong>Виплата</strong> — миттєвий кредит на in-app balance чи on-chain TX? Affects "View on chain".</li>
+          <li><strong>Share-card</strong> — генеруємо server-side (recommended) чи client-side? Який brand?</li>
+          <li><strong>"Play again"</strong> — чи відкриваємо одразу новий contest (next session) чи завжди Lobby?</li>
+          <li><strong>Free roll mechanic</strong> — якщо програв, пропонувати free contest? І чи це affects retention?</li>
+          <li><strong>Breakdown depth</strong> — показувати fees / rake explicit? Affects user trust.</li>
+          <li><strong>Result archive</strong> — де гравець бачить історію? Profile screen (out of MVP)?</li>
+          <li><strong>Top-3 окремий extra</strong> — спецдиплом / NFT / badge для перших трьох? (visual only OR mechanic?)</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ── FOOTNOTE ─────────────────────────────────────── -->
+<div class="footnote">
+  <p><strong>What's NOT in this spec (out of MVP):</strong> auth/onboarding, top-up modal flow, KYC, full leaderboard screen, profile/history, tutorial, settings, push notifications, multi-team, social feed, in-app messaging, chain integration UX. Each can be specced separately when scope allows.</p>
+  <p><strong>Reading order for engineering:</strong> 1) Components (what to build), 2) Data (contracts), 3) States (what to render when), 4) Edge cases (what can break), 5) Open questions (need answers BEFORE coding).</p>
+  <p style="font-family:'JetBrains Mono',monospace; font-size:11px;">v1 · 2026-04 · functional-only · pair with Design Research for visual direction</p>
+</div>
+
+</body>
+</html>
