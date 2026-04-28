@@ -25,6 +25,8 @@ export interface ContestsTickRepo {
   finalizeStart(args: { contestId: string }): Promise<void>;
   findContestsToFinalize2(): Promise<Array<{ id: string; prizePoolCents: bigint }>>;
   finalize(contestId: string): Promise<{ paidCount: number; totalCents: number }>;
+  findStaleContests(thresholdMs: number): Promise<Array<{ id: string }>>;
+  cancelContest(contestId: string): Promise<{ refundedCount: number; totalCents: number }>;
 }
 
 export interface ContestsTickServiceDeps {
@@ -35,6 +37,8 @@ export interface ContestsTickServiceDeps {
 }
 
 const STALE_PRICE_HOURS = 2;
+/** Any contest still scheduled/active this long after startsAt is treated as stuck and refund-cancelled. PLAY_DURATION is 10min, so 1h gives massive margin. */
+const STALE_CONTEST_THRESHOLD_MS = 60 * 60_000;
 
 export interface ContestsTickService {
   tick(): Promise<void>;
@@ -100,6 +104,21 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
           );
         } catch (err) {
           deps.log.error({ err, contestId: c.id }, 'contests.tick finalize failed');
+        }
+      }
+
+      // 4. stuck scheduled/active → cancelled (with refunds). Catches legacy long-duration
+      // contests and any contest whose lifecycle stalled past PLAY_DURATION × 6.
+      const stale = await deps.repo.findStaleContests(STALE_CONTEST_THRESHOLD_MS);
+      for (const c of stale) {
+        try {
+          const r = await deps.repo.cancelContest(c.id);
+          deps.log.info(
+            { contestId: c.id, refundedCount: r.refundedCount, totalCents: r.totalCents },
+            'contests.tick stale cancelled',
+          );
+        } catch (err) {
+          deps.log.error({ err, contestId: c.id }, 'contests.tick stale cancel failed');
         }
       }
     },

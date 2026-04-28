@@ -107,7 +107,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
   const finalizeRepo = createContestsFinalizeRepo(deps.db, currency, deps.config.RAKE_PCT);
-  const tickRepo = createContestsTickRepo(deps.db, finalizeRepo);
+  const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
+  const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
   const tick = createContestsTickService({
     repo: tickRepo,
     log: deps.logger,
@@ -131,7 +132,6 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
-  const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
