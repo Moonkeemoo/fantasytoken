@@ -1,13 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import { CreateContestBody } from '@fantasytoken/shared';
 import { requireAdmin } from '../../lib/admin-auth.js';
 import { errors } from '../../lib/errors.js';
 import type { ContestsService } from '../contests/contests.service.js';
 import type { UsersService } from '../users/users.service.js';
+import type { CancelContestResult } from './admin.cancel.js';
 
 export interface AdminRoutesDeps {
   contests: ContestsService;
   users: UsersService;
+  cancelContest: (args: { contestId: string }) => Promise<CancelContestResult>;
 }
 
 export function makeAdminRoutes(deps: AdminRoutesDeps): FastifyPluginAsync {
@@ -39,6 +42,12 @@ export function makeAdminRoutes(deps: AdminRoutesDeps): FastifyPluginAsync {
         createdByUserId: upsert.userId,
       });
       return { id: created.id };
+    });
+
+    app.post('/contests/:id/cancel', async (req) => {
+      const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const result = await deps.cancelContest({ contestId: id });
+      return result;
     });
   };
 }

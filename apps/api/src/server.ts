@@ -21,6 +21,7 @@ import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
 import { makeAdminRoutes } from './modules/admin/admin.routes.js';
+import { createCancelContest } from './modules/admin/admin.cancel.js';
 import { createEntriesRepo } from './modules/entries/entries.repo.js';
 import { createEntriesService } from './modules/entries/entries.service.js';
 import { makeEntriesRoutes } from './modules/entries/entries.routes.js';
@@ -119,7 +120,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
-  await app.register(makeAdminRoutes({ contests, users }), { prefix: '/admin' });
+  const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
+  await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
   const MINUTE = 60_000;
