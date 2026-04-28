@@ -3,3 +3,4 @@ export * from './contest-list.js';
 export * from './user.js';
 export * from './balance.js';
 export * from './token.js';
+export * from './entry.js';
