@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { tokens } from '../../db/schema/index.js';
+import { contests, entries, tokens } from '../../db/schema/index.js';
 import type { TokensRepo, TokenUpsertRow } from './tokens.service.js';
 
 export function createTokensRepo(db: Database): TokensRepo {
@@ -50,6 +50,17 @@ export function createTokensRepo(db: Database): TokensRepo {
         )
         .orderBy(sql`${tokens.marketCapUsd} DESC NULLS LAST`)
         .limit(limit);
+    },
+
+    async listActiveSymbols() {
+      const rows = await db.execute<{ symbol: string }>(
+        sql`SELECT DISTINCT (pick->>'symbol')::text AS symbol
+            FROM ${entries}
+            JOIN ${contests} ON ${entries.contestId} = ${contests.id},
+            jsonb_array_elements(${entries.picks}::jsonb) pick
+            WHERE ${contests.status} = 'active'`,
+      );
+      return (rows as unknown as Array<{ symbol: string }>).map((r) => r.symbol);
     },
 
     async listPage({ page, limit }) {
