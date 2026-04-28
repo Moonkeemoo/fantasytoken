@@ -66,6 +66,7 @@ export function Lobby() {
         onTopUp={() => setTopUpOpen(true)}
         heading="All contests"
       />
+      <div className="flex-1" />
       <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>

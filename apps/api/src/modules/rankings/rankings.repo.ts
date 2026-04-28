@@ -3,8 +3,6 @@ import type { Database } from '../../db/client.js';
 import { transactions, users } from '../../db/schema/index.js';
 import type { RankingsRepo, RankingRow } from './rankings.service.js';
 
-const GAMEPLAY_TYPES = ['ENTRY_FEE', 'PRIZE_PAYOUT', 'REFUND'] as const;
-
 function rowFromAggregation(r: {
   user_id: string;
   display_name: string | null;
@@ -54,6 +52,7 @@ export function createRankingsRepo(db: Database): RankingsRepo {
     },
 
     async topGlobal(limit) {
+      // All users who've authed are eligible; non-players sit at $0 P&L (tie-broken by createdAt).
       const rows = await db.execute<{
         user_id: string;
         display_name: string | null;
@@ -65,14 +64,12 @@ export function createRankingsRepo(db: Database): RankingsRepo {
           u.id AS user_id,
           u.first_name AS display_name,
           u.username,
-          SUM(t.delta_cents)::text AS net_cents,
+          COALESCE(SUM(CASE WHEN t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN t.delta_cents ELSE 0 END), 0)::text AS net_cents,
           COUNT(DISTINCT t.ref_id) FILTER (WHERE t.type = 'ENTRY_FEE')::text AS contests_played
         FROM users u
-        JOIN transactions t ON t.user_id = u.id
-        WHERE t.type IN (${sql.raw(GAMEPLAY_TYPES.map((s) => `'${s}'`).join(','))})
-        GROUP BY u.id, u.first_name, u.username
-        HAVING COUNT(*) FILTER (WHERE t.type = 'ENTRY_FEE') > 0
-        ORDER BY SUM(t.delta_cents) DESC
+        LEFT JOIN transactions t ON t.user_id = u.id
+        GROUP BY u.id, u.first_name, u.username, u.created_at
+        ORDER BY COALESCE(SUM(CASE WHEN t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN t.delta_cents ELSE 0 END), 0) DESC, u.created_at ASC
         LIMIT ${sql.raw(String(Math.max(1, Math.floor(limit))))}
       `);
       return (
@@ -94,17 +91,17 @@ export function createRankingsRepo(db: Database): RankingsRepo {
     async globalRankOf(userId) {
       const rows = await db.execute<{ rank: string }>(sql`
         WITH net AS (
-          SELECT u.id, SUM(t.delta_cents) AS net_cents
+          SELECT u.id, u.created_at,
+            COALESCE(SUM(CASE WHEN t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN t.delta_cents ELSE 0 END), 0) AS net_cents
           FROM users u
-          JOIN transactions t ON t.user_id = u.id
-          WHERE t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND')
-          GROUP BY u.id
-          HAVING COUNT(*) FILTER (WHERE t.type = 'ENTRY_FEE') > 0
+          LEFT JOIN transactions t ON t.user_id = u.id
+          GROUP BY u.id, u.created_at
         )
         SELECT (
           SELECT COUNT(*) + 1
           FROM net n2
           WHERE n2.net_cents > n1.net_cents
+             OR (n2.net_cents = n1.net_cents AND n2.created_at < n1.created_at)
         )::text AS rank
         FROM net n1
         WHERE n1.id = ${userId}
