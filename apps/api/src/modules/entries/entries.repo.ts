@@ -1,4 +1,4 @@
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, tokens } from '../../db/schema/index.js';
 import type { EntriesRepo } from './entries.service.js';
@@ -36,7 +36,7 @@ export function createEntriesRepo(db: Database): EntriesRepo {
       const found = await db
         .select({ symbol: tokens.symbol })
         .from(tokens)
-        .where(sql`${tokens.symbol} = ANY(${upper})`);
+        .where(inArray(tokens.symbol, upper));
       const foundSet = new Set(found.map((r) => r.symbol));
       return upper.filter((s) => !foundSet.has(s));
     },
