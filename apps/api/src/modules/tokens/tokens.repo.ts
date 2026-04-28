@@ -34,6 +34,24 @@ export function createTokensRepo(db: Database): TokensRepo {
         });
     },
 
+    async search({ q, limit }) {
+      const pattern = `%${q.toUpperCase()}%`;
+      return db
+        .select({
+          symbol: tokens.symbol,
+          name: tokens.name,
+          currentPriceUsd: tokens.currentPriceUsd,
+          pctChange24h: tokens.pctChange24h,
+          marketCapUsd: tokens.marketCapUsd,
+        })
+        .from(tokens)
+        .where(
+          sql`(UPPER(${tokens.symbol}) LIKE ${pattern} OR UPPER(${tokens.name}) LIKE ${pattern})`,
+        )
+        .orderBy(sql`${tokens.marketCapUsd} DESC NULLS LAST`)
+        .limit(limit);
+    },
+
     async listPage({ page, limit }) {
       const offset = page * limit;
       const items = await db
