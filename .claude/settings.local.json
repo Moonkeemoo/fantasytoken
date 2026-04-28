@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf ~/.claude/skills/superpowers)",
+      "Bash(rmdir ~/.claude/skills)",
+      "Bash(mkdir -p /Users/tarasromaniuk/Documents/GitHub/fantasytoken/.claude/skills/find-skills)",
+      "Bash(cp /Users/tarasromaniuk/Documents/GitHub/ora-et-labora/.agents/skills/find-skills/SKILL.md /Users/tarasromaniuk/Documents/GitHub/fantasytoken/.claude/skills/find-skills/SKILL.md)"
+    ]
+  }
+}
