@@ -9,6 +9,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
       const [c] = await db
         .select({
           id: contests.id,
+          name: contests.name,
           status: contests.status,
           startsAt: contests.startsAt,
           endsAt: contests.endsAt,
@@ -20,6 +21,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
       if (!c) return null;
       return {
         id: c.id,
+        name: c.name,
         status: c.status as 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled',
         startsAt: c.startsAt,
         endsAt: c.endsAt,

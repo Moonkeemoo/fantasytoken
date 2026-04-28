@@ -48,6 +48,7 @@ function makeRepo(opts: {
     async getContest() {
       return {
         id: 'c-1',
+        name: 'Test Contest',
         status: opts.status ?? 'active',
         startsAt: new Date('2026-04-28T11:00:00Z'),
         endsAt: new Date('2026-04-28T13:00:00Z'),

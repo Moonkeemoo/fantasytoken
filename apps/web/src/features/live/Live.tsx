@@ -30,7 +30,7 @@ export function Live() {
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <LiveHeader contestName={'Contest'} endsAt={data.endsAt} status={data.status} />
+      <LiveHeader contestName={data.contestName} endsAt={data.endsAt} status={data.status} />
       <Scoreboard
         plPct={data.portfolio.plPct}
         startUsd={data.portfolio.startUsd}
