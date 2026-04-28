@@ -8,7 +8,7 @@ async function main() {
   const logger = createLogger(config);
   const db = createDatabase(config);
 
-  const app = await createServer({ config, logger, db });
+  const { app, stopCrons } = await createServer({ config, logger, db });
 
   try {
     await app.listen({ port: config.PORT, host: '0.0.0.0' });
@@ -22,6 +22,7 @@ async function main() {
   for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, () => {
       logger.info({ sig }, 'Shutting down');
+      stopCrons();
       app.close().then(
         () => process.exit(0),
         (err: unknown) => {
