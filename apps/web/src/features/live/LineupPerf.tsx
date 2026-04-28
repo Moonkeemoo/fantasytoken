@@ -35,11 +35,9 @@ export function LineupPerf({ rows }: LineupPerfProps) {
             </div>
             <div className="text-right text-[11px]">
               <div className={`font-bold ${pos ? 'text-hl-green' : 'text-hl-red'}`}>
-                {formatPct(r.pctChange)}
+                {r.contribUsd >= 0 ? '+' : '-'}${Math.abs(r.contribUsd).toFixed(2)}
               </div>
-              <div className="text-[9px] text-muted">
-                {r.contribUsd >= 0 ? '+' : ''}${r.contribUsd.toFixed(2)} contrib
-              </div>
+              <div className="text-[9px] text-muted">{formatPct(r.pctChange)} token</div>
             </div>
           </Card>
         );

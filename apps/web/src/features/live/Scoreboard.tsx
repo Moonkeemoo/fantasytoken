@@ -1,7 +1,7 @@
 import { useCountdown } from '../../lib/countdown.js';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
-import { formatCents, formatPct, formatTimeLeft } from '../../lib/format.js';
+import { formatCents, formatPct, formatPnl, formatTimeLeft } from '../../lib/format.js';
 
 export interface ScoreboardProps {
   plPct: number;
@@ -32,12 +32,14 @@ export function Scoreboard({
 
   return (
     <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
-      <Label>your performance</Label>
-      <div className="my-[6px] text-[36px] font-extrabold leading-none tracking-tight">
-        {formatPct(plPct)}
+      <Label>your P&amp;L</Label>
+      <div
+        className={`my-[6px] text-[36px] font-extrabold leading-none tracking-tight ${plPct > 0 ? 'text-hl-green' : plPct < 0 ? 'text-hl-red' : ''}`}
+      >
+        {formatPnl(plPct)}
       </div>
       <div className="text-[11px] text-muted">
-        portfolio: ${startUsd.toFixed(2)} → ${currentUsd.toFixed(2)}
+        {formatPct(plPct)} · ${startUsd.toFixed(2)} → ${currentUsd.toFixed(2)}
       </div>
       <div className="mt-3 flex justify-between border-t border-dashed border-rule pt-[10px]">
         <Stat label="rank" primary={rank !== null ? `#${rank}` : '—'} sub={`of ${totalEntries}`} />

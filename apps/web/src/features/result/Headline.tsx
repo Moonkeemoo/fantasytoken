@@ -2,7 +2,7 @@ import type { ResultResponse } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
-import { formatCents, formatPct } from '../../lib/format.js';
+import { formatCents, formatPct, formatPnl } from '../../lib/format.js';
 
 export interface HeadlineProps {
   result: ResultResponse;
@@ -27,8 +27,8 @@ export function Headline({ result, onShare }: HeadlineProps) {
           {formatCents(result.prizeCents)}
         </div>
         <div className="text-[11px] text-muted">
-          final P/L: {formatPct(result.finalPlPct)} · rank #{result.finalRank ?? '—'} of{' '}
-          {result.totalEntries}
+          P&amp;L: {formatPnl(result.finalPlPct)} ({formatPct(result.finalPlPct)}) · rank #
+          {result.finalRank ?? '—'} of {result.totalEntries}
         </div>
         <div className="mt-[10px] flex items-center justify-center gap-[6px]">
           <Button size="sm" variant="primary" onClick={onShare}>
@@ -45,9 +45,13 @@ export function Headline({ result, onShare }: HeadlineProps) {
   return (
     <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
       <Label>no prize this time</Label>
-      <div className="my-2 text-[24px] font-bold leading-tight">{formatPct(result.finalPlPct)}</div>
+      <div
+        className={`my-2 text-[24px] font-bold leading-tight ${result.finalPlPct > 0 ? 'text-hl-green' : result.finalPlPct < 0 ? 'text-hl-red' : ''}`}
+      >
+        {formatPnl(result.finalPlPct)}
+      </div>
       <div className="text-[11px] text-muted">
-        rank #{result.finalRank ?? '—'} of {result.totalEntries}
+        {formatPct(result.finalPlPct)} · rank #{result.finalRank ?? '—'} of {result.totalEntries}
       </div>
     </Card>
   );

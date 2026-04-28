@@ -1,7 +1,7 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
-import { formatPct } from '../../lib/format.js';
+import { formatPnl } from '../../lib/format.js';
 
 export interface MiniLeaderboardProps {
   top: LeaderboardEntry[];
@@ -43,7 +43,7 @@ function Row({ entry }: { entry: LeaderboardEntry }) {
         {entry.isMe && ' (you)'}
       </span>
       <span className={`font-bold ${entry.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
-        {formatPct(entry.scorePct)}
+        {formatPnl(entry.scorePct)}
       </span>
     </div>
   );

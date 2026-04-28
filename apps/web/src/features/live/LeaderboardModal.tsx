@@ -1,6 +1,6 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
-import { formatPct } from '../../lib/format.js';
+import { formatPnl } from '../../lib/format.js';
 
 export interface LeaderboardModalProps {
   open: boolean;
@@ -37,7 +37,7 @@ export function LeaderboardModal({ open, onClose, entries }: LeaderboardModalPro
                   {e.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
                 </span>
                 <span className={`font-bold ${e.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
-                  {formatPct(e.scorePct)}
+                  {formatPnl(e.scorePct)}
                 </span>
               </div>
             ))}

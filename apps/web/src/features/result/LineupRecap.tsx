@@ -16,10 +16,14 @@ export function LineupRecap({ rows }: { rows: LineupFinalRow[] }) {
           <div className="flex-1 text-[11px] font-bold">
             {r.symbol} <span className="font-normal text-muted">{r.alloc}%</span>
           </div>
-          <div
-            className={`text-[11px] font-bold ${r.finalPlPct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}
-          >
-            {formatPct(r.finalPlPct)}
+          <div className="text-right text-[11px]">
+            <div className={`font-bold ${r.finalPlPct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
+              {(() => {
+                const contrib = r.alloc * r.finalPlPct;
+                return `${contrib >= 0 ? '+' : '-'}$${Math.abs(contrib).toFixed(2)}`;
+              })()}
+            </div>
+            <div className="text-[9px] text-muted">{formatPct(r.finalPlPct)} token</div>
           </div>
         </Card>
       ))}
