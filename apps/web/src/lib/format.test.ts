@@ -26,8 +26,8 @@ describe('formatPct', () => {
 });
 
 describe('formatTimeLeft', () => {
-  it('formats hh:mm when > 1h', () => {
-    expect(formatTimeLeft(3 * 3600_000 + 47 * 60_000)).toBe('03:47');
+  it('formats hh:mm:ss when > 1h', () => {
+    expect(formatTimeLeft(3 * 3600_000 + 47 * 60_000 + 12_000)).toBe('03:47:12');
   });
   it('formats mm:ss when < 1h', () => {
     expect(formatTimeLeft(2 * 60_000 + 30_000)).toBe('02:30');

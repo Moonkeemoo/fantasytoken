@@ -24,6 +24,6 @@ export function formatTimeLeft(ms: number): string {
   const min = totalMin % 60;
   const hr = Math.floor(totalMin / 60);
   const pad = (n: number) => n.toString().padStart(2, '0');
-  if (hr > 0) return `${pad(hr)}:${pad(min)}`;
+  if (hr > 0) return `${pad(hr)}:${pad(min)}:${pad(sec)}`;
   return `${pad(min)}:${pad(sec)}`;
 }
