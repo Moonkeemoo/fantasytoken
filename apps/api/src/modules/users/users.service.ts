@@ -32,6 +32,7 @@ export interface UsersServiceDeps {
 
 export interface UsersService {
   upsertOnAuth(args: UpsertOnAuthArgs): Promise<UpsertOnAuthResult>;
+  findUserIdByTelegramId(telegramId: number): Promise<string | null>;
 }
 
 export function createUsersService(deps: UsersServiceDeps): UsersService {
@@ -57,6 +58,10 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
         balanceCents = r.balanceAfter;
       }
       return { userId: created.id, isNew: true, balanceCents };
+    },
+    async findUserIdByTelegramId(telegramId) {
+      const r = await deps.repo.findByTelegramId(telegramId);
+      return r?.id ?? null;
     },
   };
 }

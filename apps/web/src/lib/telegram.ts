@@ -6,6 +6,7 @@ import WebApp from '@twa-dev/sdk';
  */
 export const telegram = {
   user: () => WebApp.initDataUnsafe.user,
+  startParam: () => WebApp.initDataUnsafe.start_param,
   showAlert: (msg: string) => WebApp.showAlert(msg),
   hapticImpact: (style: 'light' | 'medium' | 'heavy' = 'light') =>
     WebApp.HapticFeedback.impactOccurred(style),
