@@ -11,8 +11,8 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { contests } from './contests';
-import { users } from './users';
+import { contests } from './contests.js';
+import { users } from './users.js';
 
 // INV-10: picks immutable after submitted_at.
 export const entries = pgTable(

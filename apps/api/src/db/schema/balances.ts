@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { bigint, pgTable, primaryKey, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 export const balances = pgTable(
   'balances',

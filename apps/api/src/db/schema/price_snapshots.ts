@@ -1,6 +1,6 @@
 import { numeric, pgTable, primaryKey, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
-import { contests } from './contests';
-import { tokens } from './tokens';
+import { contests } from './contests.js';
+import { tokens } from './tokens.js';
 
 // INV-2: immutable once captured.
 export const priceSnapshots = pgTable(

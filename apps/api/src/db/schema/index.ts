@@ -7,10 +7,10 @@
 // actual 'users.js' file on disk (only 'users.ts'), so the '.js' extension causes MODULE_NOT_FOUND.
 // This is a known drizzle-kit limitation. Once drizzle-kit gains proper ESM/ts-node resolution,
 // these should be migrated back to './users.js' per the rest of the apps/api codebase convention.
-export * from './users';
-export * from './balances';
-export * from './transactions';
-export * from './tokens';
-export * from './contests';
-export * from './entries';
-export * from './price_snapshots';
+export * from './users.js';
+export * from './balances.js';
+export * from './transactions.js';
+export * from './tokens.js';
+export * from './contests.js';
+export * from './entries.js';
+export * from './price_snapshots.js';
