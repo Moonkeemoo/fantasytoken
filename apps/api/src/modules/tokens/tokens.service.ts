@@ -33,6 +33,8 @@ export interface TokensRepo {
     }>
   >;
   listActiveSymbols(): Promise<string[]>;
+  /** Returns coingecko_ids for tokens used in any active contest's entry picks. */
+  listActiveCoingeckoIds(): Promise<string[]>;
 }
 
 export interface TokensServiceDeps {
@@ -42,7 +44,7 @@ export interface TokensServiceDeps {
 }
 
 export interface TokensService {
-  syncCatalog(args: { pages: number; perPage: number }): Promise<number>;
+  syncCatalog(args: { pages: number; perPage: number; pageDelayMs?: number }): Promise<number>;
   syncActive(): Promise<number>;
   listPage(args: { page: number; limit: number }): ReturnType<TokensRepo['listPage']>;
   search(args: { q: string; limit: number }): ReturnType<TokensRepo['search']>;
@@ -50,7 +52,7 @@ export interface TokensService {
 
 export function createTokensService(deps: TokensServiceDeps): TokensService {
   return {
-    async syncCatalog({ pages, perPage }) {
+    async syncCatalog({ pages, perPage, pageDelayMs = 5000 }) {
       let upserted = 0;
       for (let page = 1; page <= pages; page++) {
         try {
@@ -62,24 +64,23 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
           // INV-7: log per-page failure; continue to next page.
           deps.log.warn({ err, page }, 'tokens.sync.catalog page failed');
         }
+        // Stagger between pages to avoid CoinGecko free-tier rate-limit (5-15 req/min).
+        if (page < pages && pageDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, pageDelayMs));
+        }
       }
       deps.log.info({ upserted, pages }, 'tokens.sync.catalog done');
       return upserted;
     },
 
     async syncActive() {
-      const symbols = await deps.repo.listActiveSymbols();
-      if (symbols.length === 0) return 0;
+      const ids = await deps.repo.listActiveCoingeckoIds();
+      if (ids.length === 0) return 0;
       try {
-        const markets = await deps.client.topMarkets({ perPage: 250, page: 1 });
-        const upper = new Set(symbols);
-        const filtered = markets.filter((m) => upper.has(m.symbol.toUpperCase()));
-        const rows = filtered.map(toUpsertRow);
+        const markets = await deps.client.marketsByIds(ids);
+        const rows = markets.map(toUpsertRow);
         await deps.repo.upsertMany(rows);
-        deps.log.info(
-          { refreshed: rows.length, active: symbols.length },
-          'tokens.sync.active done',
-        );
+        deps.log.info({ refreshed: rows.length, requested: ids.length }, 'tokens.sync.active done');
         return rows.length;
       } catch (err) {
         deps.log.warn({ err }, 'tokens.sync.active failed');

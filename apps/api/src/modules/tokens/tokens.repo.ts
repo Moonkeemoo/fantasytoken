@@ -63,6 +63,19 @@ export function createTokensRepo(db: Database): TokensRepo {
       return (rows as unknown as Array<{ symbol: string }>).map((r) => r.symbol);
     },
 
+    async listActiveCoingeckoIds() {
+      // Resolve symbols-in-active-contests → coingecko_ids via tokens table.
+      const rows = await db.execute<{ coingecko_id: string }>(
+        sql`SELECT DISTINCT t.coingecko_id
+            FROM ${entries} e
+            JOIN ${contests} c ON e.contest_id = c.id,
+            jsonb_array_elements(e.picks::jsonb) pick
+            JOIN ${tokens} t ON UPPER(t.symbol) = UPPER(pick->>'symbol')
+            WHERE c.status = 'active'`,
+      );
+      return (rows as unknown as Array<{ coingecko_id: string }>).map((r) => r.coingecko_id);
+    },
+
     async listPage({ page, limit }) {
       const offset = page * limit;
       const items = await db

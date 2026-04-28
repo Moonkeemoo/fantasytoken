@@ -35,6 +35,7 @@ export const LiveResponse = z.object({
   projectedPrizeCents: z.number().int().nonnegative(),
   lineup: z.array(LineupRow),
   leaderboardTop: z.array(LeaderboardEntry),
+  leaderboardAll: z.array(LeaderboardEntry),
   userRow: LeaderboardEntry.nullable(),
 });
 export type LiveResponse = z.infer<typeof LiveResponse>;

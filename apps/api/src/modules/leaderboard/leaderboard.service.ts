@@ -147,6 +147,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         projectedPrizeCents,
         lineup,
         leaderboardTop: display.slice(0, 3),
+        leaderboardAll: display.slice(0, 100),
         userRow,
       };
     },

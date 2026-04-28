@@ -18,9 +18,38 @@ export interface CoinGeckoMarket {
 export interface CoinGeckoClient {
   /** Fetch top-N coins ordered by market cap. Free tier: per_page max 250. */
   topMarkets(args: { perPage: number; page: number }): Promise<CoinGeckoMarket[]>;
+  /** Fetch specific coins by their CoinGecko id. Up to 250 ids per call. */
+  marketsByIds(ids: string[]): Promise<CoinGeckoMarket[]>;
 }
 
 export function createCoinGeckoClient(cfg: CoinGeckoConfig, log: Logger): CoinGeckoClient {
+  function buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { accept: 'application/json' };
+    if (cfg.apiKey) {
+      headers['x-cg-demo-api-key'] = cfg.apiKey;
+    }
+    return headers;
+  }
+
+  function parseMarkets(json: unknown): CoinGeckoMarket[] {
+    if (!Array.isArray(json)) {
+      throw new Error('CoinGecko: expected array response');
+    }
+    return json.map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        id: String(r.id ?? ''),
+        symbol: String(r.symbol ?? ''),
+        name: String(r.name ?? ''),
+        current_price: typeof r.current_price === 'number' ? r.current_price : null,
+        market_cap: typeof r.market_cap === 'number' ? r.market_cap : null,
+        price_change_percentage_24h:
+          typeof r.price_change_percentage_24h === 'number' ? r.price_change_percentage_24h : null,
+        last_updated: typeof r.last_updated === 'string' ? r.last_updated : null,
+      };
+    });
+  }
+
   return {
     async topMarkets({ perPage, page }) {
       const url = new URL(`${cfg.baseUrl}/coins/markets`);
@@ -29,39 +58,38 @@ export function createCoinGeckoClient(cfg: CoinGeckoConfig, log: Logger): CoinGe
       url.searchParams.set('page', String(page));
       url.searchParams.set('order', 'market_cap_desc');
 
-      const headers: Record<string, string> = { accept: 'application/json' };
-      // Demo plan key header is x-cg-demo-api-key; pro is x-cg-pro-api-key.
-      // Both work via the same hostname for free-tier-style endpoints.
-      if (cfg.apiKey) {
-        headers['x-cg-demo-api-key'] = cfg.apiKey;
-      }
-
-      const res = await fetch(url.toString(), { headers });
+      const res = await fetch(url.toString(), { headers: buildHeaders() });
       if (!res.ok) {
-        // INV-7: surface caller; INV-8: don't log url params (key may leak via header logs).
         log.warn({ status: res.status }, 'coingecko request failed');
         throw new Error(`CoinGecko ${res.status}`);
       }
-      const json: unknown = await res.json();
-      if (!Array.isArray(json)) {
-        throw new Error('CoinGecko: expected array response');
+      return parseMarkets(await res.json());
+    },
+
+    async marketsByIds(ids: string[]) {
+      if (ids.length === 0) return [];
+      // CoinGecko per_page max 250; for >250 ids, batch sequentially.
+      const BATCH = 250;
+      const out: CoinGeckoMarket[] = [];
+      for (let i = 0; i < ids.length; i += BATCH) {
+        const slice = ids.slice(i, i + BATCH);
+        const url = new URL(`${cfg.baseUrl}/coins/markets`);
+        url.searchParams.set('vs_currency', 'usd');
+        url.searchParams.set('ids', slice.join(','));
+        url.searchParams.set('per_page', String(slice.length));
+        url.searchParams.set('page', '1');
+
+        const res = await fetch(url.toString(), { headers: buildHeaders() });
+        if (!res.ok) {
+          log.warn(
+            { status: res.status, batchSize: slice.length },
+            'coingecko marketsByIds failed',
+          );
+          throw new Error(`CoinGecko ${res.status}`);
+        }
+        out.push(...parseMarkets(await res.json()));
       }
-      // Trust the shape minimally; extract only fields we know about.
-      return json.map((row) => {
-        const r = row as Record<string, unknown>;
-        return {
-          id: String(r.id ?? ''),
-          symbol: String(r.symbol ?? ''),
-          name: String(r.name ?? ''),
-          current_price: typeof r.current_price === 'number' ? r.current_price : null,
-          market_cap: typeof r.market_cap === 'number' ? r.market_cap : null,
-          price_change_percentage_24h:
-            typeof r.price_change_percentage_24h === 'number'
-              ? r.price_change_percentage_24h
-              : null,
-          last_updated: typeof r.last_updated === 'string' ? r.last_updated : null,
-        };
-      });
+      return out;
     },
   };
 }
