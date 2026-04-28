@@ -102,13 +102,20 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
       };
     },
 
-    async getDisplayNameForUser(userId) {
+    async getProfileForUser(userId) {
       const [u] = await db
-        .select({ firstName: users.firstName, username: users.username })
+        .select({
+          firstName: users.firstName,
+          username: users.username,
+          photoUrl: users.photoUrl,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      return u?.firstName ?? u?.username ?? 'Player';
+      return {
+        displayName: u?.firstName ?? u?.username ?? 'Player',
+        avatarUrl: u?.photoUrl ?? null,
+      };
     },
 
     async getImagesBySymbols(symbols) {

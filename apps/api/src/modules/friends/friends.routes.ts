@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { requireTelegramUser } from '../../lib/auth-context.js';
+import { requireTelegramUser, upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import type { UsersService } from '../users/users.service.js';
 import type { FriendsService } from './friends.service.js';
 
@@ -25,11 +25,7 @@ export function makeFriendsRoutes(deps: FriendsRoutesDeps): FastifyPluginAsync {
       const tg = requireTelegramUser(req);
       const body = ReferralBody.parse(req.body);
 
-      const me = await deps.users.upsertOnAuth({
-        telegramId: tg.id,
-        ...(tg.first_name !== undefined && { firstName: tg.first_name }),
-        ...(tg.username !== undefined && { username: tg.username }),
-      });
+      const me = await deps.users.upsertOnAuth(upsertArgsFromTgUser(tg));
       const inviterUserId = await deps.users.findUserIdByTelegramId(body.inviterTelegramId);
       if (!inviterUserId) return { ok: false, reason: 'inviter_not_found' };
 

@@ -4,6 +4,7 @@ export const RankingRow = z.object({
   rank: z.number().int().positive(),
   userId: z.string().uuid(),
   displayName: z.string(),
+  avatarUrl: z.string().nullable(),
   netPnlCents: z.number().int(),
   contestsPlayed: z.number().int().nonnegative(),
   isMe: z.boolean(),

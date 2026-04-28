@@ -8,14 +8,22 @@ export interface UsersRepo {
     telegramId: number;
     firstName?: string;
     username?: string;
+    photoUrl?: string;
   }): Promise<{ id: string; telegramId: number; createdAt: Date }>;
   touchLastSeen(id: string): Promise<void>;
+  updateProfile(args: {
+    id: string;
+    firstName?: string;
+    username?: string;
+    photoUrl?: string;
+  }): Promise<void>;
 }
 
 export interface UpsertOnAuthArgs {
   telegramId: number;
   firstName?: string;
   username?: string;
+  photoUrl?: string;
 }
 
 export interface UpsertOnAuthResult {
@@ -41,6 +49,13 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       const existing = await deps.repo.findByTelegramId(args.telegramId);
       if (existing) {
         await deps.repo.touchLastSeen(existing.id);
+        // Refresh mutable profile fields each auth so they stay current with TG.
+        await deps.repo.updateProfile({
+          id: existing.id,
+          ...(args.firstName !== undefined && { firstName: args.firstName }),
+          ...(args.username !== undefined && { username: args.username }),
+          ...(args.photoUrl !== undefined && { photoUrl: args.photoUrl }),
+        });
         return {
           userId: existing.id,
           isNew: false,

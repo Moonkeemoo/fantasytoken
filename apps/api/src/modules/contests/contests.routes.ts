@@ -2,7 +2,7 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ContestFilter, ContestListResponse } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
-import { tryTelegramUser } from '../../lib/auth-context.js';
+import { tryTelegramUser, upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import type { ContestsService } from './contests.service.js';
 import type { UsersService } from '../users/users.service.js';
 
@@ -24,11 +24,7 @@ async function authedUser(
 ): Promise<string | undefined> {
   const tg = tryTelegramUser(req);
   if (!tg) return undefined;
-  const r = await deps.users.upsertOnAuth({
-    telegramId: tg.id,
-    ...(tg.first_name !== undefined && { firstName: tg.first_name }),
-    ...(tg.username !== undefined && { username: tg.username }),
-  });
+  const r = await deps.users.upsertOnAuth(upsertArgsFromTgUser(tg));
   return r.userId;
 }
 

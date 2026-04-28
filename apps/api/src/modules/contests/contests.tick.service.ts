@@ -32,6 +32,8 @@ export interface ContestsTickRepo {
 export interface ContestsTickServiceDeps {
   repo: ContestsTickRepo;
   log: Logger;
+  /** Called after each successful lock so the lobby refills immediately. */
+  onContestLocked?: () => Promise<void>;
 }
 
 const STALE_PRICE_HOURS = 2;
@@ -75,6 +77,13 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
 
           await deps.repo.lockAndSpawn({ contestId: c.id, botPicks });
           deps.log.info({ contestId: c.id, bots: botCount }, 'contests.tick locked');
+          if (deps.onContestLocked) {
+            try {
+              await deps.onContestLocked();
+            } catch (err) {
+              deps.log.warn({ err, contestId: c.id }, 'contests.tick onContestLocked failed');
+            }
+          }
         } catch (err) {
           deps.log.error({ err, contestId: c.id }, 'contests.tick lock failed');
         }

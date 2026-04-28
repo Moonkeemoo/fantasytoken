@@ -14,6 +14,7 @@ export const LeaderboardEntry = z.object({
   entryId: z.string().uuid(),
   isBot: z.boolean(),
   displayName: z.string(),
+  avatarUrl: z.string().nullable(),
   scorePct: z.number(),
   isMe: z.boolean(),
 });

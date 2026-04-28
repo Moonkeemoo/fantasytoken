@@ -29,6 +29,13 @@
       "when": 1777404664040,
       "tag": "0003_complete_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777407514017,
+      "tag": "0004_worthless_sugar_man",
+      "breakpoints": true
     }
   ]
 }

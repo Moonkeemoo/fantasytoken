@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { LiveResponse } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
-import { tryTelegramUser } from '../../lib/auth-context.js';
+import { tryTelegramUser, upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import type { LeaderboardService } from './leaderboard.service.js';
 import type { UsersService } from '../users/users.service.js';
 
@@ -19,11 +19,7 @@ export function makeLiveRoutes(deps: LiveRoutesDeps): FastifyPluginAsync {
       const tg = tryTelegramUser(req);
       let userId: string | undefined;
       if (tg) {
-        const upsert = await deps.users.upsertOnAuth({
-          telegramId: tg.id,
-          ...(tg.first_name !== undefined && { firstName: tg.first_name }),
-          ...(tg.username !== undefined && { username: tg.username }),
-        });
+        const upsert = await deps.users.upsertOnAuth(upsertArgsFromTgUser(tg));
         userId = upsert.userId;
       }
 

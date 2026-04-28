@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
+import { Avatar } from '../../components/ui/Avatar.js';
 import { formatPnl } from '../../lib/format.js';
 
 export interface LeaderboardModalProps {
@@ -31,10 +32,14 @@ export function LeaderboardModal({ open, onClose, entries }: LeaderboardModalPro
                   e.isMe ? 'bg-note' : ''
                 }`}
               >
-                <span>
-                  <strong>#{e.rank}</strong> {e.displayName}
-                  {e.isBot && <span className="ml-1 text-[10px] text-muted">(bot)</span>}
-                  {e.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                <span className="flex items-center gap-[6px] truncate">
+                  <strong className="font-mono text-[10px]">#{e.rank}</strong>
+                  <Avatar name={e.displayName} url={e.avatarUrl} size={20} bot={e.isBot} />
+                  <span className="truncate">
+                    {e.displayName}
+                    {e.isBot && <span className="ml-1 text-[10px] text-muted">(bot)</span>}
+                    {e.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                  </span>
                 </span>
                 <span className={`font-bold ${e.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
                   {formatPnl(e.scorePct)}
