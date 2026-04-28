@@ -1,6 +1,7 @@
 export interface RankingRow {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
   netPnlCents: number;
   contestsPlayed: number;
 }
@@ -22,6 +23,7 @@ export interface RankingsService {
       rank: number;
       userId: string;
       displayName: string;
+      avatarUrl: string | null;
       netPnlCents: number;
       contestsPlayed: number;
       isMe: boolean;
@@ -32,6 +34,7 @@ export interface RankingsService {
       rank: number;
       userId: string;
       displayName: string;
+      avatarUrl: string | null;
       netPnlCents: number;
       contestsPlayed: number;
       isMe: boolean;
@@ -40,6 +43,7 @@ export interface RankingsService {
       rank: number;
       userId: string;
       displayName: string;
+      avatarUrl: string | null;
       netPnlCents: number;
       contestsPlayed: number;
     } | null;
@@ -64,6 +68,7 @@ export function createRankingsService(deps: RankingsServiceDeps): RankingsServic
           rank: i + 1,
           userId: r.userId,
           displayName: r.displayName,
+          avatarUrl: r.avatarUrl,
           netPnlCents: r.netPnlCents,
           contestsPlayed: r.contestsPlayed,
           isMe: r.userId === userId,
@@ -77,6 +82,7 @@ export function createRankingsService(deps: RankingsServiceDeps): RankingsServic
         rank: i + 1,
         userId: r.userId,
         displayName: r.displayName,
+        avatarUrl: r.avatarUrl,
         netPnlCents: r.netPnlCents,
         contestsPlayed: r.contestsPlayed,
         isMe: r.userId === userId,
@@ -91,6 +97,7 @@ export function createRankingsService(deps: RankingsServiceDeps): RankingsServic
             rank: myRank,
             userId: myRow.userId,
             displayName: myRow.displayName,
+            avatarUrl: myRow.avatarUrl,
             netPnlCents: myRow.netPnlCents,
             contestsPlayed: myRow.contestsPlayed,
           };

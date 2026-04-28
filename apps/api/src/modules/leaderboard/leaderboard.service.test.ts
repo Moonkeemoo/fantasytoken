@@ -72,8 +72,8 @@ function makeRepo(opts: {
       const e = opts.entries.find((e) => e.userId === userId);
       return e ?? null;
     },
-    async getDisplayNameForUser() {
-      return opts.displayName ?? 'You';
+    async getProfileForUser() {
+      return { displayName: opts.displayName ?? 'You', avatarUrl: null };
     },
     async getImagesBySymbols() {
       return new Map();

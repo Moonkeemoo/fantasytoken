@@ -34,6 +34,7 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
         telegramId: tgUser.id,
         ...(tgUser.first_name !== undefined && { firstName: tgUser.first_name }),
         ...(tgUser.username !== undefined && { username: tgUser.username }),
+        ...(tgUser.photo_url !== undefined && { photoUrl: tgUser.photo_url }),
       });
 
       return {
@@ -42,6 +43,7 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
           first_name: tgUser.first_name ?? '',
           last_name: tgUser.last_name,
           username: tgUser.username,
+          photo_url: tgUser.photo_url,
           language_code: tgUser.language_code,
         },
         balanceCents: Number(upsert.balanceCents),

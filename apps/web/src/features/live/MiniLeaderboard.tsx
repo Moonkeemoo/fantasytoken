@@ -1,6 +1,7 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
+import { Avatar } from '../../components/ui/Avatar.js';
 import { formatPnl } from '../../lib/format.js';
 
 export interface MiniLeaderboardProps {
@@ -37,10 +38,14 @@ export function MiniLeaderboard({ top, userRow, onViewAll }: MiniLeaderboardProp
 
 function Row({ entry }: { entry: LeaderboardEntry }) {
   return (
-    <div className="flex items-center justify-between">
-      <span>
-        <strong>#{entry.rank}</strong> {entry.displayName}
-        {entry.isMe && ' (you)'}
+    <div className="flex items-center justify-between gap-2">
+      <span className="flex items-center gap-[6px] truncate">
+        <strong className="font-mono text-[10px]">#{entry.rank}</strong>
+        <Avatar name={entry.displayName} url={entry.avatarUrl} size={18} bot={entry.isBot} />
+        <span className="truncate">
+          {entry.displayName}
+          {entry.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+        </span>
       </span>
       <span className={`font-bold ${entry.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
         {formatPnl(entry.scorePct)}

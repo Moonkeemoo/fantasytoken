@@ -4,6 +4,25 @@ import { errors } from './errors.js';
 import { parseUserFromInitData, validateInitData } from './telegram-auth.js';
 
 /**
+ * Convenience: build the args object that UsersService.upsertOnAuth expects from a
+ * verified TelegramUser. Spreads only fields that were actually provided so we don't
+ * accidentally null-out columns when a TG payload omits e.g. photo_url.
+ */
+export function upsertArgsFromTgUser(tg: TelegramUser): {
+  telegramId: number;
+  firstName?: string;
+  username?: string;
+  photoUrl?: string;
+} {
+  return {
+    telegramId: tg.id,
+    ...(tg.first_name !== undefined && { firstName: tg.first_name }),
+    ...(tg.username !== undefined && { username: tg.username }),
+    ...(tg.photo_url !== undefined && { photoUrl: tg.photo_url }),
+  };
+}
+
+/**
  * Validate initData (INV-1) and return the parsed Telegram user.
  * Throws AppError on missing/invalid data — use when auth is required.
  */

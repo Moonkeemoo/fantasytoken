@@ -10,6 +10,7 @@ import { Pill } from '../../components/ui/Pill.js';
 import { Card } from '../../components/ui/Card.js';
 import { Button } from '../../components/ui/Button.js';
 import { Label } from '../../components/ui/Label.js';
+import { Avatar } from '../../components/ui/Avatar.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { formatCents } from '../../lib/format.js';
 
@@ -107,10 +108,16 @@ function FriendsView({
               key={r.userId}
               className={`flex items-center justify-between !px-[10px] !py-[7px] ${r.isMe ? 'bg-note' : ''}`}
             >
-              <span className="text-[12px]">
-                <strong>#{r.rank}</strong> {r.displayName}
-                {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
-                <span className="ml-2 text-[9px] text-muted">{r.contestsPlayed} contests</span>
+              <span className="flex items-center gap-[8px] text-[12px]">
+                <strong className="font-mono text-[10px]">#{r.rank}</strong>
+                <Avatar name={r.displayName} url={r.avatarUrl} size={26} />
+                <span className="flex flex-col leading-tight">
+                  <span>
+                    {r.displayName}
+                    {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                  </span>
+                  <span className="text-[9px] text-muted">{r.contestsPlayed} contests</span>
+                </span>
               </span>
               <span
                 className={`font-bold ${r.netPnlCents > 0 ? 'text-hl-green' : r.netPnlCents < 0 ? 'text-hl-red' : ''}`}
@@ -153,9 +160,13 @@ function GlobalView({
               key={r.userId}
               className={`flex items-center justify-between !px-[10px] !py-[6px] ${r.isMe ? 'bg-note' : ''}`}
             >
-              <span className="text-[12px]">
-                <strong>#{r.rank}</strong> {r.displayName}
-                {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+              <span className="flex items-center gap-[8px] text-[12px]">
+                <strong className="font-mono text-[10px]">#{r.rank}</strong>
+                <Avatar name={r.displayName} url={r.avatarUrl} size={22} />
+                <span>
+                  {r.displayName}
+                  {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                </span>
               </span>
               <span
                 className={`font-bold ${r.netPnlCents > 0 ? 'text-hl-green' : r.netPnlCents < 0 ? 'text-hl-red' : ''}`}
@@ -170,9 +181,12 @@ function GlobalView({
         <div className="mt-2 px-3">
           <div className="text-[9px] uppercase tracking-[0.08em] text-muted">your position</div>
           <Card className="mt-1 flex items-center justify-between !px-[10px] !py-[7px] bg-note ring-2 ring-accent/40">
-            <span className="text-[12px]">
-              <strong>#{data.me.rank}</strong> {data.me.displayName}{' '}
-              <span className="text-[10px] text-muted">(you)</span>
+            <span className="flex items-center gap-[8px] text-[12px]">
+              <strong className="font-mono text-[10px]">#{data.me.rank}</strong>
+              <Avatar name={data.me.displayName} url={data.me.avatarUrl} size={22} />
+              <span>
+                {data.me.displayName} <span className="text-[10px] text-muted">(you)</span>
+              </span>
             </span>
             <span
               className={`font-bold ${data.me.netPnlCents > 0 ? 'text-hl-green' : data.me.netPnlCents < 0 ? 'text-hl-red' : ''}`}

@@ -33,7 +33,7 @@ export interface LeaderboardRepo {
   getPriceSnapshots(contestId: string, phase: 'start' | 'end'): Promise<Map<string, number>>;
   getCurrentPrices(symbols: string[]): Promise<Map<string, number>>;
   getMyEntry(contestId: string, userId: string): Promise<EntrySnapshot | null>;
-  getDisplayNameForUser(userId: string): Promise<string>;
+  getProfileForUser(userId: string): Promise<{ displayName: string; avatarUrl: string | null }>;
   getImagesBySymbols(symbols: string[]): Promise<Map<string, string | null>>;
 }
 
@@ -78,10 +78,13 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         scored.map(async (s, i) => {
           const isMe = !!userId && s.entry.userId === userId;
           let displayName: string;
+          let avatarUrl: string | null = null;
           if (s.entry.isBot) {
             displayName = s.entry.botHandle ?? 'bot';
           } else if (s.entry.userId) {
-            displayName = await deps.repo.getDisplayNameForUser(s.entry.userId);
+            const p = await deps.repo.getProfileForUser(s.entry.userId);
+            displayName = p.displayName;
+            avatarUrl = p.avatarUrl;
           } else {
             displayName = '—';
           }
@@ -90,6 +93,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
             entryId: s.entry.entryId,
             isBot: s.entry.isBot,
             displayName,
+            avatarUrl,
             scorePct: s.score,
             isMe,
           };

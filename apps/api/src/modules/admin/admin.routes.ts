@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { CreateContestBody } from '@fantasytoken/shared';
 import { requireAdmin } from '../../lib/admin-auth.js';
+import { upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import { errors } from '../../lib/errors.js';
 import type { ContestsService } from '../contests/contests.service.js';
 import type { UsersService } from '../users/users.service.js';
@@ -23,11 +24,7 @@ export function makeAdminRoutes(deps: AdminRoutesDeps): FastifyPluginAsync {
 
       const body = CreateContestBody.parse(req.body);
 
-      const upsert = await deps.users.upsertOnAuth({
-        telegramId: tg.id,
-        ...(tg.first_name !== undefined && { firstName: tg.first_name }),
-        ...(tg.username !== undefined && { username: tg.username }),
-      });
+      const upsert = await deps.users.upsertOnAuth(upsertArgsFromTgUser(tg));
 
       const startsAt = new Date(body.startsAt);
       const endsAt = new Date(body.endsAt);

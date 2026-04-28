@@ -5,6 +5,7 @@ export const TelegramUser = z.object({
   first_name: z.string(),
   last_name: z.string().optional(),
   username: z.string().optional(),
+  photo_url: z.string().optional(),
   language_code: z.string().optional(),
 });
 export type TelegramUser = z.infer<typeof TelegramUser>;

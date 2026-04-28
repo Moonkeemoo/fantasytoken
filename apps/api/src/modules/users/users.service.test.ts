@@ -21,6 +21,9 @@ function makeFakeRepo(): UsersRepo & {
     async touchLastSeen(_id) {
       // no-op for tests
     },
+    async updateProfile(_args) {
+      // no-op for tests
+    },
   };
 }
 

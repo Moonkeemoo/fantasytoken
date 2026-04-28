@@ -115,9 +115,18 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const finalizeRepo = createContestsFinalizeRepo(deps.db, currency, deps.config.RAKE_PCT);
   const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
+  const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
+  const replenish = createReplenishService({
+    db: deps.db,
+    log: deps.logger,
+    adminTelegramId,
+  });
   const tick = createContestsTickService({
     repo: tickRepo,
     log: deps.logger,
+    onContestLocked: async () => {
+      await replenish.replenish();
+    },
   });
 
   const leaderboardRepo = createLeaderboardRepo(deps.db);
@@ -176,13 +185,6 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     name: 'tokens.sync.active',
     log: deps.logger,
     runOnStart: deps.config.NODE_ENV !== 'test',
-  });
-
-  const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
-  const replenish = createReplenishService({
-    db: deps.db,
-    log: deps.logger,
-    adminTelegramId,
   });
 
   const stopReplenish = scheduleEvery({
