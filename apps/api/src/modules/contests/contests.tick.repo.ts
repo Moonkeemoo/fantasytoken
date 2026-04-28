@@ -170,7 +170,10 @@ export function createContestsTickRepo(
         .where(
           and(
             or(eq(contests.status, 'scheduled'), eq(contests.status, 'active')),
-            lt(contests.startsAt, cutoff),
+            or(
+              lt(contests.startsAt, cutoff),
+              sql`(${contests.endsAt} - ${contests.startsAt}) > make_interval(secs => ${Math.floor(thresholdMs / 1000)})`,
+            ),
           ),
         );
       return rows;
