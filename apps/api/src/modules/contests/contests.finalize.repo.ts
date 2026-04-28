@@ -30,6 +30,7 @@ export function createContestsFinalizeRepo(
           id: contests.id,
           prizePoolCents: contests.prizePoolCents,
           entryFeeCents: contests.entryFeeCents,
+          type: contests.type,
         })
         .from(contests)
         .where(eq(contests.id, contestId))
@@ -88,6 +89,7 @@ export function createContestsFinalizeRepo(
         entries: inputEntries,
         prices,
         prizePoolCents: actualPoolCents,
+        contestType: contest.type === 'bear' ? 'bear' : 'bull',
       });
 
       // 5. Apply entry updates + contest status in single tx.

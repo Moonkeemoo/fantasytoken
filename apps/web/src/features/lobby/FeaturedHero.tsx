@@ -13,10 +13,24 @@ export interface FeaturedHeroProps {
 
 export function FeaturedHero({ contest, onEnter }: FeaturedHeroProps) {
   const ms = useCountdown(contest.startsAt);
+  const isBear = contest.type === 'bear';
   return (
-    <Card variant="dim" shadow className="m-3 px-[14px] py-3">
+    <Card
+      variant="dim"
+      shadow
+      className={`m-3 px-[14px] py-3 ${isBear ? 'border-l-[3px] border-l-hl-red' : ''}`}
+    >
       <Label>★ FEATURED CONTEST</Label>
-      <div className="mt-1 text-[15px] font-bold leading-tight">{contest.name}</div>
+      <div className="mt-1 flex items-center gap-2 text-[15px] font-bold leading-tight">
+        {contest.name}
+        <span
+          className={`rounded-[2px] border-[1px] px-[5px] py-[1px] font-mono text-[9px] uppercase tracking-[0.06em] ${
+            isBear ? 'border-hl-red text-hl-red' : 'border-hl-green text-hl-green'
+          }`}
+        >
+          {isBear ? '↓ Bear · most-loss wins' : '↑ Bull · most-gain wins'}
+        </span>
+      </div>
       <div className="mt-2 flex justify-between">
         <Stat label="prize pool" value={formatCents(contest.prizePoolCents)} />
         <Stat label="entry" value={formatCents(contest.entryFeeCents)} />

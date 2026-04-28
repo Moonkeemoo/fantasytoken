@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ContestStatus } from './contest.js';
+import { ContestStatus, ContestType } from './contest.js';
 
 export const ContestFilter = z.enum(['cash', 'free', 'my']);
 export type ContestFilter = z.infer<typeof ContestFilter>;
@@ -8,6 +8,7 @@ export type ContestFilter = z.infer<typeof ContestFilter>;
 export const ContestListItem = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  type: ContestType,
   status: ContestStatus,
   entryFeeCents: z.number().int().nonnegative(),
   prizePoolCents: z.number().int().nonnegative(),

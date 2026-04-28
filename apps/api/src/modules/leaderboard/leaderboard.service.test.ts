@@ -30,6 +30,7 @@ function makeRepo(opts: {
   status?: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
   prizePoolCents?: number;
   entryFeeCents?: number;
+  contestType?: 'bull' | 'bear';
   entries: EntrySnapshot[];
   startPrices?: Record<string, number>;
   currentPrices?: Record<string, number>;
@@ -55,6 +56,7 @@ function makeRepo(opts: {
         endsAt: new Date('2026-04-28T13:00:00Z'),
         prizePoolCents: opts.prizePoolCents ?? 100_000,
         entryFeeCents: opts.entryFeeCents ?? 0,
+        type: opts.contestType ?? 'bull',
       };
     },
     async getEntries() {

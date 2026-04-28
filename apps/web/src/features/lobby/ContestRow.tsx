@@ -64,13 +64,25 @@ export function ContestRow({
     caption = `Win up to ${formatCents(contest.prizePoolCents)} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
   }
 
+  const isBear = contest.type === 'bear';
   return (
-    <Card className="flex items-center gap-[10px] !px-[10px] !py-[6px]">
+    <Card
+      className={`flex items-center gap-[10px] !px-[10px] !py-[6px] ${isBear ? 'border-l-[3px] border-l-hl-red' : ''}`}
+    >
       <div className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold">
         {fee}
       </div>
       <div className="flex-1">
-        <div className="text-[12px] font-bold leading-tight">{contest.name}</div>
+        <div className="flex items-center gap-[6px] text-[12px] font-bold leading-tight">
+          {contest.name}
+          <span
+            className={`rounded-[2px] border-[1px] px-[4px] py-[1px] font-mono text-[8px] uppercase tracking-[0.06em] ${
+              isBear ? 'border-hl-red text-hl-red' : 'border-hl-green text-hl-green'
+            }`}
+          >
+            {isBear ? '↓ Bear' : '↑ Bull'}
+          </span>
+        </div>
         <div className="text-[10px] text-muted">{caption}</div>
       </div>
       <Button

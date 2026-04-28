@@ -118,8 +118,6 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const tick = createContestsTickService({
     repo: tickRepo,
     log: deps.logger,
-    botMinFiller: deps.config.BOT_MIN_FILLER,
-    botRatio: deps.config.BOT_RATIO,
   });
 
   const leaderboardRepo = createLeaderboardRepo(deps.db);

@@ -9,6 +9,7 @@ import type { Logger } from '../../logger.js';
 export const REPLENISH_TEMPLATES = [
   {
     name: 'Quick Match',
+    type: 'bull' as const,
     entryFeeCents: 100n,
     prizePoolCents: 0n,
     maxCapacity: 20,
@@ -16,14 +17,16 @@ export const REPLENISH_TEMPLATES = [
   },
   {
     name: 'Memecoin Madness',
+    type: 'bull' as const,
     entryFeeCents: 500n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: true,
   },
   {
-    name: 'High Stakes',
-    entryFeeCents: 2_500n,
+    name: 'Bear Trap',
+    type: 'bear' as const,
+    entryFeeCents: 100n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -85,6 +88,7 @@ export function createReplenishService(deps: ReplenishServiceDeps): ReplenishSer
 
         await deps.db.insert(contests).values({
           name: t.name,
+          type: t.type,
           entryFeeCents: t.entryFeeCents,
           prizePoolCents: t.prizePoolCents,
           maxCapacity: t.maxCapacity,

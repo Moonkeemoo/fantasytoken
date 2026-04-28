@@ -12,6 +12,8 @@ export interface FinalizeArgs {
   entries: FinalizeInputEntry[];
   prices: Map<string, { start: number; end: number }>;
   prizePoolCents: number;
+  /** 'bull' = highest P&L wins; 'bear' = most-losing P&L wins (rank ASC). Default 'bull'. */
+  contestType?: 'bull' | 'bear';
 }
 
 export interface FinalizedEntry {
@@ -35,7 +37,8 @@ export interface FinalizeResult {
 }
 
 export function finalizeContest(args: FinalizeArgs): FinalizeResult {
-  const { entries, prices, prizePoolCents } = args;
+  const { entries, prices, prizePoolCents, contestType = 'bull' } = args;
+  const dir = contestType === 'bear' ? -1 : 1;
 
   const scored = entries.map((e) => ({
     entry: e,
@@ -43,7 +46,7 @@ export function finalizeContest(args: FinalizeArgs): FinalizeResult {
   }));
 
   scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
+    if (b.score !== a.score) return dir * (b.score - a.score);
     return a.entry.submittedAt.getTime() - b.entry.submittedAt.getTime();
   });
 

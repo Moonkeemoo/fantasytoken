@@ -111,4 +111,36 @@ describe('finalizeContest', () => {
     const sum = result.payouts.reduce((s, p) => s + p.cents, 0);
     expect(sum).toBe(1_000_000);
   });
+
+  it('bear contest: most-losing real entry wins (rank ASC)', () => {
+    const lowBtc = entry('low-btc', {
+      submittedAt: new Date('2026-04-28T11:00:00Z'),
+      picks: [
+        { symbol: 'BTC', alloc: 10 },
+        { symbol: 'ETH', alloc: 25 },
+        { symbol: 'PEPE', alloc: 25 },
+        { symbol: 'WIF', alloc: 25 },
+        { symbol: 'BONK', alloc: 15 },
+      ],
+    });
+    const highBtc = entry('high-btc', {
+      submittedAt: new Date('2026-04-28T11:00:01Z'),
+      picks: [
+        { symbol: 'BTC', alloc: 80 },
+        { symbol: 'ETH', alloc: 5 },
+        { symbol: 'PEPE', alloc: 5 },
+        { symbol: 'WIF', alloc: 5 },
+        { symbol: 'BONK', alloc: 5 },
+      ],
+    });
+    const result = finalizeContest({
+      entries: [highBtc, lowBtc],
+      prices: PRICES_BTC_UP,
+      prizePoolCents: 10_000,
+      contestType: 'bear',
+    });
+    // BTC +10%; high-BTC has higher score; in bear lowest wins → low-btc rank 1.
+    expect(result.entries[0]?.entryId).toBe('low-btc');
+    expect(result.payouts[0]?.entryId).toBe('low-btc');
+  });
 });

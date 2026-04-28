@@ -32,8 +32,6 @@ export interface ContestsTickRepo {
 export interface ContestsTickServiceDeps {
   repo: ContestsTickRepo;
   log: Logger;
-  botMinFiller: number;
-  botRatio: number;
 }
 
 const STALE_PRICE_HOURS = 2;
@@ -62,9 +60,9 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
             continue;
           }
 
-          const targetBots = Math.max(deps.botMinFiller, c.realEntries * deps.botRatio);
-          const cap = c.maxCapacity - c.realEntries;
-          const botCount = Math.max(0, Math.min(targetBots, cap));
+          // Fill remaining seats: maxCapacity − realEntries. Pure capacity-fill, no
+          // ratio/min logic — every contest reaches exactly maxCapacity at lock time.
+          const botCount = Math.max(0, c.maxCapacity - c.realEntries);
 
           const allSymbols = await deps.repo.listSymbols();
           const botPicks: Array<{ handle: string; picks: { symbol: string; alloc: number }[] }> =

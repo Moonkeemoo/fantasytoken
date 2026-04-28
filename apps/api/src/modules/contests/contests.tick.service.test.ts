@@ -137,12 +137,12 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops).toHaveLength(0);
     });
 
-    it('spawns BOT_MIN_FILLER bots when zero real entries', async () => {
+    it('fills empty contest to capacity (cap=20, real=0 → 20 bots)', async () => {
       const { repo, ops } = makeFakeRepo({
         contests: [
           {
@@ -150,18 +150,18 @@ describe('ContestsTickService', () => {
             status: 'scheduled',
             startsAt: nowPlusMin(-1),
             endsAt: nowPlusMin(10),
-            maxCapacity: 100,
+            maxCapacity: 20,
             realEntries: 0,
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops).toHaveLength(1);
       expect(ops[0]).toMatchObject({ kind: 'lock', contestId: 'c1', bots: 20 });
     });
 
-    it('uses real_count × BOT_RATIO when greater than min', async () => {
+    it('fills only the empty seats (cap=20, real=1 → 19 bots)', async () => {
       const { repo, ops } = makeFakeRepo({
         contests: [
           {
@@ -169,18 +169,18 @@ describe('ContestsTickService', () => {
             status: 'scheduled',
             startsAt: nowPlusMin(-1),
             endsAt: nowPlusMin(10),
-            maxCapacity: 1000,
-            realEntries: 50,
+            maxCapacity: 20,
+            realEntries: 1,
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       const op0 = ops[0];
-      expect(op0?.kind === 'lock' ? op0.bots : undefined).toBe(150);
+      expect(op0?.kind === 'lock' ? op0.bots : undefined).toBe(19);
     });
 
-    it('caps bot count at max_capacity − real_entries', async () => {
+    it('zero bots when contest already full', async () => {
       const { repo, ops } = makeFakeRepo({
         contests: [
           {
@@ -188,16 +188,15 @@ describe('ContestsTickService', () => {
             status: 'scheduled',
             startsAt: nowPlusMin(-1),
             endsAt: nowPlusMin(10),
-            maxCapacity: 100,
-            realEntries: 50,
+            maxCapacity: 20,
+            realEntries: 20,
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
-      // want 150 (50*3), cap = 100-50 = 50
       const op0 = ops[0];
-      expect(op0?.kind === 'lock' ? op0.bots : undefined).toBe(50);
+      expect(op0?.kind === 'lock' ? op0.bots : undefined).toBe(0);
     });
 
     it('aborts lock if any token price stale (>2h)', async () => {
@@ -220,7 +219,7 @@ describe('ContestsTickService', () => {
           { symbol: 'BONK', lastUpdatedAt: new Date() },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops).toHaveLength(0);
     });
@@ -240,7 +239,7 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       // step 2 transitions active→finalizing; step 3 immediately picks it up in the same tick
       expect(ops).toHaveLength(2);
@@ -263,7 +262,7 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'stuck')).toBe(true);
     });
@@ -281,7 +280,7 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'long-duration')).toBe(true);
     });
@@ -306,7 +305,7 @@ describe('ContestsTickService', () => {
           { symbol: 'BONK', lastUpdatedAt: new Date() },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops.some((o) => o.kind === 'lock')).toBe(false); // lock aborted by stale prices
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'orphan')).toBe(true);
@@ -325,7 +324,7 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops.some((o) => o.kind === 'cancel')).toBe(false);
     });
@@ -345,7 +344,7 @@ describe('ContestsTickService', () => {
           },
         ],
       });
-      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops).toHaveLength(1);
       expect(ops[0]).toMatchObject({ kind: 'finalize2', contestId: 'c1' });

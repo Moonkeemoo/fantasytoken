@@ -29,6 +29,7 @@ function rowFromDbRow(
   return {
     id: row.id,
     name: row.name,
+    type: row.type === 'bear' ? 'bear' : 'bull',
     status: row.status as ContestRowFromRepo['status'],
     entryFeeCents: Number(row.entryFeeCents),
     prizePoolCents: dynamicPool,

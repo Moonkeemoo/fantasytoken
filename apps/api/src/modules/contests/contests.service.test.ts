@@ -13,6 +13,7 @@ function makeRow(overrides: Partial<ContestRowFromRepo> = {}): ContestRowFromRep
   return {
     id: 'c-1',
     name: 'Sample',
+    type: 'bull',
     status: 'scheduled',
     entryFeeCents: 500,
     prizePoolCents: 10_000,

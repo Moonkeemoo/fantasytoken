@@ -24,6 +24,7 @@ export interface ContestSnapshot {
   /** Guaranteed minimum (overlay floor). Actual pool is computed from real entries × fee × (1-rake). */
   prizePoolCents: number;
   entryFeeCents: number;
+  type: 'bull' | 'bear';
 }
 
 export interface LeaderboardRepo {
@@ -62,9 +63,10 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         return { entry: e, score };
       });
 
-      // Sort by score DESC, submittedAt ASC.
+      // Sort by score (DESC for bull, ASC for bear), submittedAt ASC tie-breaker.
+      const dir = contest.type === 'bear' ? -1 : 1;
       scored.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
+        if (b.score !== a.score) return dir * (b.score - a.score);
         return a.entry.submittedAt.getTime() - b.entry.submittedAt.getTime();
       });
 
@@ -111,7 +113,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         userRank = userRow.rank;
         const realScored = scored.filter((s) => !s.entry.isBot);
         realScored.sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
+          if (b.score !== a.score) return dir * (b.score - a.score);
           return a.entry.submittedAt.getTime() - b.entry.submittedAt.getTime();
         });
         const realRank = realScored.findIndex((s) => s.entry.userId === userId) + 1;

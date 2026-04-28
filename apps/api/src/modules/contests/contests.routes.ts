@@ -45,6 +45,7 @@ export function makeContestsRoutes(deps: ContestsRoutesDeps): FastifyPluginAsync
         items: items.map((r) => ({
           id: r.id,
           name: r.name,
+          type: r.type,
           status: r.status,
           entryFeeCents: r.entryFeeCents,
           prizePoolCents: r.prizePoolCents,

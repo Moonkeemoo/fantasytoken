@@ -3,6 +3,7 @@ import type { ContestFilter, ContestStatus } from '@fantasytoken/shared';
 export interface ContestRowFromRepo {
   id: string;
   name: string;
+  type: 'bull' | 'bear';
   status: ContestStatus;
   entryFeeCents: number;
   prizePoolCents: number;
