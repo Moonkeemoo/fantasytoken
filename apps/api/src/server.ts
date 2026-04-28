@@ -34,6 +34,7 @@ import { makeLiveRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { createResultRepo } from './modules/result/result.repo.js';
 import { createResultService } from './modules/result/result.service.js';
 import { makeResultRoutes } from './modules/result/result.routes.js';
+import { createReplenishService } from './modules/contests/contests.replenish.js';
 
 export interface ServerDeps {
   config: Config;
@@ -163,12 +164,30 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
+  const replenish = createReplenishService({
+    db: deps.db,
+    log: deps.logger,
+    adminTelegramId,
+  });
+
+  const stopReplenish = scheduleEvery({
+    intervalMs: MINUTE,
+    fn: async () => {
+      await replenish.replenish();
+    },
+    name: 'contests.replenish',
+    log: deps.logger,
+    runOnStart: deps.config.NODE_ENV !== 'test',
+  });
+
   return {
     app,
     stopCrons: () => {
       stopCatalogSync();
       stopTick();
       stopActiveSync();
+      stopReplenish();
     },
   };
 }

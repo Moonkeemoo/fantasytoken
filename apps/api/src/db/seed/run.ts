@@ -34,7 +34,7 @@ async function main() {
     logger.warn({ err }, 'token catalog sync failed (continuing with contests)');
   }
 
-  const result = await seedContests(db, { adminTelegramId });
+  const result = await seedContests(db, { adminTelegramId }, logger);
   logger.info(result, 'seeded contests');
 
   process.exit(0);
