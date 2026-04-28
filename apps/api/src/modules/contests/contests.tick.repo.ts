@@ -1,12 +1,14 @@
-import { and, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, lte, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, priceSnapshots, tokens } from '../../db/schema/index.js';
+import type { CancelContestResult } from '../admin/admin.cancel.js';
 import type { ContestsFinalizeRepo } from './contests.finalize.repo.js';
 import type { ContestsTickRepo } from './contests.tick.service.js';
 
 export function createContestsTickRepo(
   db: Database,
   finalize: ContestsFinalizeRepo,
+  cancel: (args: { contestId: string }) => Promise<CancelContestResult>,
 ): ContestsTickRepo {
   return {
     async findContestsToLock() {
@@ -158,6 +160,24 @@ export function createContestsTickRepo(
 
     async finalize(contestId) {
       return finalize.finalize(contestId);
+    },
+
+    async findStaleContests(thresholdMs) {
+      const cutoff = new Date(Date.now() - thresholdMs);
+      const rows = await db
+        .select({ id: contests.id })
+        .from(contests)
+        .where(
+          and(
+            or(eq(contests.status, 'scheduled'), eq(contests.status, 'active')),
+            lt(contests.startsAt, cutoff),
+          ),
+        );
+      return rows;
+    },
+
+    async cancelContest(contestId) {
+      return cancel({ contestId });
     },
   };
 }

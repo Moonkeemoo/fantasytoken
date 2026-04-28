@@ -39,7 +39,8 @@ function makeFakeRepo(
   type Op =
     | { kind: 'lock'; contestId: string; bots: number }
     | { kind: 'finalize'; contestId: string }
-    | { kind: 'finalize2'; contestId: string };
+    | { kind: 'finalize2'; contestId: string }
+    | { kind: 'cancel'; contestId: string };
   const ops: Op[] = [];
 
   const repo: ContestsTickRepo = {
@@ -97,6 +98,21 @@ function makeFakeRepo(
       const c = contests.find((c) => c.id === contestId);
       if (c) c.status = 'finalized' as never;
       return { paidCount: 1, totalCents: 100_000 };
+    },
+    async findStaleContests(thresholdMs) {
+      const cutoff = Date.now() - thresholdMs;
+      return contests
+        .filter(
+          (c) =>
+            (c.status === 'active' || c.status === 'scheduled') && c.startsAt.getTime() < cutoff,
+        )
+        .map((c) => ({ id: c.id }));
+    },
+    async cancelContest(contestId) {
+      ops.push({ kind: 'cancel', contestId });
+      const c = contests.find((c) => c.id === contestId);
+      if (c) c.status = 'finalized' as never;
+      return { refundedCount: 0, totalCents: 0 };
     },
   };
   return { repo, ops };
@@ -228,6 +244,70 @@ describe('ContestsTickService', () => {
       expect(ops).toHaveLength(2);
       expect(ops[0]).toMatchObject({ kind: 'finalize', contestId: 'c1' });
       expect(ops[1]).toMatchObject({ kind: 'finalize2', contestId: 'c1' });
+    });
+  });
+
+  describe('auto-cancel stale contests', () => {
+    it('cancels active contest where startsAt > 1h ago (stuck-live legacy)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'stuck',
+            status: 'active',
+            startsAt: nowPlusMin(-90), // 1.5h ago
+            endsAt: nowPlusMin(60 * 22), // far in future (legacy 24h schedule)
+            maxCapacity: 100,
+            realEntries: 1,
+          },
+        ],
+      });
+      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      await svc.tick();
+      expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'stuck')).toBe(true);
+    });
+
+    it('cancels scheduled contest stuck because prices were stale at lock time', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'orphan',
+            status: 'scheduled',
+            startsAt: nowPlusMin(-180),
+            endsAt: nowPlusMin(60 * 12), // legacy long endsAt
+            maxCapacity: 100,
+            realEntries: 0,
+          },
+        ],
+        tokens: [
+          { symbol: 'BTC', lastUpdatedAt: new Date(Date.now() - 3 * 3600_000) },
+          { symbol: 'ETH', lastUpdatedAt: new Date() },
+          { symbol: 'PEPE', lastUpdatedAt: new Date() },
+          { symbol: 'WIF', lastUpdatedAt: new Date() },
+          { symbol: 'BONK', lastUpdatedAt: new Date() },
+        ],
+      });
+      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      await svc.tick();
+      expect(ops.some((o) => o.kind === 'lock')).toBe(false); // lock aborted by stale prices
+      expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'orphan')).toBe(true);
+    });
+
+    it('does NOT cancel fresh active contest (startsAt < threshold)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'fresh',
+            status: 'active',
+            startsAt: nowPlusMin(-5),
+            endsAt: nowPlusMin(5),
+            maxCapacity: 100,
+            realEntries: 1,
+          },
+        ],
+      });
+      const svc = createContestsTickService({ repo, log: noopLog, botMinFiller: 20, botRatio: 3 });
+      await svc.tick();
+      expect(ops.some((o) => o.kind === 'cancel')).toBe(false);
     });
   });
 
