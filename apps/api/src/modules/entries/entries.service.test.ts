@@ -85,18 +85,18 @@ describe('EntriesService.submit', () => {
     const repo = makeFakeRepo({ contestOpen: false });
     const cur = makeFakeCurrency();
     const svc = createEntriesService({ repo, currency: cur });
-    await expect(svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS })).rejects.toThrow(
-      /CONTEST_CLOSED/,
-    );
+    await expect(
+      svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS }),
+    ).rejects.toMatchObject({ code: 'CONTEST_CLOSED' });
   });
 
   it('throws INSUFFICIENT_BALANCE when balance < entryFee', async () => {
     const repo = makeFakeRepo();
     const cur = makeFakeCurrency({ balance: 100n });
     const svc = createEntriesService({ repo, currency: cur });
-    await expect(svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS })).rejects.toThrow(
-      /INSUFFICIENT_BALANCE/,
-    );
+    await expect(
+      svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS }),
+    ).rejects.toMatchObject({ code: 'INSUFFICIENT_BALANCE' });
     expect(repo.createdEntry).toBeNull();
   });
 
@@ -104,8 +104,8 @@ describe('EntriesService.submit', () => {
     const repo = makeFakeRepo({ knownSymbols: ['BTC', 'ETH', 'PEPE', 'WIF'] });
     const cur = makeFakeCurrency();
     const svc = createEntriesService({ repo, currency: cur });
-    await expect(svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS })).rejects.toThrow(
-      /INVALID_LINEUP/,
-    );
+    await expect(
+      svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS }),
+    ).rejects.toMatchObject({ code: 'INVALID_LINEUP' });
   });
 });
