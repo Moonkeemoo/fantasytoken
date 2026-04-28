@@ -2,7 +2,7 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ContestFilter, ContestListResponse } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
-import { parseUserFromInitData, validateInitData } from '../../lib/telegram-auth.js';
+import { tryTelegramUser } from '../../lib/auth-context.js';
 import type { ContestsService } from './contests.service.js';
 import type { UsersService } from '../users/users.service.js';
 
@@ -22,10 +22,7 @@ async function authedUser(
   req: FastifyRequest,
   deps: ContestsRoutesDeps,
 ): Promise<string | undefined> {
-  const initData = req.headers['x-telegram-init-data'];
-  if (typeof initData !== 'string' || initData.length === 0) return undefined;
-  if (!validateInitData(initData, req.server.deps.config.TELEGRAM_BOT_TOKEN)) return undefined;
-  const tg = parseUserFromInitData(initData);
+  const tg = tryTelegramUser(req);
   if (!tg) return undefined;
   const r = await deps.users.upsertOnAuth({
     telegramId: tg.id,

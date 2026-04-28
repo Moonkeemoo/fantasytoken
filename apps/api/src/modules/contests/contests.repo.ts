@@ -3,11 +3,20 @@ import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
 import type { ContestsRepo, ContestRowFromRepo, CreateContestArgs } from './contests.service.js';
 
+const MAX_CENTS_AS_NUMBER = BigInt(Number.MAX_SAFE_INTEGER);
+
 function rowFromDbRow(
   row: typeof contests.$inferSelect,
   spotsFilled: number,
   userHasEntered: boolean,
 ): ContestRowFromRepo {
+  // Guard against silent precision loss on bigint→number cast.
+  // 2^53 cents ≈ $90T — if we ever cross this we have bigger problems.
+  if (row.entryFeeCents > MAX_CENTS_AS_NUMBER || row.prizePoolCents > MAX_CENTS_AS_NUMBER) {
+    throw new Error(
+      `contest ${row.id} has cents value exceeding Number.MAX_SAFE_INTEGER — wire shape would lose precision`,
+    );
+  }
   return {
     id: row.id,
     name: row.name,
