@@ -29,9 +29,10 @@ const ConfigSchema = z.object({
   COINGECKO_BASE_URL: z.string().url().default('https://api.coingecko.com/api/v3'),
   COINGECKO_API_KEY: z.string().optional(),
 
-  // Public base URL the api is reachable on — used to build absolute og:image links.
-  // Must match what's in the Vercel/Railway domain config; falls back to localhost in dev.
-  PUBLIC_API_URL: z.string().url().default('http://localhost:3000'),
+  // Optional public base URL of the API (e.g. https://fantasytoken-production.up.railway.app).
+  // Used to build absolute og:image links for the share card. Empty → routes derive
+  // from request headers, which works behind Railway / Vercel proxies.
+  PUBLIC_API_URL: z.string().url().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

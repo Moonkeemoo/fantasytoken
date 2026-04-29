@@ -157,9 +157,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
   await app.register(makeFriendsRoutes({ friends, users }), { prefix: '/friends' });
-  await app.register(makeShareRoutes({ share, apiBaseUrl: deps.config.PUBLIC_API_URL }), {
-    prefix: '/share',
-  });
+  await app.register(
+    makeShareRoutes({
+      share,
+      ...(deps.config.PUBLIC_API_URL ? { apiBaseUrl: deps.config.PUBLIC_API_URL } : {}),
+    }),
+    { prefix: '/share' },
+  );
   await app.register(makeRankingsRoutes({ rankings, friends, users }), { prefix: '/rankings' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 

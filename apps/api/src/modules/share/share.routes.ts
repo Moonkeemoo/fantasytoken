@@ -6,8 +6,24 @@ import { renderShareCardPng } from './share.render.js';
 
 export interface ShareRoutesDeps {
   share: ShareService;
-  /** Public base URL of the API (used to absolute-link the og:image). */
-  apiBaseUrl: string;
+  /** Optional explicit public base URL of the API (Railway domain). Falls back to
+   * deriving from request headers, which works behind Railway / Vercel proxies that
+   * forward x-forwarded-proto and the Host header. */
+  apiBaseUrl?: string;
+}
+
+function deriveBaseUrl(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const proto =
+    (Array.isArray(req.headers['x-forwarded-proto'])
+      ? req.headers['x-forwarded-proto'][0]
+      : req.headers['x-forwarded-proto']) ?? 'https';
+  const host =
+    (Array.isArray(req.headers['x-forwarded-host'])
+      ? req.headers['x-forwarded-host'][0]
+      : req.headers['x-forwarded-host']) ??
+    (Array.isArray(req.headers['host']) ? req.headers['host'][0] : req.headers['host']) ??
+    'localhost:3000';
+  return `${proto}://${host}`;
 }
 
 export function makeShareRoutes(deps: ShareRoutesDeps): FastifyPluginAsync {
@@ -23,7 +39,8 @@ export function makeShareRoutes(deps: ShareRoutesDeps): FastifyPluginAsync {
       const data = await deps.share.load(entryId);
       if (!data) throw errors.notFound('share');
 
-      const imageUrl = `${deps.apiBaseUrl}/share/${entryId}/image.png`;
+      const baseUrl = deps.apiBaseUrl ?? deriveBaseUrl(req);
+      const imageUrl = `${baseUrl}/share/${entryId}/image.png`;
       const refLink = `https://t.me/fantasytokenbot/fantasytoken?startapp=ref_${data.user.telegramId}`;
       const title = `${data.user.displayName} · #${data.finalRank ?? '—'} of ${data.totalEntries} · Fantasy Token`;
       const desc =
@@ -48,7 +65,7 @@ export function makeShareRoutes(deps: ShareRoutesDeps): FastifyPluginAsync {
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:url" content="${deps.apiBaseUrl}/share/${entryId}" />
+    <meta property="og:url" content="${baseUrl}/share/${entryId}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Fantasy Token" />
     <meta name="twitter:card" content="summary_large_image" />
