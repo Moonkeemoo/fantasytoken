@@ -1,0 +1,2073 @@
+<!doctype html>
+<!-- Visual mockup for RANK_SYSTEM.md
+     Source artifact: ftl-rank-system-design (Cowork)
+     Created: 2026-04-29
+     Open in browser to see interactive tabs, charts, and UI mockups.
+-->
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fantasy Token League — Rank System Design</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
+      integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f7f8fa;
+        --border: #e3e6ec;
+        --text: #14161a;
+        --muted: #5b6272;
+        --accent: #0b6cff;
+        --accent-soft: #e7f0ff;
+        --good: #15a05a;
+        --good-soft: #e3f6ec;
+        --warn: #d97a00;
+        --warn-soft: #fdf1dc;
+        --bad: #d23f3f;
+        --ftl: #6e36ff;
+        --ftl-soft: #ece2ff;
+
+        /* Paper aesthetic for mockups */
+        --paper: #f6f1e8;
+        --paper-dim: #eee5d2;
+        --ink: #1a1814;
+        --ink-soft: #4a4540;
+        --paper-muted: #8a8478;
+        --rule: #d0c5b0;
+        --paper-accent: #d4441c;
+        --note: #fef08a;
+        --code-bg: #f0e6d0;
+        --hl-green: #16a34a;
+        --hl-red: #dc2626;
+
+        /* Tier colors */
+        --t-newbie: #8a8478;
+        --t-trader: #6b8e6b;
+        --t-degen: #5a7ba8;
+        --t-whale: #8a5fa8;
+        --t-legend: #c97a3a;
+        --t-mythic: #d4441c;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          system-ui,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 24px;
+        letter-spacing: -0.01em;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 28px 0 12px;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+
+      .tld {
+        background: var(--ftl-soft);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 12px 0 24px;
+        font-size: 13px;
+        line-height: 1.6;
+        border-left: 3px solid var(--ftl);
+      }
+      .tld strong {
+        color: var(--ftl);
+      }
+
+      /* CSS-only tabs */
+      .tab-radio {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin: 0 0 24px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .tab {
+        padding: 8px 14px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        user-select: none;
+        display: inline-block;
+        line-height: 1.5;
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+      .panel {
+        display: none;
+      }
+      #t-ladder:checked ~ .tabs label[for='t-ladder'],
+      #t-economy:checked ~ .tabs label[for='t-economy'],
+      #t-unlocks:checked ~ .tabs label[for='t-unlocks'],
+      #t-ui:checked ~ .tabs label[for='t-ui'],
+      #t-impl:checked ~ .tabs label[for='t-impl'] {
+        color: var(--text);
+        border-bottom-color: var(--accent);
+      }
+      #t-ladder:checked ~ #panel-ladder,
+      #t-economy:checked ~ #panel-economy,
+      #t-unlocks:checked ~ #panel-unlocks,
+      #t-ui:checked ~ #panel-ui,
+      #t-impl:checked ~ #panel-impl {
+        display: block;
+      }
+
+      /* ===== Ladder ===== */
+      .ladder-wrap {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      @media (min-width: 880px) {
+        .ladder-wrap {
+          grid-template-columns: 1fr 1.4fr;
+        }
+      }
+
+      .ladder {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        max-height: 700px;
+        overflow-y: auto;
+      }
+      .tier-group {
+        margin-bottom: 14px;
+      }
+      .tier-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .tier-icon-sm {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .tier-name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .tier-range {
+        font-size: 11px;
+        color: var(--muted);
+        margin-left: auto;
+        font-family: ui-monospace, monospace;
+      }
+      .rank-row {
+        display: grid;
+        grid-template-columns: 36px 1fr 80px;
+        gap: 10px;
+        padding: 6px 4px;
+        border-bottom: 1px solid var(--border);
+        align-items: center;
+        font-size: 12px;
+      }
+      .rank-row:last-child {
+        border-bottom: none;
+      }
+      .rank-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        color: #fff;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .rank-name {
+        color: var(--text);
+      }
+      .rank-name b {
+        font-weight: 700;
+      }
+      .rank-xp {
+        font-family: ui-monospace, monospace;
+        color: var(--muted);
+        font-size: 11px;
+        text-align: right;
+      }
+      .unlock-tag {
+        display: inline-block;
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 600;
+        margin-left: 4px;
+      }
+      .unlock-tag.bear {
+        background: var(--ftl-soft);
+        color: var(--ftl);
+      }
+      .unlock-tag.feature {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+
+      /* tier color classes */
+      .bg-newbie {
+        background: var(--t-newbie);
+      }
+      .bg-trader {
+        background: var(--t-trader);
+      }
+      .bg-degen {
+        background: var(--t-degen);
+      }
+      .bg-whale {
+        background: var(--t-whale);
+      }
+      .bg-legend {
+        background: var(--t-legend);
+      }
+      .bg-mythic {
+        background: var(--t-mythic);
+      }
+
+      .chart-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .chart-wrap h3 {
+        margin-bottom: 12px;
+      }
+      .chart-canvas {
+        position: relative;
+        height: 280px;
+      }
+
+      .simulator {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .sim-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .sim-row:last-child {
+        border-bottom: none;
+      }
+      .sim-row .label {
+        flex: 1;
+      }
+      .sim-row .v {
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+      }
+      .sim-row .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        gap: 4px;
+      }
+
+      /* ===== XP Economy ===== */
+      .economy-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      @media (min-width: 720px) {
+        .economy-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .eco-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .eco-card h3 {
+        margin-bottom: 12px;
+      }
+      .formula {
+        background: var(--bg);
+        border-left: 3px solid var(--accent);
+        padding: 10px 14px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        border-radius: 0 4px 4px 0;
+        margin: 8px 0 12px;
+      }
+      .kv-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .kv-table td,
+      .kv-table th {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+      .kv-table th {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+      .kv-table td.num {
+        text-align: right;
+        font-family: ui-monospace, monospace;
+        font-weight: 600;
+      }
+      .kv-table td.tag {
+        text-align: right;
+      }
+
+      .season-card {
+        background: var(--ftl-soft);
+        border: 1px solid var(--ftl);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 16px 0;
+      }
+      .season-card h3 {
+        color: var(--ftl);
+        margin-bottom: 8px;
+      }
+
+      /* ===== Mockups (paper) ===== */
+      .mockups-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      @media (min-width: 880px) {
+        .mockups-grid {
+          grid-template-columns: 380px 1fr;
+        }
+      }
+
+      .mockup-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        align-items: center;
+      }
+      .paper-frame {
+        width: 380px;
+        max-width: 100%;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--ink);
+        border-radius: 16px;
+        overflow: hidden;
+        font-family: 'Inter', system-ui, sans-serif;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      .mock-title {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        padding: 0 16px;
+        font-weight: 600;
+      }
+
+      .lobby-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border-bottom: 1.5px solid var(--ink);
+      }
+      .lobby-h-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .av-circ {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #c97a3a, #8a4a1a);
+        border: 1.5px solid var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .lobby-greeting {
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .lobby-balance {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 1px;
+      }
+
+      /* The new rank chip */
+      .rank-chip-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 999px;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .rank-chip-pill .rank-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--paper-accent);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .rank-chip-pill .xp-mini {
+        color: var(--note);
+        font-size: 9px;
+        opacity: 0.85;
+      }
+
+      /* Next-rank teaser banner */
+      .teaser-banner {
+        background: var(--note);
+        border-bottom: 1.5px solid var(--ink);
+        padding: 10px 12px;
+      }
+      .teaser-h {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .teaser-label {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+      .teaser-headline {
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 6px;
+      }
+      .teaser-headline b {
+        color: var(--paper-accent);
+      }
+      .teaser-bar {
+        height: 6px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .teaser-bar-fill {
+        height: 100%;
+        background: var(--paper-accent);
+        width: 68%;
+      }
+      .teaser-meta {
+        display: flex;
+        justify-content: space-between;
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        color: var(--ink-soft);
+        margin-top: 4px;
+        letter-spacing: 0.04em;
+      }
+
+      /* Contest cards */
+      .contests-section {
+        padding: 12px;
+      }
+      .contest-card {
+        border: 1.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: var(--paper);
+      }
+      .contest-card.locked {
+        background: var(--paper-dim);
+        position: relative;
+        opacity: 0.85;
+      }
+      .contest-card-h {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 4px;
+      }
+      .contest-name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .contest-fee {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+      .contest-meta {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .lock-overlay {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        padding: 3px 7px;
+        border-radius: 3px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      /* Result XP animation block */
+      .result-xp-block {
+        padding: 16px;
+        background: var(--code-bg);
+        border-bottom: 1.5px solid var(--ink);
+      }
+      .result-xp-h {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+      }
+      .result-xp-label {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+      .result-xp-total {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--paper-accent);
+        font-family: ui-monospace, monospace;
+      }
+      .xp-line {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px dashed var(--rule);
+        font-size: 12px;
+      }
+      .xp-line:last-of-type {
+        border-bottom: none;
+        margin-bottom: 8px;
+      }
+      .xp-line .reason {
+        color: var(--ink-soft);
+      }
+      .xp-line .amt {
+        font-family: ui-monospace, monospace;
+        font-weight: 700;
+        color: var(--hl-green);
+      }
+      .xp-line.bonus .reason {
+        color: var(--paper-accent);
+        font-weight: 600;
+      }
+      .xp-line.bonus .amt {
+        color: var(--paper-accent);
+      }
+
+      .rank-progress-block {
+        background: var(--paper);
+        padding: 10px 12px;
+        border: 1.5px solid var(--ink);
+        border-radius: 6px;
+        margin-top: 8px;
+      }
+      .rank-progress-h {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+      }
+      .rank-now {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .rank-next {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .rank-bar {
+        height: 10px;
+        background: var(--paper-dim);
+        border: 1.5px solid var(--ink);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .rank-bar-fill {
+        height: 100%;
+        background: var(--paper-accent);
+        width: 60%;
+        transition: width 0.5s ease;
+      }
+      .rank-bar-add {
+        position: absolute;
+        top: 0;
+        left: 60%;
+        height: 100%;
+        background: var(--note);
+        border-right: 1.5px solid var(--ink);
+        width: 12%;
+      }
+      .rank-bar-meta {
+        display: flex;
+        justify-content: space-between;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--paper-muted);
+        margin-top: 4px;
+        letter-spacing: 0.04em;
+      }
+      .rank-bar-meta b {
+        color: var(--ink);
+      }
+
+      /* Rank up moment */
+      .rankup-overlay {
+        background: linear-gradient(135deg, #d4441c 0%, #8a2a0c 100%);
+        color: #fff;
+        padding: 32px 20px;
+        text-align: center;
+        border-radius: 12px;
+        margin: 12px 16px;
+      }
+      .rankup-label {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        opacity: 0.85;
+        margin-bottom: 12px;
+      }
+      .rankup-rank {
+        font-size: 48px;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+      .rankup-tier {
+        font-size: 16px;
+        font-weight: 700;
+        opacity: 0.95;
+        margin-bottom: 16px;
+      }
+      .rankup-unlock {
+        background: rgba(0, 0, 0, 0.25);
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      /* Profile rank section */
+      .profile-rank {
+        padding: 14px 16px;
+        border-bottom: 1.5px solid var(--ink);
+        background: var(--code-bg);
+      }
+      .profile-rank-h {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .tier-icon-lg {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 18px;
+        font-family: ui-monospace, monospace;
+        flex-shrink: 0;
+      }
+      .profile-rank-info {
+        flex: 1;
+      }
+      .profile-rank-num {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .profile-rank-tier {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--ink-soft);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .profile-rank-trophy {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--paper-muted);
+        margin-top: 8px;
+        letter-spacing: 0.04em;
+      }
+      .profile-rank-trophy b {
+        color: var(--paper-accent);
+      }
+
+      /* Notes column */
+      .notes {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .note {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+      }
+      .note h3 {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .note-tag {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-weight: 600;
+        margin-left: 6px;
+      }
+      .tag-onb {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+      .tag-ret {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .tag-vir {
+        background: var(--ftl-soft);
+        color: var(--ftl);
+      }
+      .tag-imp {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      /* Implementation */
+      .impl-block {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .impl-block h3 {
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        line-height: 1.45;
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Rank System — design</h1>
+      <p class="lead">
+        XP-driven progression з 30 рангами, 6 tier groups, hybrid naming, season reset кожні 4
+        тижні. Замикає onboarding (gate-via-rank), retention (рости daily) і соц. proof (rank скрізь
+        видно).
+      </p>
+
+      <div class="tld">
+        <strong>Архітектурний коміт.</strong>
+        <strong>30 рангів</strong> у 6 tier groups (Newbie→Mythic), display "<strong
+          >Rank 7 · Trader II</strong
+        >". XP від участі (10) + position multiplier (#1 = +100, top-30% = +5). Bear contests дають
+        <strong>×1.5 множник</strong> (incentivize ваш диференціатор). Контент
+        <strong>gated by rank</strong> — Rank 1 має тільки Welcome Match, кожен наступний відкриває
+        щось. Season = 4 тижні, в кінці <strong>soft reset</strong>: drop 5 ranks (capped at Rank 5
+        minimum) — ніхто не страждає, але є fresh grind. Career-highest зберігається як trophy.
+      </div>
+
+      <input class="tab-radio" type="radio" name="tabs" id="t-ladder" checked />
+      <input class="tab-radio" type="radio" name="tabs" id="t-economy" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-unlocks" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-ui" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-impl" />
+
+      <div class="tabs">
+        <label class="tab" for="t-ladder">Ladder &amp; XP curve</label>
+        <label class="tab" for="t-economy">XP economy</label>
+        <label class="tab" for="t-unlocks">Content unlocks</label>
+        <label class="tab" for="t-ui">UI surfaces</label>
+        <label class="tab" for="t-impl">Implementation</label>
+      </div>
+
+      <!-- ================ LADDER ================ -->
+      <div class="panel" id="panel-ladder">
+        <div class="ladder-wrap">
+          <div class="ladder">
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-newbie">1</span>
+                <span class="tier-name">Newbie</span>
+                <span class="tier-range">RANKS 1-5</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-newbie">1</span
+                ><span class="rank-name"
+                  ><b>Newbie I</b> <span class="unlock-tag">Welcome Match</span></span
+                ><span class="rank-xp">0 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-newbie">2</span
+                ><span class="rank-name"
+                  ><b>Newbie II</b> <span class="unlock-tag">Quick Match</span></span
+                ><span class="rank-xp">30 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-newbie">3</span
+                ><span class="rank-name"
+                  ><b>Newbie III</b> <span class="unlock-tag">Memecoin Madness</span></span
+                ><span class="rank-xp">80 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-newbie">4</span
+                ><span class="rank-name"
+                  ><b>Newbie IV</b> <span class="unlock-tag feature">Profile badge slot</span></span
+                ><span class="rank-xp">150 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-newbie">5</span
+                ><span class="rank-name"
+                  ><b>Newbie V</b> <span class="unlock-tag bear">Bear Trap (1st bear)</span></span
+                ><span class="rank-xp">250 XP</span>
+              </div>
+            </div>
+
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-trader">2</span>
+                <span class="tier-name">Trader</span>
+                <span class="tier-range">RANKS 6-10</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-trader">6</span
+                ><span class="rank-name"><b>Trader I</b></span
+                ><span class="rank-xp">400 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-trader">7</span
+                ><span class="rank-name"
+                  ><b>Trader II</b> <span class="unlock-tag">High-Stakes Quick</span></span
+                ><span class="rank-xp">600 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-trader">8</span
+                ><span class="rank-name"
+                  ><b>Trader III</b> <span class="unlock-tag feature">Custom share-card</span></span
+                ><span class="rank-xp">850 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-trader">9</span
+                ><span class="rank-name"><b>Trader IV</b></span
+                ><span class="rank-xp">1,150 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-trader">10</span
+                ><span class="rank-name"
+                  ><b>Trader V</b> <span class="unlock-tag">Trader Cup (weekly)</span></span
+                ><span class="rank-xp">1,500 XP</span>
+              </div>
+            </div>
+
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-degen">3</span>
+                <span class="tier-name">Degen</span>
+                <span class="tier-range">RANKS 11-15</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-degen">11</span
+                ><span class="rank-name"><b>Degen I</b></span
+                ><span class="rank-xp">2,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-degen">12</span
+                ><span class="rank-name"
+                  ><b>Degen II</b> <span class="unlock-tag bear">Bear Apocalypse</span></span
+                ><span class="rank-xp">2,600 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-degen">13</span
+                ><span class="rank-name"><b>Degen III</b></span
+                ><span class="rank-xp">3,300 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-degen">14</span
+                ><span class="rank-name"
+                  ><b>Degen IV</b> <span class="unlock-tag feature">Animated badge</span></span
+                ><span class="rank-xp">4,100 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-degen">15</span
+                ><span class="rank-name"
+                  ><b>Degen V</b> <span class="unlock-tag">Degen-only contests</span></span
+                ><span class="rank-xp">5,000 XP</span>
+              </div>
+            </div>
+
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-whale">4</span>
+                <span class="tier-name">Whale</span>
+                <span class="tier-range">RANKS 16-20</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-whale">16</span
+                ><span class="rank-name"><b>Whale I</b></span
+                ><span class="rank-xp">6,200 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-whale">17</span
+                ><span class="rank-name"><b>Whale II</b></span
+                ><span class="rank-xp">7,500 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-whale">18</span
+                ><span class="rank-name"
+                  ><b>Whale III</b> <span class="unlock-tag">Whale Vault</span></span
+                ><span class="rank-xp">9,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-whale">19</span
+                ><span class="rank-name"><b>Whale IV</b></span
+                ><span class="rank-xp">10,800 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-whale">20</span
+                ><span class="rank-name"
+                  ><b>Whale V</b> <span class="unlock-tag feature">Username color</span></span
+                ><span class="rank-xp">12,800 XP</span>
+              </div>
+            </div>
+
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-legend">5</span>
+                <span class="tier-name">Legend</span>
+                <span class="tier-range">RANKS 21-25</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-legend">21</span
+                ><span class="rank-name"><b>Legend I</b></span
+                ><span class="rank-xp">15,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-legend">22</span
+                ><span class="rank-name"><b>Legend II</b></span
+                ><span class="rank-xp">17,500 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-legend">23</span
+                ><span class="rank-name"
+                  ><b>Legend III</b> <span class="unlock-tag">Legend League</span></span
+                ><span class="rank-xp">20,500 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-legend">24</span
+                ><span class="rank-name"><b>Legend IV</b></span
+                ><span class="rank-xp">24,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-legend">25</span
+                ><span class="rank-name"><b>Legend V</b></span
+                ><span class="rank-xp">28,000 XP</span>
+              </div>
+            </div>
+
+            <div class="tier-group">
+              <div class="tier-group-header">
+                <span class="tier-icon-sm bg-mythic">6</span>
+                <span class="tier-name">Mythic</span>
+                <span class="tier-range">RANKS 26-30</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-mythic">26</span
+                ><span class="rank-name"><b>Mythic I</b></span
+                ><span class="rank-xp">33,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-mythic">27</span
+                ><span class="rank-name"><b>Mythic II</b></span
+                ><span class="rank-xp">39,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-mythic">28</span
+                ><span class="rank-name"><b>Mythic III</b></span
+                ><span class="rank-xp">46,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-mythic">29</span
+                ><span class="rank-name"><b>Mythic IV</b></span
+                ><span class="rank-xp">54,000 XP</span>
+              </div>
+              <div class="rank-row">
+                <span class="rank-num bg-mythic">30</span
+                ><span class="rank-name"
+                  ><b>Mythic V</b> <span class="unlock-tag">Mythic Cup (monthly)</span></span
+                ><span class="rank-xp">65,000 XP</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="chart-wrap">
+              <h3>XP curve (cumulative + delta per rank)</h3>
+              <div class="chart-canvas"><canvas id="chart-xp"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <h3>Симулятор: який rank досягається за 4-тижневий сезон?</h3>
+              <div class="chart-canvas"><canvas id="chart-projection"></canvas></div>
+              <p style="font-size: 11px; color: var(--muted); margin-top: 6px">
+                <strong>Casual</strong> (1 contest/day, ~15 XP avg) → Rank 5 (Newbie V).
+                <strong>Engaged</strong> (3/day, ~30 XP avg) → Rank 14 (Degen IV).
+                <strong>Hardcore</strong> (5/day, ~80 XP avg, frequent top-5) → Rank 27 (Mythic II).
+                Касуальний юзер встигає один раз "відчути progression" і отримати Bear unlock у
+                перший сезон — ідеальна voronka.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================ ECONOMY ================ -->
+      <div class="panel" id="panel-economy">
+        <div class="economy-grid">
+          <div class="eco-card">
+            <h3>XP per contest — formula</h3>
+            <div class="formula">xp = (10 + position_bonus) × contest_multiplier</div>
+            <table class="kv-table">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>XP</th>
+                  <th>Logic</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Participation</td>
+                  <td class="num">+10</td>
+                  <td>always, finalized only</td>
+                </tr>
+                <tr>
+                  <td>#1 (winner)</td>
+                  <td class="num">+100</td>
+                  <td>position bonus</td>
+                </tr>
+                <tr>
+                  <td>#2</td>
+                  <td class="num">+60</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>#3</td>
+                  <td class="num">+40</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>#4-5</td>
+                  <td class="num">+25</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>#6-10</td>
+                  <td class="num">+15</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>#11 → top 30%</td>
+                  <td class="num">+5</td>
+                  <td>still in prizes</td>
+                </tr>
+                <tr>
+                  <td>Below top 30%</td>
+                  <td class="num">+0</td>
+                  <td>just participation</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="eco-card">
+            <h3>Contest multipliers</h3>
+            <div class="formula">multiplier = base × bear_bonus × stake_bonus</div>
+            <table class="kv-table">
+              <thead>
+                <tr>
+                  <th>Modifier</th>
+                  <th>×</th>
+                  <th>Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Bull contest (default)</td>
+                  <td class="num">×1.0</td>
+                  <td>baseline</td>
+                </tr>
+                <tr>
+                  <td>Bear contest</td>
+                  <td class="num" style="color: var(--ftl)">×1.5</td>
+                  <td>incentivize differentiator</td>
+                </tr>
+                <tr>
+                  <td>Quick Match (low stakes)</td>
+                  <td class="num">×1.0</td>
+                  <td>baseline</td>
+                </tr>
+                <tr>
+                  <td>Degen-tier contest</td>
+                  <td class="num">×1.25</td>
+                  <td>reward stake</td>
+                </tr>
+                <tr>
+                  <td>Whale Vault</td>
+                  <td class="num">×1.5</td>
+                  <td>premium</td>
+                </tr>
+                <tr>
+                  <td>Legend League</td>
+                  <td class="num">×2.0</td>
+                  <td>endgame</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-size: 12px; color: var(--muted); margin-top: 10px">
+              Multipliers множаться сумарно. Top-3 у Bear Whale Vault: (10 + 40) × 1.5 × 1.5 =
+              <b>112.5 XP</b> (округлено до 113).
+            </p>
+          </div>
+
+          <div class="eco-card">
+            <h3>Examples</h3>
+            <table class="kv-table">
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>XP earned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Played Quick Match, finished #15 of 20</td>
+                  <td class="num">10</td>
+                </tr>
+                <tr>
+                  <td>Played Quick Match, finished #5</td>
+                  <td class="num">35</td>
+                </tr>
+                <tr>
+                  <td>Played Quick Match, finished #1</td>
+                  <td class="num">110</td>
+                </tr>
+                <tr>
+                  <td>Played Bear Trap, finished #3</td>
+                  <td class="num">75</td>
+                </tr>
+                <tr>
+                  <td>Played Bear Apocalypse (Degen-tier), finished #1</td>
+                  <td class="num">206</td>
+                </tr>
+                <tr>
+                  <td>Played Whale Vault, finished #2</td>
+                  <td class="num">158</td>
+                </tr>
+                <tr>
+                  <td>Played Legend League (Bear), finished #1</td>
+                  <td class="num">330</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="eco-card">
+            <h3>Curve formula</h3>
+            <div class="formula">xp_required(N) ≈ 30 × 1.22^(N-2)</div>
+            <p style="font-size: 13px; margin-bottom: 10px">
+              Геометричний ріст. Деякі ranks вручну скоригованo для psychologically nice numbers (50
+              → 80 → 150 → 250). Базова умова: каждый next rank вимагає на ~22% більше XP.
+            </p>
+            <p style="font-size: 12px; color: var(--muted)">
+              Якщо хочеш softer curve (швидший Mythic) — змінюй b=1.18. Steeper grind (Mythic як
+              end-game) — b=1.27.
+            </p>
+          </div>
+        </div>
+
+        <div class="season-card">
+          <h3>Season mechanic</h3>
+          <p style="margin-bottom: 8px">
+            <strong>Тривалість.</strong> 4 тижні (28 днів). Прив'язка до календарних місяців: Season
+            1 = April 2026, Season 2 = May 2026.
+          </p>
+          <p style="margin-bottom: 8px">
+            <strong>Що скидається.</strong> <code>users.xp_season</code> → 0.
+            <code>users.current_rank</code> → drop 5 (capped мінімум на Rank 5, щоб ніхто не
+            повертався в onboarding).
+          </p>
+          <p style="margin-bottom: 8px">
+            <strong>Що зберігається.</strong> <code>users.xp_total</code> (career),
+            <code>users.career_highest_rank</code>, всі trophy-badges за минулі сезони ("Reached
+            Rank 24 in Season 1").
+          </p>
+          <p style="margin-bottom: 8px">
+            <strong>Що нагороджується.</strong> Top-100 season leaderboard (за
+            <code>xp_season</code>) → bonus prize pool (Stars). Top-10 → permanent "Season Champion"
+            badge з номером сезону.
+          </p>
+          <p style="margin: 0">
+            <strong>Чому soft reset.</strong> Hard reset (всі → Rank 1) ламає content gating —
+            veteran знову не може купити cup. Soft drop робить fresh grind, але baseline access
+            зберігається. Це Hearthstone-pattern, перевірений.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================ UNLOCKS ================ -->
+      <div class="panel" id="panel-unlocks">
+        <p class="lead">
+          Що відкривається на кожному рангу. Це тіло onboarding-funnel і long-term retention loop.
+        </p>
+
+        <div class="impl-block">
+          <h3>Onboarding (Ranks 1-5) — funnel</h3>
+          <table class="kv-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Unlock</th>
+                <th>Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1 · Newbie I</td>
+                <td><b>Welcome Match</b> — single free intro contest</td>
+                <td>Юзер змушений зіграти один раз. Розуміє правила.</td>
+              </tr>
+              <tr>
+                <td>2 · Newbie II</td>
+                <td><b>Quick Match</b> ($1 entry)</td>
+                <td>Перший paid контест. Виходить з tutorial.</td>
+              </tr>
+              <tr>
+                <td>3 · Newbie III</td>
+                <td><b>Memecoin Madness</b> ($5 entry)</td>
+                <td>Відкривається theme variety.</td>
+              </tr>
+              <tr>
+                <td>4 · Newbie IV</td>
+                <td><b>Profile badge slot</b></td>
+                <td>Cosmetic: можна обрати badge для display.</td>
+              </tr>
+              <tr>
+                <td>5 · Newbie V</td>
+                <td><b>Bear Trap</b> — перший Bear контест</td>
+                <td>
+                  Відкриває твій core диференціатор. Ідеальний таймінг — після 3-4 contests юзер вже
+                  хоче більшого.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="impl-block">
+          <h3>Mid-game (Ranks 6-15) — variety + soft monetization</h3>
+          <table class="kv-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Unlock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>7 · Trader II</td>
+                <td>High-Stakes Quick Match ($10 entry)</td>
+              </tr>
+              <tr>
+                <td>8 · Trader III</td>
+                <td>Custom share-card (3 visual themes)</td>
+              </tr>
+              <tr>
+                <td>10 · Trader V</td>
+                <td>Trader Cup — weekly tournament for ranks 10-14</td>
+              </tr>
+              <tr>
+                <td>12 · Degen II</td>
+                <td>Bear Apocalypse ($25 Bear contest)</td>
+              </tr>
+              <tr>
+                <td>14 · Degen IV</td>
+                <td>Animated badge effects (premium look)</td>
+              </tr>
+              <tr>
+                <td>15 · Degen V</td>
+                <td>Degen-only contests (gated entry, higher prizes)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="impl-block">
+          <h3>End-game (Ranks 16-30) — exclusivity + status</h3>
+          <table class="kv-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Unlock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>18 · Whale III</td>
+                <td>Whale Vault — premium contests з largest prize pools</td>
+              </tr>
+              <tr>
+                <td>20 · Whale V</td>
+                <td>Username color на leaderboards (gold accent)</td>
+              </tr>
+              <tr>
+                <td>23 · Legend III</td>
+                <td>Legend League — exclusive monthly tournament</td>
+              </tr>
+              <tr>
+                <td>30 · Mythic V</td>
+                <td>Mythic Cup — monthly, top stake, "I am the storm"</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="impl-block" style="background: var(--good-soft); border-color: var(--good)">
+          <h3 style="color: var(--good)">Як це працює як onboarding driver</h3>
+          <p style="font-size: 13px">
+            Юзер новий → бачить лобі з <strong>одним unlocked-контестом</strong> +
+            <strong>4-5 locked teasers нижче</strong> з "🔒 Unlocks at Rank 2-5". Це не frustrating
+            — це <strong>aspirational</strong>. Юзер чітко бачить shorted path: "грай → ранк →
+            відкрилось". Перший контест дає 110 XP (winner) або 35 XP (top-5) → одразу Rank 2.
+            Іnstant gratification + immediate next goal. Тaper з кожним рангом до Mythic, де grind
+            стає 1+ тиждень на рівень.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================ UI MOCKUPS ================ -->
+      <div class="panel" id="panel-ui">
+        <div class="mockups-grid">
+          <div class="mockup-stack">
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [1/4] LOBBY — header з rank chip + teaser banner
+              </div>
+              <div class="paper-frame">
+                <div class="lobby-header">
+                  <div class="lobby-h-left">
+                    <div class="av-circ">T</div>
+                    <div>
+                      <div class="lobby-greeting">Hi, Taras</div>
+                      <div class="lobby-balance">$1,247.50 BAL</div>
+                    </div>
+                  </div>
+                  <div class="rank-chip-pill">
+                    <span class="rank-circle">7</span>
+                    <span>Trader II</span>
+                    <span class="xp-mini">240/350 XP</span>
+                  </div>
+                </div>
+
+                <div class="teaser-banner">
+                  <div class="teaser-h">
+                    <span class="teaser-label">Next unlock</span>
+                    <span class="teaser-label">110 XP TO GO</span>
+                  </div>
+                  <div class="teaser-headline">
+                    Reach <b>Rank 8 · Trader III</b><br />to unlock <b>Custom Share-Card themes</b>
+                  </div>
+                  <div class="teaser-bar"><div class="teaser-bar-fill"></div></div>
+                  <div class="teaser-meta">
+                    <span>240 XP</span>
+                    <span>350 XP</span>
+                  </div>
+                </div>
+
+                <div class="contests-section">
+                  <div class="contest-card">
+                    <div class="contest-card-h">
+                      <span class="contest-name">Memecoin Madness</span>
+                      <span class="contest-fee">$5 → $90 pool</span>
+                    </div>
+                    <div class="contest-meta">FILLING · 12/20 PLAYERS · BULL</div>
+                  </div>
+                  <div class="contest-card">
+                    <div class="contest-card-h">
+                      <span class="contest-name">Bear Trap</span>
+                      <span class="contest-fee">$1 → $18 pool</span>
+                    </div>
+                    <div class="contest-meta">FILLING · 8/20 PLAYERS · BEAR</div>
+                  </div>
+                  <div class="contest-card locked">
+                    <div class="lock-overlay">🔒 RANK 8</div>
+                    <div class="contest-card-h">
+                      <span class="contest-name" style="opacity: 0.7">High-Stakes Quick Match</span>
+                      <span class="contest-fee" style="opacity: 0.5">$10 entry</span>
+                    </div>
+                    <div class="contest-meta" style="opacity: 0.5">110 XP AWAY · BULL</div>
+                  </div>
+                  <div class="contest-card locked">
+                    <div class="lock-overlay">🔒 RANK 12</div>
+                    <div class="contest-card-h">
+                      <span class="contest-name" style="opacity: 0.7">Bear Apocalypse</span>
+                      <span class="contest-fee" style="opacity: 0.5">$25 entry</span>
+                    </div>
+                    <div class="contest-meta" style="opacity: 0.5">5 RANKS AWAY · BEAR</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [2/4] RESULT — XP earned breakdown
+              </div>
+              <div class="paper-frame">
+                <div style="padding: 16px 16px 8px">
+                  <div
+                    style="
+                      font-family: ui-monospace, monospace;
+                      font-size: 10px;
+                      text-transform: uppercase;
+                      letter-spacing: 0.08em;
+                      color: var(--paper-muted);
+                      font-weight: 700;
+                      margin-bottom: 6px;
+                    "
+                  >
+                    CONTEST RESULT
+                  </div>
+                  <div style="font-size: 16px; font-weight: 700">Bear Trap · #3 of 18</div>
+                  <div
+                    style="
+                      margin-top: 4px;
+                      font-family: ui-monospace, monospace;
+                      font-size: 12px;
+                      color: var(--hl-green);
+                      font-weight: 700;
+                    "
+                  >
+                    +$124.00 prize
+                  </div>
+                </div>
+
+                <div class="result-xp-block">
+                  <div class="result-xp-h">
+                    <span class="result-xp-label">XP earned</span>
+                    <span class="result-xp-total">+75</span>
+                  </div>
+                  <div class="xp-line">
+                    <span class="reason">Participation</span><span class="amt">+10</span>
+                  </div>
+                  <div class="xp-line">
+                    <span class="reason">3rd place bonus</span><span class="amt">+40</span>
+                  </div>
+                  <div class="xp-line bonus">
+                    <span class="reason">Bear contest ×1.5</span><span class="amt">+25</span>
+                  </div>
+
+                  <div class="rank-progress-block">
+                    <div class="rank-progress-h">
+                      <span class="rank-now">RANK 7 · TRADER II</span>
+                      <span class="rank-next">110 → 35 XP TO RANK 8</span>
+                    </div>
+                    <div class="rank-bar">
+                      <div class="rank-bar-fill"></div>
+                      <div class="rank-bar-add"></div>
+                    </div>
+                    <div class="rank-bar-meta">
+                      <span><b>315</b> XP</span>
+                      <span>350 XP</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="padding: 12px 16px; display: flex; gap: 8px">
+                  <div
+                    style="
+                      flex: 1;
+                      padding: 10px;
+                      border: 1.5px solid var(--ink);
+                      text-align: center;
+                      font-family: ui-monospace, monospace;
+                      font-size: 11px;
+                      font-weight: 700;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      border-radius: 4px;
+                    "
+                  >
+                    Share
+                  </div>
+                  <div
+                    style="
+                      flex: 1;
+                      padding: 10px;
+                      background: var(--ink);
+                      color: var(--paper);
+                      text-align: center;
+                      font-family: ui-monospace, monospace;
+                      font-size: 11px;
+                      font-weight: 700;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      border-radius: 4px;
+                    "
+                  >
+                    Play again
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [3/4] RESULT — RANK UP MOMENT (full-screen overlay)
+              </div>
+              <div class="paper-frame">
+                <div class="rankup-overlay">
+                  <div class="rankup-label">★ RANK UP ★</div>
+                  <div class="rankup-rank">RANK 8</div>
+                  <div class="rankup-tier">TRADER III</div>
+                  <div class="rankup-unlock">
+                    <strong>NEW UNLOCK</strong><br />
+                    Custom Share-Card themes<br />
+                    <em style="opacity: 0.85">Choose how your wins look in chat</em>
+                  </div>
+                </div>
+                <div style="padding: 12px 16px; text-align: center">
+                  <div
+                    style="
+                      display: inline-block;
+                      padding: 10px 18px;
+                      background: var(--ink);
+                      color: var(--paper);
+                      font-family: ui-monospace, monospace;
+                      font-size: 11px;
+                      font-weight: 700;
+                      letter-spacing: 0.08em;
+                      text-transform: uppercase;
+                      border-radius: 4px;
+                    "
+                  >
+                    Customize now →
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">[4/4] PROFILE — rank section</div>
+              <div class="paper-frame">
+                <div class="profile-rank">
+                  <div class="profile-rank-h">
+                    <div class="tier-icon-lg" style="background: var(--t-trader)">7</div>
+                    <div class="profile-rank-info">
+                      <div class="profile-rank-num">Rank 7 · Trader II</div>
+                      <div class="profile-rank-tier">SEASON 1 · APRIL 2026</div>
+                    </div>
+                  </div>
+                  <div class="rank-bar">
+                    <div class="rank-bar-fill" style="width: 68%"></div>
+                  </div>
+                  <div class="rank-bar-meta">
+                    <span><b>240</b> XP</span>
+                    <span>110 XP TO RANK 8</span>
+                  </div>
+                  <div class="profile-rank-trophy">
+                    CAREER HIGH: <b>RANK 12 · DEGEN II</b> · S1 TROPHIES: 0
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="notes">
+            <div class="note">
+              <h3>Lobby — rank chip<span class="note-tag tag-vir">always visible</span></h3>
+              <p>
+                Mini-pill зверху-праворуч: <code>(7) Trader II · 240/350 XP</code>. Чорний bg +
+                accent-red rank circle = anchor для ока. Tap → відкриває окремий
+                <code>/me/rank</code> screen з повною ladder. Завжди видно — і в Lobby, і у всіх
+                скрінах де є Header (Live, Result).
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>
+                Lobby — next-rank teaser banner<span class="note-tag tag-onb">onboarding</span>
+              </h3>
+              <p>
+                Жовтий paper note, як streak widget у профайлі. Точна headline формула: "Reach
+                <b>Rank N · TierName</b> to unlock <b>UnlockName</b>". Прогрес-bar показує наскільки
+                близько. <strong>Зникає коли юзер на Mythic V (немає більше unlock'ів)</strong> —
+                тоді замінюється на "Defend your Mythic crown — N XP за сезон".
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>Lobby — locked contest cards<span class="note-tag tag-onb">onboarding</span></h3>
+              <p>
+                Locked contests показуємо БЕЗ ховання. <code>opacity: 0.85</code> + dim background +
+                чорна "🔒 RANK 8" plate. Текст контесту dimmed.
+                <strong>Сортування:</strong> unlocked спочатку, потім locked — у порядку зростання
+                rank requirement. Це <strong>aspirational</strong>, не frustrating — юзер бачить що
+                його чекає.
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>Result — XP breakdown<span class="note-tag tag-ret">retention</span></h3>
+              <p>
+                Окремий блок з <code>code-bg</code> background.
+                <strong>Кожна XP-строка фейдиться по черзі</strong> при відкритті (stagger 100ms):
+                Participation → Position bonus → Multiplier bonus → Total. Total великим accent
+                кольором. Bonus modifiers (Bear ×1.5) кольоровані в FTL purple щоб підкреслити "ти
+                вибрав Bear, ти молодець". Прогрес-bar показує both:
+                <strong>де був до</strong> (full bg) + <strong>скільки додалось</strong> (накладений
+                yellow segment) — visceral feedback.
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>
+                Result — RANK UP overlay<span class="note-tag tag-ret"
+                  >retention killer moment</span
+                >
+              </h3>
+              <p>
+                Full-bleed accent gradient. Великі цифри ("RANK 8" — 48px).
+                <strong>Триггериться ТІЛЬКИ якщо rank changed</strong>. Trigger order: спочатку
+                показуємо звичайний result + XP breakdown, потім bar заповнюється до 100%, потім
+                повноекранне overlay. Має <strong>tactile feedback</strong> через TG SDK Haptic
+                notification('success'). CTA <code>Customize now →</code> веде юзера ВІДРАЗУ на
+                новий unlock — не лиши момент висіти. Якщо unlock = новий контест → веде у lobby з
+                підсвіченим.
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>Profile — rank section<span class="note-tag tag-ret">profile anchor</span></h3>
+              <p>
+                Розташовується <strong>ПЕРЕД stats grid</strong> (вище секції 4). Tier icon великий
+                (48px) — найбільший visual element на profile. Trophy line знизу —
+                <strong>"Career high: Rank 12 · Degen II"</strong> — створює long-term aspirational.
+                Якщо у юзера є season trophies (закінчені сезони) — додаємо рядок з emoji-стрічкою:
+                🥇🥉🥈... Tap на тier icon → opens full ladder screen.
+              </p>
+            </div>
+
+            <div class="note">
+              <h3>
+                Leaderboards — rank поряд з username<span class="note-tag tag-vir"
+                  >social proof</span
+                >
+              </h3>
+              <p>
+                На <code>/rankings</code> кожен юзер має mini rank-badge біля імені:
+                <code>(12) Andriy</code>. Whale+ tier — gold-accent username (cosmetic unlock at
+                Rank 20). Створює "wow ці люди серйозні" effect. Опційно: filter "Show only Whale+"
+                або "My league" (current rank ±2).
+              </p>
+            </div>
+
+            <div class="note" style="background: var(--warn-soft); border-color: var(--warn)">
+              <h3>Що ВАЖЛИВО для дизайнера</h3>
+              <p>
+                <strong>Rank chip і Profile rank section мають бути ВІЗУАЛЬНО CONNECTED.</strong>
+                Той самий tier icon, той самий progress bar style. Юзер натискає chip → бачить
+                розгорнуту версію того ж самого. Continuity → mental model.
+                <strong>Tier icons</strong> можуть еволюціонувати від простих квадратів (Newbie) до
+                складних геральдичних форм (Mythic) — це додаткова тиха progression visualization.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================ IMPLEMENTATION ================ -->
+      <div class="panel" id="panel-impl">
+        <div class="impl-block">
+          <h3>1. DB schema changes</h3>
+          <div class="code">
+            -- Migration 0005_xp_ranks.sql ALTER TABLE users ADD COLUMN xp_total bigint NOT NULL
+            DEFAULT 0; ALTER TABLE users ADD COLUMN xp_season bigint NOT NULL DEFAULT 0; ALTER TABLE
+            users ADD COLUMN current_rank int NOT NULL DEFAULT 1; ALTER TABLE users ADD COLUMN
+            career_highest_rank int NOT NULL DEFAULT 1; CREATE TABLE xp_events ( id uuid PRIMARY KEY
+            DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id), contest_id uuid
+            REFERENCES contests(id), delta_xp int NOT NULL, reason varchar(32) NOT NULL, --
+            'participation' | 'position' | 'bonus' | 'season_reset' breakdown jsonb, -- structured:
+            { participation: 10, position: 40, bear_mult: 1.5 } season_id uuid, created_at
+            timestamptz NOT NULL DEFAULT now() ); CREATE INDEX xp_events_user_created_idx ON
+            xp_events(user_id, created_at DESC); CREATE TABLE seasons ( id uuid PRIMARY KEY DEFAULT
+            gen_random_uuid(), number int NOT NULL UNIQUE, name text NOT NULL, -- "April 2026"
+            starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL, status varchar(16) NOT
+            NULL DEFAULT 'active' -- active | finalized ); ALTER TABLE contests ADD COLUMN min_rank
+            int NOT NULL DEFAULT 1; ALTER TABLE contests ADD COLUMN xp_multiplier numeric(3,2) NOT
+            NULL DEFAULT 1.0;
+          </div>
+        </div>
+
+        <div class="impl-block">
+          <h3>2. Pure functions in <code>packages/shared/src/ranks/</code></h3>
+          <div class="code">
+            // rank-curve.ts export const RANK_THRESHOLDS = [ 0, 30, 80, 150, 250, // Newbie I-V
+            400, 600, 850, 1150, 1500, // Trader I-V 2000, 2600, 3300, 4100, 5000, // Degen 6200,
+            7500, 9000, 10800, 12800, // Whale 15000, 17500, 20500, 24000, 28000, // Legend 33000,
+            39000, 46000, 54000, 65000, // Mythic ]; export const TIER_GROUPS = [ { name: 'Newbie',
+            ranks: [1,5], color: '#8a8478' }, { name: 'Trader', ranks: [6,10], color: '#6b8e6b' }, {
+            name: 'Degen', ranks: [11,15], color: '#5a7ba8' }, { name: 'Whale', ranks: [16,20],
+            color: '#8a5fa8' }, { name: 'Legend', ranks: [21,25], color: '#c97a3a' }, { name:
+            'Mythic', ranks: [26,30], color: '#d4441c' }, ]; export function rankFromXp(xp: number):
+            { rank: number; tier: string; tierRoman: string } { ... } export function
+            xpToNextRank(xp: number): { current: number; next: number; remaining: number } { ... }
+            // xp-award.ts export interface ContestResult { position: number; // 1-based
+            totalRealUsers: number; contestType: 'bull' | 'bear'; contestMultiplier: number; // base
+            × tier × ... } export interface XpAward { participation: number; // 10 position: number;
+            // 0..100 bonusMultiplier: number; // 1.0..3.0 total: number; // ceil((participation +
+            position) * bonusMultiplier) breakdown: { reason: string; amount: number }[]; // for UI
+            } export function awardXp(r: ContestResult): XpAward { ... }
+          </div>
+        </div>
+
+        <div class="impl-block">
+          <h3>3. Backend — wire to <code>contests.finalize</code></h3>
+          <div class="code">
+            // contests.finalize.ts — extension async finalize(contestId) { // ... existing
+            finalization (compute final_score, distribute prizes) for (const entry of realEntries) {
+            const award = awardXp({ position: entry.position, totalRealUsers: realEntries.length,
+            contestType: contest.type, contestMultiplier: contest.xpMultiplier, }); await
+            db.transaction(async (tx) => { await tx.insert(xpEvents).values({ userId: entry.userId,
+            contestId, deltaXp: award.total, reason: 'contest_finalized', breakdown:
+            award.breakdown, seasonId: currentSeasonId, }); await tx.update(users) .set({ xpTotal:
+            sql`xp_total + ${award.total}`, xpSeason: sql`xp_season + ${award.total}`, currentRank:
+            sql`GREATEST(current_rank, ${rankFromXp(newXpTotal).rank})`, careerHighestRank:
+            sql`GREATEST(career_highest_rank, ${rankFromXp(newXpTotal).rank})`, })
+            .where(eq(users.id, entry.userId)); }); } }
+          </div>
+        </div>
+
+        <div class="impl-block">
+          <h3>4. New API endpoints</h3>
+          <div class="code">
+            GET /me/rank → { current_rank, current_tier, xp_total, xp_season, xp_to_next,
+            career_high } GET /me/rank/events?limit=20 → recent XP events for "rank history" UI (V2)
+            GET /seasons/current → { id, name, starts_at, ends_at, days_left } GET /lobby/teaser → {
+            next_rank, xp_to_next, next_unlock: { name, type } } → used by Lobby teaser banner →
+            null if user is at Mythic V GET /contests?include_locked=true → returns contests with
+            min_rank field → frontend filters/sorts
+          </div>
+        </div>
+
+        <div class="impl-block">
+          <h3>5. Cron / season management</h3>
+          <div class="code">
+            // New cron in server.ts — checks daily, fires on first day of new month const
+            stopSeasonCheck = scheduleEvery({ intervalMs: HOUR, fn: async () => { await
+            seasons.tick(); // checks if current season ended → finalize + create next }, }); //
+            seasons.service.ts async tick() { const current = await this.getCurrentSeason(); if
+            (Date.now() < current.endsAt) return; await this.db.transaction(async (tx) => { // 1.
+            Distribute season prizes (top-100 by xp_season) // 2. Award "Season Champion" badges to
+            top-10 // 3. Soft reset: all users rank = max(5, current_rank - 5), xp_season = 0 // 4.
+            Mark season as finalized // 5. Create next season }); }
+          </div>
+        </div>
+
+        <div class="impl-block" style="background: var(--ftl-soft); border-color: var(--ftl)">
+          <h3 style="color: var(--ftl)">6. Implementation order — ~5-7 днів</h3>
+          <ol style="padding-left: 20px; font-size: 13px; line-height: 1.8">
+            <li>
+              <strong>Day 1.</strong> Migration + shared/ranks/ pure functions + tests for rank
+              curve.
+            </li>
+            <li>
+              <strong>Day 2.</strong> Wire <code>awardXp</code> into <code>contests.finalize</code>.
+              Backfill XP for existing finalized contests (one-shot script).
+            </li>
+            <li>
+              <strong>Day 3.</strong> API endpoints (<code>/me/rank</code>,
+              <code>/lobby/teaser</code>). Update existing <code>/contests</code> to return
+              <code>min_rank</code>.
+            </li>
+            <li>
+              <strong>Day 4.</strong> Frontend: Lobby rank chip + teaser banner + locked contest
+              cards.
+            </li>
+            <li>
+              <strong>Day 5.</strong> Frontend: Result XP breakdown + RANK UP overlay (with haptic).
+            </li>
+            <li>
+              <strong>Day 6.</strong> Frontend: Profile rank section. Leaderboards rank badge.
+            </li>
+            <li>
+              <strong>Day 7 (optional).</strong> Season cron + season finalize logic. Можна defer на
+              пізніше — Season 1 у тебе можна просто manual створити з адмінки.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      try {
+        if (typeof Chart !== 'undefined') {
+          const ranks = Array.from({ length: 30 }, (_, i) => i + 1);
+          const thresholds = [
+            0, 30, 80, 150, 250, 400, 600, 850, 1150, 1500, 2000, 2600, 3300, 4100, 5000, 6200,
+            7500, 9000, 10800, 12800, 15000, 17500, 20500, 24000, 28000, 33000, 39000, 46000, 54000,
+            65000,
+          ];
+          const deltas = thresholds.map((v, i) => (i === 0 ? 0 : v - thresholds[i - 1]));
+          const tierColors = ['#8a8478', '#6b8e6b', '#5a7ba8', '#8a5fa8', '#c97a3a', '#d4441c'];
+          const barColors = ranks.map((r) => tierColors[Math.floor((r - 1) / 5)]);
+
+          Chart.defaults.color = '#5b6272';
+
+          new Chart(document.getElementById('chart-xp'), {
+            type: 'bar',
+            data: {
+              labels: ranks.map((r) => 'R' + r),
+              datasets: [
+                {
+                  type: 'bar',
+                  label: 'XP delta to next rank',
+                  data: deltas,
+                  backgroundColor: barColors,
+                  borderRadius: 2,
+                  yAxisID: 'y',
+                },
+                {
+                  type: 'line',
+                  label: 'Cumulative XP',
+                  data: thresholds,
+                  borderColor: '#0b6cff',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  fill: false,
+                  pointRadius: 2,
+                  yAxisID: 'y1',
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  position: 'left',
+                  title: { display: true, text: 'XP delta', font: { size: 10 } },
+                  ticks: { font: { size: 10 } },
+                },
+                y1: {
+                  beginAtZero: true,
+                  position: 'right',
+                  grid: { display: false },
+                  title: { display: true, text: 'XP cumulative', font: { size: 10 } },
+                  ticks: { font: { size: 10 } },
+                },
+                x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+              },
+            },
+          });
+
+          // Player projection over 28-day season
+          const days = Array.from({ length: 29 }, (_, i) => i);
+          function rankAtXp(xp) {
+            for (let i = thresholds.length - 1; i >= 0; i--) {
+              if (xp >= thresholds[i]) return i + 1;
+            }
+            return 1;
+          }
+          const casual = days.map((d) => rankAtXp(d * 1 * 15)); // 1 contest/day @ 15 xp
+          const engaged = days.map((d) => rankAtXp(d * 3 * 30)); // 3 contests/day @ 30 xp
+          const hardcore = days.map((d) => rankAtXp(d * 5 * 80)); // 5 contests/day @ 80 xp
+
+          new Chart(document.getElementById('chart-projection'), {
+            type: 'line',
+            data: {
+              labels: days.map((d) => 'D' + d),
+              datasets: [
+                {
+                  label: 'Casual (1 c/day, 15 XP avg)',
+                  data: casual,
+                  borderColor: '#8a8478',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  pointRadius: 0,
+                  fill: false,
+                },
+                {
+                  label: 'Engaged (3 c/day, 30 XP avg)',
+                  data: engaged,
+                  borderColor: '#5a7ba8',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  pointRadius: 0,
+                  fill: false,
+                },
+                {
+                  label: 'Hardcore (5 c/day, 80 XP avg)',
+                  data: hardcore,
+                  borderColor: '#d4441c',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  pointRadius: 0,
+                  fill: false,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 30,
+                  title: { display: true, text: 'Rank reached', font: { size: 10 } },
+                  ticks: { font: { size: 10 }, stepSize: 5 },
+                },
+                x: { ticks: { font: { size: 9 }, maxTicksLimit: 8 }, grid: { display: false } },
+              },
+            },
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    </script>
+  </body>
+</html>
