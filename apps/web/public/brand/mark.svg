@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Fantasy Token">
+  <!-- Primary mark, color variant. Per /Fantasy Token — Brand Kit.pdf §01.
+       Big tile 198×198, radius 37, stroke 8, accent fill. T-tile 88×88, radius 19,
+       stroke 8, paper fill, snaps into the lower-right corner. Solid +10/+10
+       drop-shadow (no blur) drawn behind each tile. Letterforms are simple
+       geometric blocks built on a 1-unit module per spec §01 Letterforms. -->
+
+  <!-- Big-tile shadow (drawn first so the tile fill covers most of it; only the
+       offset edge stays visible to the bottom-right). -->
+  <rect x="16" y="16" width="198" height="198" rx="37" ry="37" fill="#1A1814" />
+
+  <!-- Big tile -->
+  <rect
+    x="6" y="6" width="198" height="198" rx="37" ry="37"
+    fill="#D4441C" stroke="#1A1814" stroke-width="8"
+  />
+
+  <!-- F glyph — paper fill, centered on the big tile (105, 105). Bbox 54×80. -->
+  <g fill="#F6F1E8" transform="translate(78, 65)">
+    <rect x="0" y="0" width="14" height="80" />
+    <rect x="0" y="0" width="54" height="14" />
+    <rect x="0" y="33" width="36" height="12" />
+  </g>
+
+  <!-- Small-tile shadow — drawn ABOVE the big tile so the T-tile's shadow
+       lands on top of the F-tile, mirroring the brand kit visual. -->
+  <rect x="172" y="172" width="88" height="88" rx="19" ry="19" fill="#1A1814" />
+
+  <!-- T tile -->
+  <rect
+    x="162" y="162" width="88" height="88" rx="19" ry="19"
+    fill="#F6F1E8" stroke="#1A1814" stroke-width="8"
+  />
+
+  <!-- T glyph — ink fill, stem-centered on the T-tile (206, 206). Bbox 37×36. -->
+  <g fill="#1A1814" transform="translate(187.5, 188)">
+    <rect x="0" y="0" width="37" height="10" />
+    <rect x="13.5" y="0" width="10" height="36" />
+  </g>
+</svg>

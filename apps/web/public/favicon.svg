@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Fantasy Token">
+  <!-- Favicon: F-tile alone (per brand kit §03 Scale, T-tile drops below 14px).
+       Same proportions as primary mark; tile fills the canvas with 16px padding. -->
+  <rect x="16" y="16" width="224" height="224" rx="42" ry="42" fill="#D4441C" stroke="#1A1814" stroke-width="10" />
+  <g fill="#F6F1E8" transform="translate(98, 84)">
+    <rect x="0" y="0" width="16" height="92" />
+    <rect x="0" y="0" width="62" height="16" />
+    <rect x="0" y="38" width="42" height="14" />
+  </g>
+</svg>
