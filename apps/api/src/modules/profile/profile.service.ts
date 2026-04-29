@@ -1,7 +1,9 @@
 export interface ProfileStats {
   contestsPlayed: number;
+  /** wonContests / (wonContests + lostContests); even (cancelled-with-refund) excluded. */
   winRate: number | null;
-  bestFinish: number | null;
+  /** Best single-contest net P&L in cents. */
+  bestPnlCents: number | null;
   allTimePnlCents: number;
 }
 

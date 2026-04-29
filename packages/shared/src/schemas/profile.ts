@@ -3,10 +3,11 @@ import { ContestType } from './contest.js';
 
 export const ProfileStats = z.object({
   contestsPlayed: z.number().int().nonnegative(),
-  /** 0..1 — fraction of finalized entries where prize_cents > 0. null if no finalized entries yet. */
+  /** 0..1 — wonContests / (wonContests + lostContests). Even (cancelled with refund) excluded.
+   * null if user has no decided contests yet. */
   winRate: z.number().min(0).max(1).nullable(),
-  /** Best (lowest) final_rank across finalized entries. null if none. */
-  bestFinish: z.number().int().positive().nullable(),
+  /** Largest single-contest P&L cents (best contest result). null if none played. */
+  bestPnlCents: z.number().int().nullable(),
   allTimePnlCents: z.number().int(),
 });
 export type ProfileStats = z.infer<typeof ProfileStats>;
