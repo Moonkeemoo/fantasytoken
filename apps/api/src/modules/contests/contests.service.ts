@@ -13,6 +13,7 @@ export interface ContestRowFromRepo {
   endsAt: string;
   isFeatured: boolean;
   minRank: number;
+  payAll: boolean;
   userHasEntered: boolean;
 }
 

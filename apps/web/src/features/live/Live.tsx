@@ -48,6 +48,7 @@ export function Live() {
         startsAt={data.startsAt}
         endsAt={data.endsAt}
         status={data.status}
+        payAll={data.payAll}
       />
       <LineupPerf rows={data.lineup} />
       <MiniLeaderboard

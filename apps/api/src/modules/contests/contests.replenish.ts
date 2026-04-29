@@ -22,6 +22,7 @@ export const REPLENISH_TEMPLATES = [
     isFeatured: false,
     minRank: 1,
     xpMultiplier: '1.00',
+    payAll: true,
   },
   {
     // First paid contest — opens at Rank 2 so a fresh user does Practice
@@ -192,6 +193,7 @@ export function createReplenishService(deps: ReplenishServiceDeps): ReplenishSer
           isFeatured: t.isFeatured,
           minRank: t.minRank,
           xpMultiplier: t.xpMultiplier,
+          payAll: 'payAll' in t ? t.payAll : false,
           startsAt,
           endsAt,
           createdByUserId: adminId,

@@ -25,6 +25,8 @@ export interface ContestSnapshot {
   prizePoolCents: number;
   entryFeeCents: number;
   type: 'bull' | 'bear';
+  /** Whether every entry is paid (Practice) vs the standard top-30% curve. */
+  payAll: boolean;
 }
 
 export interface LeaderboardRepo {
@@ -111,7 +113,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         rakePct: deps.rakePct,
         guaranteedPoolCents: contest.prizePoolCents,
       });
-      const curve = computePrizeCurve(totalEntries, actualPoolCents);
+      const curve = computePrizeCurve(totalEntries, actualPoolCents, { payAll: contest.payAll });
       const topPrizeCents = curve.get(1) ?? 0;
       let projectedPrizeCents = 0;
       let userRank: number | null = null;
@@ -159,6 +161,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         realEntries,
         projectedPrizeCents,
         topPrizeCents,
+        payAll: contest.payAll,
         lineup,
         leaderboardTop: display.slice(0, 3),
         leaderboardAll: display.slice(0, 100),

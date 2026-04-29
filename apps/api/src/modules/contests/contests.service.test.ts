@@ -23,6 +23,7 @@ function makeRow(overrides: Partial<ContestRowFromRepo> = {}): ContestRowFromRep
     endsAt: nowPlus(120),
     isFeatured: false,
     minRank: 1,
+    payAll: false,
     userHasEntered: false,
     ...overrides,
   };

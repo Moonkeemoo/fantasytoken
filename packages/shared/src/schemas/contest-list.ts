@@ -21,6 +21,9 @@ export const ContestListItem = z.object({
    * Optional for backward-compat: api responses from before the rank-system
    * deploy default to 1, so the frontend doesn't crash on old data. */
   minRank: z.number().int().min(1).max(30).default(1),
+  /** When true, every entry receives a (decaying) prize share — used by
+   * Practice. Defaults false for backward-compat with pre-deploy responses. */
+  payAll: z.boolean().default(false),
   // True if the requesting user has an entry in this contest.
   userHasEntered: z.boolean(),
 });

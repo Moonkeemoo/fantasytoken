@@ -43,6 +43,7 @@ function rowFromDbRow(
     endsAt: row.endsAt.toISOString(),
     isFeatured: row.isFeatured,
     minRank: row.minRank,
+    payAll: row.payAll,
     userHasEntered,
   };
 }

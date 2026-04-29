@@ -15,6 +15,8 @@ export interface ScoreboardProps {
   startsAt: string;
   endsAt: string;
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
+  /** When true, every entry receives a payout — subtitle reads "all positions paid". */
+  payAll?: boolean;
 }
 
 export function Scoreboard({
@@ -28,6 +30,7 @@ export function Scoreboard({
   startsAt,
   endsAt,
   status,
+  payAll = false,
 }: ScoreboardProps) {
   const isPreStart = status === 'scheduled';
   const ms = useCountdown(isPreStart ? startsAt : endsAt);
@@ -56,7 +59,7 @@ export function Scoreboard({
           <Stat
             label="potential prize"
             primary={formatCents(topPrizeCents)}
-            sub="winner takes top"
+            sub={payAll ? 'all positions paid' : 'winner takes top'}
           />
         </div>
       </Card>
@@ -79,7 +82,7 @@ export function Scoreboard({
         <Stat
           label="prize if end now"
           primary={formatCents(projectedPrizeCents)}
-          sub="top 30% pays"
+          sub={payAll ? 'all positions paid' : 'top 30% pays'}
         />
         <Stat label="time left" primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
       </div>

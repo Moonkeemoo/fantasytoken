@@ -21,16 +21,32 @@ export function computeActualPrizeCents(args: {
  * One smooth curve — no special-case top-3 vs rest, no leftover. Decay r=0.65
  * keeps top-3 in the 70-80% band across realistic room sizes (3..100). Pays the
  * top 30% of entries (with a floor of 3 ranks for tiny rooms; full room when N ≤ 3).
+ *
+ * `payAll: true` overrides the 30% gate so every entry receives a (decaying)
+ * share — used by the Practice contest where the explicit promise is "all 10
+ * positions paid, $2.50 → $0.50". The curve shape stays geometric so 1st
+ * still wins more than last; only the eligibility cutoff changes.
  */
 const DECAY = 0.65;
 const PAY_FRACTION = 0.3;
 
-export function computePrizeCurve(totalCount: number, prizePoolCents: number): Map<number, number> {
+export interface PrizeCurveOptions {
+  payAll?: boolean;
+}
+
+export function computePrizeCurve(
+  totalCount: number,
+  prizePoolCents: number,
+  opts: PrizeCurveOptions = {},
+): Map<number, number> {
   const result = new Map<number, number>();
   if (totalCount <= 0 || prizePoolCents <= 0) return result;
 
-  const payingCount =
-    totalCount <= 3 ? totalCount : Math.max(3, Math.floor(totalCount * PAY_FRACTION));
+  const payingCount = opts.payAll
+    ? totalCount
+    : totalCount <= 3
+      ? totalCount
+      : Math.max(3, Math.floor(totalCount * PAY_FRACTION));
 
   // Build geometric weights w_i = r^i and their normalisation factor.
   const weights: number[] = [];
