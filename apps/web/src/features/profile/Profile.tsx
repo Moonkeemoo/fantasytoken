@@ -114,18 +114,24 @@ function BalanceCard({ balanceCents, onTopUp }: { balanceCents: number; onTopUp:
 
 function TrackRecord({ stats }: { stats: ProfileResponse['stats'] }) {
   const winRateText = stats.winRate === null ? '—' : `${Math.round(stats.winRate * 100)}%`;
-  const bestText = stats.bestFinish === null ? '—' : `#${stats.bestFinish}`;
-  const pnlClass =
+  const bestText = stats.bestPnlCents === null ? '—' : formatPnlCents(stats.bestPnlCents);
+  const allPnlClass =
     stats.allTimePnlCents > 0 ? 'text-hl-green' : stats.allTimePnlCents < 0 ? 'text-hl-red' : '';
+  const bestClass =
+    stats.bestPnlCents !== null && stats.bestPnlCents > 0
+      ? 'text-hl-green'
+      : stats.bestPnlCents !== null && stats.bestPnlCents < 0
+        ? 'text-hl-red'
+        : '';
   return (
     <div className="mt-1 grid grid-cols-2 overflow-hidden rounded-[6px] border-[1.5px] border-ink">
       <Stat label="contests" value={String(stats.contestsPlayed)} />
       <Stat label="win rate" value={winRateText} borderLeft />
-      <Stat label="best finish" value={bestText} borderTop />
+      <Stat label="best contest" value={bestText} valueClass={bestClass} borderTop />
       <Stat
         label="all-time P&L"
         value={formatPnlCents(stats.allTimePnlCents)}
-        valueClass={pnlClass}
+        valueClass={allPnlClass}
         borderLeft
         borderTop
       />
