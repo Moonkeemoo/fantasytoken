@@ -11,7 +11,10 @@ export const telegram = {
   hapticImpact: (style: 'light' | 'medium' | 'heavy' = 'light') =>
     WebApp.HapticFeedback.impactOccurred(style),
   shareToChat: (url: string, text: string) => {
-    const params = new URLSearchParams({ url, text });
-    WebApp.openTelegramLink(`https://t.me/share/url?${params.toString()}`);
+    // URLSearchParams encodes spaces as '+' which TG renders literally in the caption.
+    // Use percent-encoded form (RFC 3986) so spaces stay spaces in the chat preview.
+    const u = encodeURIComponent(url);
+    const t = encodeURIComponent(text);
+    WebApp.openTelegramLink(`https://t.me/share/url?url=${u}&text=${t}`);
   },
 };

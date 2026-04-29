@@ -31,6 +31,9 @@ export function makeShareRoutes(deps: ShareRoutesDeps): FastifyPluginAsync {
           ? `Won $${(data.prizeCents / 100).toFixed(2)} in ${data.contestName}. Tap to play.`
           : `Played ${data.contestName} on Fantasy Token. Tap to join.`;
 
+      // NOTE: no meta-refresh redirect to t.me — TG link-info bot follows redirects
+      // and the resulting t.me/<bot> preview overrides our og:image. Visitor lands
+      // here, sees the rendered card and clicks the manual button.
       reply.type('text/html; charset=utf-8');
       return `<!doctype html>
 <html lang="en">
@@ -41,20 +44,24 @@ export function makeShareRoutes(deps: ShareRoutesDeps): FastifyPluginAsync {
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(desc)}" />
     <meta property="og:image" content="${imageUrl}" />
+    <meta property="og:image:secure_url" content="${imageUrl}" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="${deps.apiBaseUrl}/share/${entryId}" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Fantasy Token" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(desc)}" />
     <meta name="twitter:image" content="${imageUrl}" />
-    <meta http-equiv="refresh" content="0; url=${escapeHtml(refLink)}" />
   </head>
   <body style="margin:0;font-family:system-ui;background:#f6f1e8;color:#1a1814;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;">
-    <div style="text-align:center;max-width:480px">
-      <h1 style="margin:0 0 12px;font-size:22px">${escapeHtml(title)}</h1>
+    <div style="text-align:center;max-width:520px">
+      <img src="${imageUrl}" alt="" style="width:100%;height:auto;border-radius:12px;box-shadow:0 6px 0 #1a1814;border:1.5px solid #1a1814" />
+      <h1 style="margin:20px 0 8px;font-size:22px">${escapeHtml(title)}</h1>
       <p style="margin:0 0 20px;color:#65615b">${escapeHtml(desc)}</p>
-      <a href="${escapeHtml(refLink)}" style="display:inline-block;background:#1a1814;color:#f6f1e8;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:700">Open in Telegram →</a>
+      <a href="${escapeHtml(refLink)}" style="display:inline-block;background:#1a1814;color:#f6f1e8;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700">Open in Telegram →</a>
     </div>
   </body>
 </html>`;

@@ -31,8 +31,15 @@ export function Result() {
     }
     // Public share URL — TG fetches OG meta from this and renders the card image preview.
     const shareUrl = `${apiBase}/share/${data.entryId}`;
-    const verb = data.outcome === 'won' ? `won ${formatCents(data.prizeCents)} in` : `played`;
-    const text = `I ${verb} ${data.contestName} on Fantasy Token. Join me ↗`;
+    const rankPart = data.finalRank !== null ? `#${data.finalRank} of ${data.totalEntries}` : '';
+    let text: string;
+    if (data.outcome === 'won') {
+      text = `🏆 ${rankPart} in ${data.contestName} — won ${formatCents(data.prizeCents)} on Fantasy Token. Pick 5 crypto tokens, win cash. Beat me 👇`;
+    } else if (data.outcome === 'cancelled') {
+      text = `Played ${data.contestName} on Fantasy Token. Pick 5 crypto tokens, beat the room 👇`;
+    } else {
+      text = `Played ${data.contestName}${rankPart ? ` — ${rankPart}` : ''} on Fantasy Token. Think you can beat me? Pick 5 crypto tokens 👇`;
+    }
     telegram.shareToChat(shareUrl, text);
     telegram.hapticImpact('medium');
   };
