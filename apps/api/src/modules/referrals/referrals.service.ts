@@ -8,6 +8,7 @@ import {
 } from '@fantasytoken/shared';
 import type { Logger } from '../../logger.js';
 import type { CurrencyService } from '../currency/currency.service.js';
+import type { DmQueueService } from '../bot/queue.service.js';
 
 export interface ReferralChainLink {
   /** 1 = direct inviter, 2 = inviter's inviter. */
@@ -121,12 +122,22 @@ export interface ReferralsRepo {
       createdAt: Date;
     }>
   >;
+
+  /** Single-row lookup used to enrich the commission DM payload — winner's
+   * first name + contest name in one round-trip. */
+  lookupCommissionDmContext(args: {
+    sourceUserId: string;
+    sourceContestId: string;
+  }): Promise<{ sourceFirstName: string | null; contestName: string | null }>;
 }
 
 export interface ReferralsServiceDeps {
   repo: ReferralsRepo;
   currency: CurrencyService;
   log: Logger;
+  /** Optional — when present, payCommissions enqueues a TG bot DM after each
+   * successful credit. Tests pass undefined; the in-app toast still works. */
+  dmQueue?: DmQueueService;
 }
 
 export interface ReferralsService {
@@ -171,6 +182,7 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
 
     async payCommissions(args) {
       let paidLevels = 0;
+      let dmContext: { sourceFirstName: string | null; contestName: string | null } | null = null;
       try {
         const chain = await deps.repo.getReferralChain(args.sourceUserId, MAX_REFERRAL_DEPTH);
         for (const link of chain) {
@@ -191,7 +203,30 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
               payoutCents: calc.payoutCents,
               currency: args.currency,
             });
-            if (r.paid) paidLevels += 1;
+            if (r.paid) {
+              paidLevels += 1;
+              if (deps.dmQueue) {
+                // Lazy lookup — only when at least one level actually paid AND
+                // we have a queue to enqueue into. Cached across levels.
+                if (dmContext === null) {
+                  dmContext = await deps.repo.lookupCommissionDmContext({
+                    sourceUserId: args.sourceUserId,
+                    sourceContestId: args.sourceContestId,
+                  });
+                }
+                await deps.dmQueue.enqueueCommission({
+                  recipientUserId: link.userId,
+                  event: {
+                    sourceFirstName: dmContext.sourceFirstName,
+                    sourcePrizeCents: Number(args.sourcePrizeCents),
+                    payoutCents: Number(calc.payoutCents),
+                    level: link.level,
+                    contestName: dmContext.contestName,
+                    currency: args.currency,
+                  },
+                });
+              }
+            }
           } catch (err) {
             // INV-7: a single-level failure must not stop us paying the other level.
             deps.log.error(

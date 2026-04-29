@@ -327,6 +327,28 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
       };
     },
 
+    async lookupCommissionDmContext({ sourceUserId, sourceContestId }) {
+      // Two single-row joins in one round-trip — cheaper than two service calls.
+      const rows = await db.execute<{
+        first_name: string | null;
+        contest_name: string | null;
+      }>(sql`
+        SELECT
+          (SELECT first_name FROM users WHERE id = ${sourceUserId}) AS first_name,
+          (SELECT name FROM contests WHERE id = ${sourceContestId}) AS contest_name
+      `);
+      const r = (
+        rows as unknown as Array<{
+          first_name: string | null;
+          contest_name: string | null;
+        }>
+      )[0];
+      return {
+        sourceFirstName: r?.first_name ?? null,
+        contestName: r?.contest_name ?? null,
+      };
+    },
+
     async getPayouts(userId, limit) {
       const rows = await db
         .select({

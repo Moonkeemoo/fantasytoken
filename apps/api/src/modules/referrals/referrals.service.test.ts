@@ -114,6 +114,9 @@ function makeFakeRepo(): FakeRepo {
     async getPayouts(_userId, _limit) {
       return [];
     },
+    async lookupCommissionDmContext(_args) {
+      return { sourceFirstName: null, contestName: null };
+    },
   };
   return repo;
 }

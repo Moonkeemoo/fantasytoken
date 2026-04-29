@@ -85,6 +85,13 @@
       "when": 1777481235000,
       "tag": "0011_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777481235100,
+      "tag": "0012_bot_dm_queue",
+      "breakpoints": true
     }
   ]
 }

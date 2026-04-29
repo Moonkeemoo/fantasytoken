@@ -39,6 +39,10 @@ export const users = pgTable('users', {
   // the 7-day window passes without a finalized entry; null otherwise.
   welcomeCreditedAt: timestamp('welcome_credited_at', { withTimezone: true }),
   welcomeExpiredAt: timestamp('welcome_expired_at', { withTimezone: true }),
+  // Last time the bot DM cron sent this user a message — REFERRAL_SYSTEM.md
+  // §11.2 caps DMs at 1 per recipient per hour. Updated by queue.service on
+  // successful send; stays NULL for users who never received a DM.
+  lastDmSentAt: timestamp('last_dm_sent_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

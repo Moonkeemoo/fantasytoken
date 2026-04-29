@@ -36,6 +36,10 @@ const ConfigSchema = z.object({
   // Used to build absolute og:image links for the share card. Empty → routes derive
   // from request headers, which works behind Railway / Vercel proxies.
   PUBLIC_API_URL: z.string().url().optional(),
+  /** Mini-app URL used by the TG bot's /start inline button to deep-link
+   * back into the app. Optional — when missing, /start replies without a
+   * button. Set to https://t.me/<bot>/<short> on prod. */
+  MINI_APP_URL: z.string().url().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

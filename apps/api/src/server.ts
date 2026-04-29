@@ -44,6 +44,9 @@ import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
 import { createReferralsRepo } from './modules/referrals/referrals.repo.js';
 import { createReferralsService } from './modules/referrals/referrals.service.js';
 import { makeReferralsRoutes } from './modules/referrals/referrals.routes.js';
+import { createBot } from './modules/bot/bot.js';
+import { createDmQueueRepo } from './modules/bot/queue.repo.js';
+import { createDmQueueService } from './modules/bot/queue.service.js';
 import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
 import { createRankingsService } from './modules/rankings/rankings.service.js';
 import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
@@ -125,12 +128,28 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
+  // Bot DM stack — initialised before referrals so payCommissions can enqueue.
+  // Skipped in test env: tests don't want long-polling to TG.
+  const bot =
+    deps.config.NODE_ENV === 'test'
+      ? null
+      : createBot({
+          token: deps.config.TELEGRAM_BOT_TOKEN,
+          log: deps.logger,
+          ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
+        });
+  const dmQueueRepo = createDmQueueRepo(deps.db);
+  const dmQueue = bot
+    ? createDmQueueService({ repo: dmQueueRepo, bot, log: deps.logger })
+    : undefined;
+
   // Referrals must be live before finalizeRepo — finalize calls it as a sidecar.
   const referralsRepo = createReferralsRepo(deps.db);
   const referrals = createReferralsService({
     repo: referralsRepo,
     currency,
     log: deps.logger,
+    ...(dmQueue ? { dmQueue } : {}),
   });
 
   const finalizeRepo = createContestsFinalizeRepo(
@@ -250,6 +269,34 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  // Bot DM drain: aggregate pending commission notifications per recipient
+  // (1 DM/recipient/hour cap, REFERRAL_SYSTEM.md §11.2). 1-min cadence so a
+  // burst of commissions still gets coalesced into one message in steady state.
+  // Skipped in test env (no bot to send through).
+  const stopDmDrain = dmQueue
+    ? scheduleEvery({
+        intervalMs: MINUTE,
+        fn: async () => {
+          const r = await dmQueue.drain();
+          if (r.sentCount > 0 || r.failedCount > 0) {
+            deps.logger.info(r, 'bot.dm.drain');
+          }
+        },
+        name: 'bot.dm.drain',
+        log: deps.logger,
+        runOnStart: deps.config.NODE_ENV !== 'test',
+      })
+    : () => {};
+
+  // Bot long-polling — runs in the background; if it ever crashes the API
+  // server stays up. Single-replica deploy on Railway, so no leader election
+  // needed. Move to webhook mode if scaling to N>1 replicas.
+  if (bot) {
+    void bot.start().catch((err) => {
+      deps.logger.error({ err }, 'bot.start failed (DMs will not send)');
+    });
+  }
+
   // Welcome bonus expiry: claw back $25 from users who never played within
   // 7 days. Daily cadence is plenty — the underlying SQL filter is cheap
   // (indexed on welcome_credited_at via the planner's seq scan over a small
@@ -281,6 +328,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopActiveSync();
       stopReplenish();
       stopWelcomeExpiry();
+      stopDmDrain();
+      if (bot) void bot.stop();
     },
   };
 }
