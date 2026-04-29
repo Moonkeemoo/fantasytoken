@@ -6,9 +6,20 @@ import {
   PORTFOLIO_TOKEN_COUNT,
 } from '@fantasytoken/shared';
 
+// Display metadata is attached on add so LineupSummary can render real
+// icons + names without a separate symbol→token lookup. Only `symbol` and
+// `alloc` go on the wire (extra fields are stripped at submission).
 export interface LineupPick {
   symbol: string;
   alloc: number;
+  name?: string;
+  imageUrl?: string | null;
+}
+
+export interface AddTokenInput {
+  symbol: string;
+  name?: string;
+  imageUrl?: string | null;
 }
 
 const STEP = ALLOCATION_STEP_PCT;
@@ -20,12 +31,21 @@ const N = PORTFOLIO_TOKEN_COUNT;
 /**
  * Add a token; rebalances all picks to equal split rounded to multiples of STEP,
  * with remainder going to the first pick. Caps at TOTAL and N picks.
+ *
+ * Accepts either a bare symbol string (legacy / tests) or a token-shaped
+ * object so display metadata (name, imageUrl) can ride along.
  */
-export function addToken(lineup: LineupPick[], symbol: string): LineupPick[] {
-  if (lineup.some((p) => p.symbol === symbol)) return lineup;
+export function addToken(lineup: LineupPick[], input: string | AddTokenInput): LineupPick[] {
+  const meta: AddTokenInput = typeof input === 'string' ? { symbol: input } : input;
+  if (lineup.some((p) => p.symbol === meta.symbol)) return lineup;
   if (lineup.length >= N) return lineup;
-  const next = [...lineup, { symbol, alloc: 0 }];
-  return rebalanceEqual(next);
+  const added: LineupPick = {
+    symbol: meta.symbol,
+    alloc: 0,
+    ...(meta.name !== undefined && { name: meta.name }),
+    ...(meta.imageUrl !== undefined && { imageUrl: meta.imageUrl }),
+  };
+  return rebalanceEqual([...lineup, added]);
 }
 
 export function removeToken(lineup: LineupPick[], symbol: string): LineupPick[] {

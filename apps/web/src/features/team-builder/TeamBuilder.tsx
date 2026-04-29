@@ -32,15 +32,19 @@ export function TeamBuilder() {
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const onAdd = (t: Token) => setDraft(addToken(draft, t.symbol));
+  const onAdd = (t: Token) =>
+    setDraft(addToken(draft, { symbol: t.symbol, name: t.name, imageUrl: t.imageUrl }));
   const onRemove = (sym: string) => setDraft(removeToken(draft, sym));
   const onBump = (sym: string, delta: number) => setDraft(bumpAlloc(draft, sym, delta));
 
   const onSubmit = () => {
     if (!id) return;
     setErrMsg(null);
+    // Strip display-only metadata before posting — backend zod schema only
+    // accepts { symbol, alloc } and would reject the enriched LineupPick.
+    const wirePicks = draft.map((p) => ({ symbol: p.symbol, alloc: p.alloc }));
     submit.mutate(
-      { contestId: id, picks: draft },
+      { contestId: id, picks: wirePicks },
       {
         onSuccess: (res) => {
           clearDraft();
