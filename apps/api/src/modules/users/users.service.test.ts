@@ -49,6 +49,9 @@ function makeFakeRepo(): UsersRepo & {
     async markWelcomeExpired(_id) {
       // no-op for tests
     },
+    async getWelcomeRaw(_id) {
+      return null;
+    },
   };
 }
 

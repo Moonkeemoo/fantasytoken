@@ -1,7 +1,13 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { REFEREE_SIGNUP_BONUS_CENTS, RECRUITER_SIGNUP_BONUS_CENTS } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
-import { entries, referralPayouts, referralSignupBonuses, users } from '../../db/schema/index.js';
+import {
+  contests,
+  entries,
+  referralPayouts,
+  referralSignupBonuses,
+  users,
+} from '../../db/schema/index.js';
 import type { ReferralChainLink, ReferralsRepo } from './referrals.service.js';
 
 export function createReferralsRepo(db: Database): ReferralsRepo {
@@ -155,6 +161,201 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
           transactionId,
         })
         .where(eq(referralSignupBonuses.id, bonusRowId));
+    },
+
+    async getStats(userId) {
+      // Two-pass: first the counts (cheap, single CTE), then the earned sums.
+      // L1 = caller's direct referees. L2 = referees of L1.
+      // Active = referee with at least one finalized entry.
+      const counts = await db.execute<{
+        l1_count: number;
+        l2_count: number;
+        l1_active: number;
+        l2_active: number;
+      }>(sql`
+        WITH l1 AS (
+          SELECT u.id, EXISTS (
+            SELECT 1 FROM entries e WHERE e.user_id = u.id AND e.status = 'finalized'
+          ) AS active
+          FROM ${users} u
+          WHERE u.referrer_user_id = ${userId}
+        ),
+        l2 AS (
+          SELECT u.id, EXISTS (
+            SELECT 1 FROM entries e WHERE e.user_id = u.id AND e.status = 'finalized'
+          ) AS active
+          FROM ${users} u
+          WHERE u.referrer_user_id IN (SELECT id FROM l1)
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM l1) AS l1_count,
+          (SELECT COUNT(*)::int FROM l2) AS l2_count,
+          (SELECT COUNT(*)::int FROM l1 WHERE active) AS l1_active,
+          (SELECT COUNT(*)::int FROM l2 WHERE active) AS l2_active
+      `);
+      const c = (
+        counts as unknown as Array<{
+          l1_count: number;
+          l2_count: number;
+          l1_active: number;
+          l2_active: number;
+        }>
+      )[0] ?? { l1_count: 0, l2_count: 0, l1_active: 0, l2_active: 0 };
+
+      const earned = await db
+        .select({
+          level: referralPayouts.level,
+          sumCents: sql<string>`COALESCE(SUM(${referralPayouts.payoutCents}), 0)::text`,
+        })
+        .from(referralPayouts)
+        .where(eq(referralPayouts.recipientUserId, userId))
+        .groupBy(referralPayouts.level);
+
+      let l1EarnedCents = 0n;
+      let l2EarnedCents = 0n;
+      for (const r of earned) {
+        const v = BigInt(r.sumCents);
+        if (r.level === 1) l1EarnedCents = v;
+        else if (r.level === 2) l2EarnedCents = v;
+      }
+      return {
+        l1Count: c.l1_count,
+        l2Count: c.l2_count,
+        l1ActiveCount: c.l1_active,
+        l2ActiveCount: c.l2_active,
+        l1EarnedCents,
+        l2EarnedCents,
+      };
+    },
+
+    async getTree(userId) {
+      // L1: direct referees with derived per-friend stats.
+      const l1Rows = await db.execute<{
+        id: string;
+        first_name: string | null;
+        photo_url: string | null;
+        created_at: Date;
+        contests_played: number;
+        total_contributed_cents: string;
+      }>(sql`
+        SELECT
+          u.id,
+          u.first_name,
+          u.photo_url,
+          u.created_at,
+          (SELECT COUNT(*)::int FROM entries e
+            WHERE e.user_id = u.id AND e.status = 'finalized') AS contests_played,
+          COALESCE((
+            SELECT SUM(rp.payout_cents)::text FROM referral_payouts rp
+            WHERE rp.recipient_user_id = ${userId} AND rp.source_user_id = u.id
+          ), '0') AS total_contributed_cents
+        FROM ${users} u
+        WHERE u.referrer_user_id = ${userId}
+        ORDER BY u.created_at DESC
+      `);
+
+      // L2: referees of L1, with viaUserId = the L1 inviter id.
+      const l2Rows = await db.execute<{
+        id: string;
+        first_name: string | null;
+        photo_url: string | null;
+        created_at: Date;
+        contests_played: number;
+        total_contributed_cents: string;
+        via_user_id: string;
+      }>(sql`
+        SELECT
+          u.id,
+          u.first_name,
+          u.photo_url,
+          u.created_at,
+          (SELECT COUNT(*)::int FROM entries e
+            WHERE e.user_id = u.id AND e.status = 'finalized') AS contests_played,
+          COALESCE((
+            SELECT SUM(rp.payout_cents)::text FROM referral_payouts rp
+            WHERE rp.recipient_user_id = ${userId} AND rp.source_user_id = u.id
+          ), '0') AS total_contributed_cents,
+          u.referrer_user_id AS via_user_id
+        FROM ${users} u
+        JOIN ${users} l1 ON l1.id = u.referrer_user_id
+        WHERE l1.referrer_user_id = ${userId}
+        ORDER BY u.created_at DESC
+      `);
+
+      const mapL1 = (r: {
+        id: string;
+        first_name: string | null;
+        photo_url: string | null;
+        created_at: Date;
+        contests_played: number;
+        total_contributed_cents: string;
+      }) => ({
+        userId: r.id,
+        firstName: r.first_name,
+        photoUrl: r.photo_url,
+        joinedAt: r.created_at,
+        hasPlayed: r.contests_played > 0,
+        contestsPlayed: r.contests_played,
+        totalContributedCents: BigInt(r.total_contributed_cents),
+      });
+
+      return {
+        l1: (
+          l1Rows as unknown as Array<{
+            id: string;
+            first_name: string | null;
+            photo_url: string | null;
+            created_at: Date;
+            contests_played: number;
+            total_contributed_cents: string;
+          }>
+        ).map(mapL1),
+        l2: (
+          l2Rows as unknown as Array<{
+            id: string;
+            first_name: string | null;
+            photo_url: string | null;
+            created_at: Date;
+            contests_played: number;
+            total_contributed_cents: string;
+            via_user_id: string;
+          }>
+        ).map((r) => ({
+          ...mapL1(r),
+          viaUserId: r.via_user_id,
+        })),
+      };
+    },
+
+    async getPayouts(userId, limit) {
+      const rows = await db
+        .select({
+          id: referralPayouts.id,
+          level: referralPayouts.level,
+          payoutCents: referralPayouts.payoutCents,
+          sourcePrizeCents: referralPayouts.sourcePrizeCents,
+          currencyCode: referralPayouts.currencyCode,
+          createdAt: referralPayouts.createdAt,
+          sourceFirstName: users.firstName,
+          contestName: contests.name,
+        })
+        .from(referralPayouts)
+        .leftJoin(users, eq(users.id, referralPayouts.sourceUserId))
+        .leftJoin(contests, eq(contests.id, referralPayouts.sourceContestId))
+        .where(eq(referralPayouts.recipientUserId, userId))
+        .orderBy(sql`${referralPayouts.createdAt} DESC`)
+        .limit(limit);
+
+      return rows.map((r) => ({
+        id: r.id,
+        level: (r.level === 1 ? 1 : 2) as 1 | 2,
+        payoutCents: r.payoutCents,
+        sourcePrizeCents: r.sourcePrizeCents,
+        currencyCode: r.currencyCode,
+        sourceFirstName: r.sourceFirstName ?? null,
+        contestName: r.contestName ?? null,
+        createdAt: r.createdAt,
+      }));
     },
   };
 }

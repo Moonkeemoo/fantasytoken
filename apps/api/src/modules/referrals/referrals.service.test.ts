@@ -98,6 +98,22 @@ function makeFakeRepo(): FakeRepo {
       const row = this.bonusRows.find((r) => r.id === bonusRowId);
       if (row) row.unlocked = true;
     },
+    async getStats(_userId) {
+      return {
+        l1Count: 0,
+        l2Count: 0,
+        l1ActiveCount: 0,
+        l2ActiveCount: 0,
+        l1EarnedCents: 0n,
+        l2EarnedCents: 0n,
+      };
+    },
+    async getTree(_userId) {
+      return { l1: [], l2: [] };
+    },
+    async getPayouts(_userId, _limit) {
+      return [];
+    },
   };
   return repo;
 }

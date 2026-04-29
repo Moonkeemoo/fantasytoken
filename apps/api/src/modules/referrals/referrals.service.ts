@@ -70,6 +70,57 @@ export interface ReferralsRepo {
     triggeredByEntryId: string;
     transactionId: string;
   }): Promise<void>;
+
+  /** Aggregate stats for /me/referrals. All counts/sums in one round-trip. */
+  getStats(userId: string): Promise<{
+    l1Count: number;
+    l2Count: number;
+    l1ActiveCount: number;
+    l2ActiveCount: number;
+    l1EarnedCents: bigint;
+    l2EarnedCents: bigint;
+  }>;
+
+  /** Two arrays for /me/referrals/tree — referees + their referees, with
+   * derived per-friend stats (joined contests, contributed commission). */
+  getTree(userId: string): Promise<{
+    l1: Array<{
+      userId: string;
+      firstName: string | null;
+      photoUrl: string | null;
+      joinedAt: Date;
+      hasPlayed: boolean;
+      contestsPlayed: number;
+      totalContributedCents: bigint;
+    }>;
+    l2: Array<{
+      userId: string;
+      firstName: string | null;
+      photoUrl: string | null;
+      joinedAt: Date;
+      hasPlayed: boolean;
+      contestsPlayed: number;
+      totalContributedCents: bigint;
+      viaUserId: string;
+    }>;
+  }>;
+
+  /** Recent commission payouts for the caller, newest first. */
+  getPayouts(
+    userId: string,
+    limit: number,
+  ): Promise<
+    Array<{
+      id: string;
+      level: 1 | 2;
+      payoutCents: bigint;
+      sourcePrizeCents: bigint;
+      currencyCode: string;
+      sourceFirstName: string | null;
+      contestName: string | null;
+      createdAt: Date;
+    }>
+  >;
 }
 
 export interface ReferralsServiceDeps {
@@ -96,6 +147,12 @@ export interface ReferralsService {
     userId: string;
     triggeredByEntryId: string;
   }): Promise<{ unlockedCount: number }>;
+
+  /** Read methods backing /me/referrals* routes. All pass-through to repo for
+   * now; live in the service so the route layer can stay zero-business-logic. */
+  getStats(userId: string): ReturnType<ReferralsRepo['getStats']>;
+  getTree(userId: string): ReturnType<ReferralsRepo['getTree']>;
+  getPayouts(userId: string, limit: number): ReturnType<ReferralsRepo['getPayouts']>;
 }
 
 export function createReferralsService(deps: ReferralsServiceDeps): ReferralsService {
@@ -157,6 +214,15 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
       return { paidLevels };
     },
 
+    async getStats(userId) {
+      return deps.repo.getStats(userId);
+    },
+    async getTree(userId) {
+      return deps.repo.getTree(userId);
+    },
+    async getPayouts(userId, limit) {
+      return deps.repo.getPayouts(userId, limit);
+    },
     async maybeUnlockSignupBonuses({ userId, triggeredByEntryId }) {
       let unlockedCount = 0;
       try {

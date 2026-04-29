@@ -43,6 +43,7 @@ import { createFriendsService } from './modules/friends/friends.service.js';
 import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
 import { createReferralsRepo } from './modules/referrals/referrals.repo.js';
 import { createReferralsService } from './modules/referrals/referrals.service.js';
+import { makeReferralsRoutes } from './modules/referrals/referrals.routes.js';
 import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
 import { createRankingsService } from './modules/rankings/rankings.service.js';
 import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
@@ -182,6 +183,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeRankRoutes({ db: deps.db, users }), { prefix: '/me' });
+  await app.register(makeReferralsRoutes({ referrals, users }), { prefix: '/me' });
   await app.register(makeSeasonsRoutes({ seasons: seasonsSvc }), { prefix: '/seasons' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users, db: deps.db }), { prefix: '/contests' });

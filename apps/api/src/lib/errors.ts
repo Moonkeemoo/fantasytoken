@@ -33,4 +33,5 @@ export const errors = {
   invalidLineup: (cause?: unknown) => new AppError('INVALID_LINEUP', 'Invalid lineup', 400, cause),
   insufficientBalance: () => new AppError('INSUFFICIENT_BALANCE', 'Insufficient balance', 402),
   contestClosed: () => new AppError('CONTEST_CLOSED', 'Contest is closed for entries', 409),
+  internal: (msg: string, cause?: unknown) => new AppError('INTERNAL', msg, 500, cause),
 };

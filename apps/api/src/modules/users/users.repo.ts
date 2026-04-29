@@ -93,6 +93,36 @@ export function createUsersRepo(db: Database): UsersRepo {
         .where(eq(users.id, id));
     },
 
+    async getWelcomeRaw(id) {
+      const rows = await db.execute<{
+        welcome_credited_at: Date | null;
+        welcome_expired_at: Date | null;
+        finalized_count: number;
+      }>(sql`
+        SELECT
+          u.welcome_credited_at,
+          u.welcome_expired_at,
+          (SELECT COUNT(*)::int FROM entries e
+            WHERE e.user_id = u.id AND e.status = 'finalized') AS finalized_count
+        FROM ${users} u
+        WHERE u.id = ${id}
+        LIMIT 1
+      `);
+      const r = (
+        rows as unknown as Array<{
+          welcome_credited_at: Date | null;
+          welcome_expired_at: Date | null;
+          finalized_count: number;
+        }>
+      )[0];
+      if (!r) return null;
+      return {
+        welcomeCreditedAt: r.welcome_credited_at,
+        welcomeExpiredAt: r.welcome_expired_at,
+        finalizedCount: r.finalized_count,
+      };
+    },
+
     async setReferrerIfEligible({ userId, inviterUserId }) {
       // INV-13 immutability + 60s window from signup + 0 finalized entries.
       // All three guards live in the WHERE so no race can sneak past — a

@@ -38,6 +38,12 @@ export interface UsersRepo {
   findUsersWithExpiredWelcome(args: { expiryDays: number }): Promise<Array<{ id: string }>>;
   /** Stamp welcome_expired_at = NOW() so we don't double-claw. */
   markWelcomeExpired(id: string): Promise<void>;
+  /** Read raw welcome bonus state + finalized count for /me/welcome-status. */
+  getWelcomeRaw(id: string): Promise<{
+    welcomeCreditedAt: Date | null;
+    welcomeExpiredAt: Date | null;
+    finalizedCount: number;
+  } | null>;
 }
 
 export interface UpsertOnAuthArgs {
@@ -75,6 +81,16 @@ export interface UsersService {
    * played within the 7-day expiry window. Skips grandfathered users
    * (welcome_credited_at IS NULL). Returns the count debited. */
   expireUnusedWelcome(): Promise<{ expiredCount: number }>;
+  /** Derive welcome bonus status for /me/welcome-status: 'active' (still
+   * counting down), 'used' (already played), 'expired' (cron clawed back),
+   * or 'grandfathered' (pre-rollout user, untracked). */
+  getWelcomeStatus(userId: string): Promise<{
+    state: 'active' | 'used' | 'expired' | 'grandfathered';
+    welcomeBonusCents: number;
+    welcomeCreditedAt: Date | null;
+    welcomeExpiresAt: Date | null;
+    daysUntilExpiry: number | null;
+  }>;
 }
 
 export function createUsersService(deps: UsersServiceDeps): UsersService {
@@ -124,6 +140,51 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
     async attributeReferrer({ userId, inviterUserId }) {
       if (userId === inviterUserId) return false; // self-ref blocked at the service layer too
       return deps.repo.setReferrerIfEligible({ userId, inviterUserId });
+    },
+    async getWelcomeStatus(userId) {
+      const raw = await deps.repo.getWelcomeRaw(userId);
+      const bonusCents = WELCOME_BONUS_CENTS;
+      if (!raw || raw.welcomeCreditedAt === null) {
+        // Pre-rollout user (migration 0011 left their welcome_credited_at NULL).
+        return {
+          state: 'grandfathered' as const,
+          welcomeBonusCents: bonusCents,
+          welcomeCreditedAt: null,
+          welcomeExpiresAt: null,
+          daysUntilExpiry: null,
+        };
+      }
+      const expiresAt = new Date(
+        raw.welcomeCreditedAt.getTime() + WELCOME_EXPIRY_DAYS * 24 * 3600 * 1000,
+      );
+      if (raw.welcomeExpiredAt !== null) {
+        return {
+          state: 'expired' as const,
+          welcomeBonusCents: bonusCents,
+          welcomeCreditedAt: raw.welcomeCreditedAt,
+          welcomeExpiresAt: expiresAt,
+          daysUntilExpiry: null,
+        };
+      }
+      if (raw.finalizedCount > 0) {
+        return {
+          state: 'used' as const,
+          welcomeBonusCents: bonusCents,
+          welcomeCreditedAt: raw.welcomeCreditedAt,
+          welcomeExpiresAt: expiresAt,
+          daysUntilExpiry: null,
+        };
+      }
+      // Active state — still in the 7-day window with no contests played.
+      const msLeft = expiresAt.getTime() - Date.now();
+      const daysUntilExpiry = Math.max(0, Math.floor(msLeft / (24 * 3600 * 1000)));
+      return {
+        state: 'active' as const,
+        welcomeBonusCents: bonusCents,
+        welcomeCreditedAt: raw.welcomeCreditedAt,
+        welcomeExpiresAt: expiresAt,
+        daysUntilExpiry,
+      };
     },
     async expireUnusedWelcome() {
       // Snapshot the bonus amount in case config changes mid-cron — we want to
