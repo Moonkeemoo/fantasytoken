@@ -13,6 +13,7 @@ export type LineupFinalRow = z.infer<typeof LineupFinalRow>;
 
 export const ResultResponse = z.object({
   contestId: z.string().uuid(),
+  entryId: z.string().uuid(),
   contestName: z.string(),
   outcome: ResultOutcome,
   prizeCents: z.number().int().nonnegative(),

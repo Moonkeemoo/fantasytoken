@@ -2,6 +2,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button.js';
 import { Label } from '../../components/ui/Label.js';
 import { formatCents } from '../../lib/format.js';
+import { getApiBaseUrl } from '../../lib/api-client.js';
 import { telegram } from '../../lib/telegram.js';
 import { Headline } from './Headline.js';
 import { Breakdown } from './Breakdown.js';
@@ -23,8 +24,17 @@ export function Result() {
 
   const data = result.data;
   const onShare = () => {
-    const text = `I won ${formatCents(data.prizeCents)} in ${data.contestName} 🚀`;
-    telegram.shareToChat(window.location.origin, text);
+    const apiBase = getApiBaseUrl();
+    if (!apiBase) {
+      telegram.showAlert('Share unavailable: API base URL not configured.');
+      return;
+    }
+    // Public share URL — TG fetches OG meta from this and renders the card image preview.
+    const shareUrl = `${apiBase}/share/${data.entryId}`;
+    const verb = data.outcome === 'won' ? `won ${formatCents(data.prizeCents)} in` : `played`;
+    const text = `I ${verb} ${data.contestName} on Fantasy Token. Join me ↗`;
+    telegram.shareToChat(shareUrl, text);
+    telegram.hapticImpact('medium');
   };
 
   return (
