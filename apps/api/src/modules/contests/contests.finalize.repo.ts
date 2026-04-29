@@ -152,7 +152,7 @@ export function createContestsFinalizeRepo(
         for (const e of realFinalized) {
           const award = awardXp({
             position: e.finalRank,
-            totalRealUsers: totalEntries,
+            totalEntries,
             contestMultiplier: xpMultiplier,
             contestType: contest.type === 'bear' ? 'bear' : 'bull',
           });
