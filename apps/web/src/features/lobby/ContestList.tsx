@@ -5,6 +5,7 @@ import { ContestRow } from './ContestRow.js';
 export interface ContestListProps {
   items: ContestListItem[];
   balanceCents: number;
+  userRank?: number;
   onJoin: (id: string) => void;
   onView: (id: string) => void;
   onResult: (id: string) => void;
@@ -15,6 +16,7 @@ export interface ContestListProps {
 export function ContestList({
   items,
   balanceCents,
+  userRank,
   onJoin,
   onView,
   onResult,
@@ -36,6 +38,7 @@ export function ContestList({
           key={c.id}
           contest={c}
           balanceCents={balanceCents}
+          {...(userRank !== undefined && { userRank })}
           onJoin={onJoin}
           onView={onView}
           onResult={onResult}

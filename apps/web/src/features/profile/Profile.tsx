@@ -11,6 +11,7 @@ import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
 import { useProfile } from './useProfile.js';
 import { useRank } from '../rank/useRank.js';
+import { TierIcon } from '../rank/TierIcon.js';
 
 export function Profile() {
   const navigate = useNavigate();
@@ -99,12 +100,7 @@ function RankSection({ rank }: { rank: RankResponse }) {
   return (
     <div className="rounded-[6px] border-[1.5px] border-ink bg-paper-dim px-[14px] py-3">
       <div className="flex items-center gap-3">
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-[10px] border-[2px] border-ink text-[20px] font-extrabold text-ink"
-          style={{ backgroundColor: rank.color }}
-        >
-          {rank.currentRank}
-        </div>
+        <TierIcon rank={rank.currentRank} size={48} />
         <div className="flex-1">
           <div className="text-[16px] font-extrabold leading-tight">
             Rank {rank.currentRank} · {rank.display}

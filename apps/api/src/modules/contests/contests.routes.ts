@@ -50,6 +50,7 @@ export function makeContestsRoutes(deps: ContestsRoutesDeps): FastifyPluginAsync
           startsAt: r.startsAt,
           endsAt: r.endsAt,
           isFeatured: r.isFeatured,
+          minRank: r.minRank,
           userHasEntered: r.userHasEntered,
         })),
       };

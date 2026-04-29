@@ -7,6 +7,8 @@ import { useCountdown } from '../../lib/countdown.js';
 export interface ContestRowProps {
   contest: ContestListItem;
   balanceCents: number;
+  /** Caller's current rank — used to dim+lock contests above their rank. */
+  userRank?: number;
   /** Tap to enter — for not-yet-entered scheduled contests. Routes to Team Builder. */
   onJoin: (id: string) => void;
   /** Tap to view live — for already-entered or active contests. Routes to Live page. */
@@ -19,6 +21,7 @@ export interface ContestRowProps {
 export function ContestRow({
   contest,
   balanceCents,
+  userRank = 1,
   onJoin,
   onView,
   onResult,
@@ -28,6 +31,9 @@ export function ContestRow({
   const isFull = contest.spotsFilled >= contest.maxCapacity;
   const cantAfford = balanceCents < contest.entryFeeCents;
   const fee = contest.entryFeeCents === 0 ? 'FR' : `$${Math.floor(contest.entryFeeCents / 100)}`;
+  // Locked when contest gates by rank and user hasn't reached it yet — and they
+  // haven't already managed to enter (legacy entries should still be visible).
+  const isLocked = !contest.userHasEntered && contest.minRank > userRank;
 
   let cta: {
     label: string;
@@ -35,8 +41,14 @@ export function ContestRow({
     disabled?: boolean;
     variant?: 'primary' | 'ghost';
   };
-  // Already-entered routing depends on status.
-  if (contest.userHasEntered) {
+  if (isLocked) {
+    cta = {
+      label: `🔒 RANK ${contest.minRank}`,
+      onClick: () => {},
+      disabled: true,
+      variant: 'ghost',
+    };
+  } else if (contest.userHasEntered) {
     if (contest.status === 'finalized' || contest.status === 'cancelled') {
       cta = { label: 'RESULT', onClick: () => onResult(contest.id), variant: 'ghost' };
     } else if (contest.status === 'active') {
@@ -67,7 +79,7 @@ export function ContestRow({
   const isBear = contest.type === 'bear';
   return (
     <Card
-      className={`flex items-center gap-[10px] !px-[10px] !py-[6px] ${isBear ? 'border-l-[3px] border-l-hl-red' : ''}`}
+      className={`flex items-center gap-[10px] !px-[10px] !py-[6px] ${isBear ? 'border-l-[3px] border-l-hl-red' : ''} ${isLocked ? 'opacity-[0.55]' : ''}`}
     >
       <div className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold">
         {fee}

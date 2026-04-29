@@ -21,6 +21,7 @@ export function createEntriesRepo(db: Database): EntriesRepo {
           id: contests.id,
           entryFeeCents: contests.entryFeeCents,
           startsAt: contests.startsAt,
+          minRank: contests.minRank,
         })
         .from(contests)
         .where(

@@ -8,6 +8,7 @@ function rowFromAggregation(r: {
   display_name: string | null;
   username: string | null;
   photo_url: string | null;
+  current_rank: number | null;
   net_cents: string | null;
   contests_played: string | null;
 }): RankingRow {
@@ -15,6 +16,7 @@ function rowFromAggregation(r: {
     userId: r.user_id,
     displayName: r.display_name ?? r.username ?? 'Player',
     avatarUrl: r.photo_url ?? null,
+    tierRank: r.current_rank ?? 1,
     netPnlCents: Number(r.net_cents ?? 0),
     contestsPlayed: Number(r.contests_played ?? 0),
   };
@@ -30,13 +32,14 @@ export function createRankingsRepo(db: Database): RankingsRepo {
           displayName: users.firstName,
           username: users.username,
           photoUrl: users.photoUrl,
+          currentRank: users.currentRank,
           netCents: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN ${transactions.deltaCents} ELSE 0 END), 0)::text`,
           contestsPlayed: sql<string>`COUNT(DISTINCT ${transactions.refId}) FILTER (WHERE ${transactions.type} = 'ENTRY_FEE')::text`,
         })
         .from(users)
         .leftJoin(transactions, eq(transactions.userId, users.id))
         .where(inArray(users.id, userIds))
-        .groupBy(users.id, users.firstName, users.username, users.photoUrl);
+        .groupBy(users.id, users.firstName, users.username, users.photoUrl, users.currentRank);
 
       const map = new Map<string, RankingRow>();
       for (const r of rows) {
@@ -47,6 +50,7 @@ export function createRankingsRepo(db: Database): RankingsRepo {
             display_name: r.displayName,
             username: r.username,
             photo_url: r.photoUrl,
+            current_rank: r.currentRank,
             net_cents: r.netCents,
             contests_played: r.contestsPlayed,
           }),
@@ -62,6 +66,7 @@ export function createRankingsRepo(db: Database): RankingsRepo {
         display_name: string | null;
         username: string | null;
         photo_url: string | null;
+        current_rank: number | null;
         net_cents: string;
         contests_played: string;
       }>(sql`
@@ -70,11 +75,12 @@ export function createRankingsRepo(db: Database): RankingsRepo {
           u.first_name AS display_name,
           u.username,
           u.photo_url,
+          u.current_rank,
           COALESCE(SUM(CASE WHEN t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN t.delta_cents ELSE 0 END), 0)::text AS net_cents,
           COUNT(DISTINCT t.ref_id) FILTER (WHERE t.type = 'ENTRY_FEE')::text AS contests_played
         FROM users u
         LEFT JOIN transactions t ON t.user_id = u.id
-        GROUP BY u.id, u.first_name, u.username, u.photo_url, u.created_at
+        GROUP BY u.id, u.first_name, u.username, u.photo_url, u.current_rank, u.created_at
         ORDER BY COALESCE(SUM(CASE WHEN t.type IN ('ENTRY_FEE','PRIZE_PAYOUT','REFUND') THEN t.delta_cents ELSE 0 END), 0) DESC, u.created_at ASC
         LIMIT ${sql.raw(String(Math.max(1, Math.floor(limit))))}
       `);
@@ -84,6 +90,7 @@ export function createRankingsRepo(db: Database): RankingsRepo {
           display_name: string | null;
           username: string | null;
           photo_url: string | null;
+          current_rank: number | null;
           net_cents: string;
           contests_played: string;
         }>

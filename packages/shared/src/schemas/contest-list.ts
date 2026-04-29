@@ -17,6 +17,8 @@ export const ContestListItem = z.object({
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),
   isFeatured: z.boolean(),
+  /** Min rank required to enter (rank-system gate). 1 = open to everyone. */
+  minRank: z.number().int().min(1).max(30),
   // True if the requesting user has an entry in this contest.
   userHasEntered: z.boolean(),
 });

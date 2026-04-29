@@ -5,6 +5,8 @@ export const RankingRow = z.object({
   userId: z.string().uuid(),
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
+  /** Rank-system tier rank (1..30). 1 = Newbie I, 30 = Mythic V. */
+  tierRank: z.number().int().min(1).max(30),
   netPnlCents: z.number().int(),
   contestsPlayed: z.number().int().nonnegative(),
   isMe: z.boolean(),
