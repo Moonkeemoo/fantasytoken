@@ -6,10 +6,9 @@ import { users, transactions } from '../../db/schema/index.js';
 import { createCurrencyRepo } from './currency.repo.js';
 import { createCurrencyService } from './currency.service.js';
 
-// Integration tests require a live Postgres. Skipped by default; run with
-// RUN_INTEGRATION=1 (set automatically when DATABASE_URL points at localhost).
-const RUN =
-  process.env.RUN_INTEGRATION === '1' || (process.env.DATABASE_URL?.includes('localhost') ?? false);
+// Integration tests require a live Postgres. Always skipped unless RUN_INTEGRATION=1.
+// Do NOT infer from DATABASE_URL — Railway's GitHub Action integration may auto-inject it.
+const RUN = process.env.RUN_INTEGRATION === '1';
 const d = RUN ? describe : describe.skip;
 
 let db: Database;
