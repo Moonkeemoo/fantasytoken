@@ -6,6 +6,7 @@ import { LineupPerf } from './LineupPerf.js';
 import { MiniLeaderboard } from './MiniLeaderboard.js';
 import { LeaderboardModal } from './LeaderboardModal.js';
 import { useLive } from './useLive.js';
+import { LoadingSplash } from '../loading/LoadingSplash.js';
 
 export function Live() {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +24,7 @@ export function Live() {
   }, [live.data, id, navigate]);
 
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
-  if (live.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (live.isLoading) return <LoadingSplash />;
   if (live.isError || !live.data) return <div className="p-6 text-hl-red">contest not found</div>;
 
   const data = live.data;

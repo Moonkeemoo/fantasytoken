@@ -7,6 +7,7 @@ import { ContestList } from '../lobby/ContestList.js';
 import { BottomNav } from '../lobby/BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { Label } from '../../components/ui/Label.js';
+import { LoadingSplash } from '../loading/LoadingSplash.js';
 
 const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 
@@ -34,7 +35,7 @@ export function LiveList() {
     [items],
   );
 
-  if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (me.isLoading) return <LoadingSplash />;
   if (me.isError || !me.data)
     return <div className="p-6 text-hl-red">error: {String(me.error)}</div>;
 

@@ -8,6 +8,7 @@ import { Headline } from './Headline.js';
 import { Breakdown } from './Breakdown.js';
 import { LineupRecap } from './LineupRecap.js';
 import { useResult } from './useResult.js';
+import { LoadingSplash } from '../loading/LoadingSplash.js';
 
 export function Result() {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +18,7 @@ export function Result() {
   const result = useResult(id, entryId);
 
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
-  if (result.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (result.isLoading) return <LoadingSplash />;
   if (result.isError || !result.data) {
     return <div className="p-6 text-hl-red">result not ready (contest may still be active)</div>;
   }
