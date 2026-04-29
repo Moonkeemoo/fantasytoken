@@ -10,8 +10,14 @@ export interface RankUnlock {
 }
 
 export const RANK_UNLOCKS: readonly RankUnlock[] = [
-  // Quick Match unlocks at Rank 1 (the starter cash contest) — no teaser entry,
-  // since you start with it the moment you sign up.
+  // Practice (R1) is the starter free contest — no teaser entry since
+  // it's available the moment you sign up.
+  {
+    rank: 2,
+    name: 'Quick Match',
+    type: 'contest',
+    description: '$1 entry · first real-money pool',
+  },
   {
     rank: 3,
     name: 'Bear Trap',

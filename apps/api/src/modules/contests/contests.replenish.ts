@@ -24,13 +24,15 @@ export const REPLENISH_TEMPLATES = [
     xpMultiplier: '1.00',
   },
   {
+    // First paid contest — opens at Rank 2 so a fresh user does Practice
+    // (R1, free) for one cycle, earns XP, then graduates into cash.
     name: 'Quick Match',
     type: 'bull' as const,
     entryFeeCents: 100n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
-    minRank: 1,
+    minRank: 2,
     xpMultiplier: '1.00',
   },
   {

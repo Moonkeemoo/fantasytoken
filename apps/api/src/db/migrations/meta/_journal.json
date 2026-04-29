@@ -99,6 +99,13 @@
       "when": 1777481235200,
       "tag": "0013_rename_welcome_to_practice",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777481235300,
+      "tag": "0014_quick_match_min_rank_2",
+      "breakpoints": true
     }
   ]
 }

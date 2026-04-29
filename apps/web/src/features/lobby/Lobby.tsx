@@ -44,11 +44,20 @@ export function Lobby() {
   // Featured = the highest-min_rank contest the user has actually unlocked.
   // The latest unlock becomes the headline; older unlocks demote to All Contests.
   // No fallback to a static is_featured flag — keeps the headline truthful per user.
+  // Cash-tab fallback: if the user hasn't unlocked any cash contest yet (fresh
+  // Rank-1 player), surface a Free contest (typically Practice) so the lobby
+  // has a real "Enter contest →" headline instead of an empty hero slot.
   const featured = useMemo(() => {
-    const unlocked = items.filter((c) => c.minRank <= userRank);
-    if (unlocked.length === 0) return undefined;
-    return unlocked.reduce((best, c) => (c.minRank > best.minRank ? c : best), unlocked[0]!);
-  }, [items, userRank]);
+    const pickHighest = (pool: typeof items) => {
+      const unlocked = pool.filter((c) => c.minRank <= userRank);
+      if (unlocked.length === 0) return undefined;
+      return unlocked.reduce((best, c) => (c.minRank > best.minRank ? c : best), unlocked[0]!);
+    };
+    const primary = pickHighest(items);
+    if (primary) return primary;
+    if (filter === 'cash') return pickHighest(free.data?.items ?? []);
+    return undefined;
+  }, [items, userRank, filter, free.data?.items]);
   const others = useMemo(() => {
     const list = featured ? items.filter((c) => c.id !== featured.id) : items;
     return list.slice().sort((a, b) => {

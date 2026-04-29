@@ -16,29 +16,34 @@ export function InviteSlide() {
     showInviteSheet();
   };
   return (
-    <Card shadow className="m-0 bg-note px-[14px] py-3">
+    <Card shadow className="m-0 bg-note px-[14px] py-[14px]">
       <div className="flex items-center justify-between">
         <Label>invite friends</Label>
         <span className="rounded-[3px] border-[1.5px] border-accent bg-paper px-[6px] py-[1px] font-mono text-[10px] font-extrabold text-accent">
           F
         </span>
       </div>
-      <div className="mt-1 text-[20px] font-extrabold leading-tight">
+      <div className="mt-[6px] text-[22px] font-extrabold leading-tight">
         Earn <span className="text-accent">5%</span> forever
       </div>
-      <p className="mt-[2px] text-[12px] leading-snug text-ink-soft">
-        Both get $25 after their first contest.
+      <p className="mt-[4px] text-[12px] leading-snug text-ink-soft">
+        Both of you get <span className="font-bold text-ink">$25</span> after their first contest —
+        plus 5% of every entry they ever pay.
       </p>
-      <div className="my-2 border-t border-dashed border-ink/40" />
-      <div className="flex items-end justify-between">
+      <div className="my-[10px] border-t border-dashed border-ink/40" />
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>per friend</Label>
-          <div className="mt-[2px] text-[20px] font-extrabold leading-none">$25 + 5%</div>
+          <div className="mt-[2px] text-[18px] font-extrabold leading-none">$25</div>
         </div>
-        <Button variant="primary" size="md" onClick={onClick}>
-          Send link →
-        </Button>
+        <div>
+          <Label>then forever</Label>
+          <div className="mt-[2px] text-[18px] font-extrabold leading-none text-accent">5% cut</div>
+        </div>
       </div>
+      <Button variant="primary" size="md" className="mt-[12px] w-full" onClick={onClick}>
+        Send invite link →
+      </Button>
     </Card>
   );
 }
