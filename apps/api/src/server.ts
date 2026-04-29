@@ -47,6 +47,9 @@ import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
 import { createProfileRepo } from './modules/profile/profile.repo.js';
 import { createProfileService } from './modules/profile/profile.service.js';
 import { makeProfileRoutes } from './modules/profile/profile.routes.js';
+import { createSeasonsService } from './modules/seasons/seasons.service.js';
+import { makeSeasonsRoutes } from './modules/seasons/seasons.routes.js';
+import { makeRankRoutes } from './modules/rank/rank.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -118,7 +121,12 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
-  const finalizeRepo = createContestsFinalizeRepo(deps.db, currency, deps.config.RAKE_PCT);
+  const finalizeRepo = createContestsFinalizeRepo(
+    deps.db,
+    currency,
+    deps.config.RAKE_PCT,
+    deps.logger,
+  );
   const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
   const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
@@ -155,8 +163,14 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const profileRepo = createProfileRepo(deps.db);
   const profile = createProfileService(profileRepo);
 
+  const seasonsSvc = createSeasonsService({ db: deps.db, log: deps.logger });
+  // Boot-time: ensure Season 1 exists. Idempotent.
+  await seasonsSvc.ensureActive();
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
+  await app.register(makeRankRoutes({ db: deps.db, users }), { prefix: '/me' });
+  await app.register(makeSeasonsRoutes({ seasons: seasonsSvc }), { prefix: '/seasons' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
@@ -221,6 +235,11 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     log: deps.logger,
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
+
+  // Seasons are calendar-month aligned. No cron — rollover happens lazily inside
+  // seasonsSvc.ensureActive() on the read path (currently /seasons/current and
+  // contests.finalize). Boot-time call above ensures Season N for current month
+  // exists before first request.
 
   return {
     app,

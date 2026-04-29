@@ -1,8 +1,18 @@
-import { and, eq } from 'drizzle-orm';
-import { computeActualPrizeCents } from '@fantasytoken/shared';
+import { and, eq, sql } from 'drizzle-orm';
+import { awardXp, computeActualPrizeCents, rankFromXp } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
-import { contests, entries, priceSnapshots, tokens, transactions } from '../../db/schema/index.js';
+import {
+  contests,
+  entries,
+  priceSnapshots,
+  seasons,
+  tokens,
+  transactions,
+  users,
+  xpEvents,
+} from '../../db/schema/index.js';
 import type { CurrencyService } from '../currency/currency.service.js';
+import type { Logger } from '../../logger.js';
 import { finalizeContest, type FinalizeInputEntry } from './contests.finalize.js';
 
 export interface ContestsFinalizeRepo {
@@ -14,6 +24,7 @@ export function createContestsFinalizeRepo(
   db: Database,
   currency: CurrencyService,
   rakePct: number,
+  log: Logger,
 ): ContestsFinalizeRepo {
   return {
     async findContestsToFinalize2() {
@@ -24,13 +35,14 @@ export function createContestsFinalizeRepo(
     },
 
     async finalize(contestId) {
-      // 1. Load contest.
+      // 1. Load contest (incl. xp_multiplier for the rank-system XP awards).
       const [contest] = await db
         .select({
           id: contests.id,
           prizePoolCents: contests.prizePoolCents,
           entryFeeCents: contests.entryFeeCents,
           type: contests.type,
+          xpMultiplier: contests.xpMultiplier,
         })
         .from(contests)
         .where(eq(contests.id, contestId))
@@ -108,7 +120,71 @@ export function createContestsFinalizeRepo(
         await tx.update(contests).set({ status: 'finalized' }).where(eq(contests.id, contestId));
       });
 
-      // 6. Payouts (idempotent — INV-9 each via currency.transact).
+      // 6. XP awards (rank-system) — only for real users in payable AND non-payable
+      // ranks alike (everyone gets at least Participation = +10). Skipped for bots
+      // (no userId). Idempotent: skip if any xp_events already exist for this contest.
+      const [existingXp] = await db
+        .select({ id: xpEvents.id })
+        .from(xpEvents)
+        .where(eq(xpEvents.contestId, contestId))
+        .limit(1);
+      if (!existingXp) {
+        const [activeSeason] = await db
+          .select({ id: seasons.id })
+          .from(seasons)
+          .where(eq(seasons.status, 'active'))
+          .limit(1);
+        const seasonId = activeSeason?.id;
+        const xpMultiplier = Number(contest.xpMultiplier);
+        // Real entries sorted by their finalRank to compute position bonus.
+        const realFinalized = result.entries
+          .filter((e) => !e.isBot && e.userId)
+          .sort((a, b) => a.finalRank - b.finalRank);
+        const realCount = realFinalized.length;
+
+        for (let i = 0; i < realFinalized.length; i++) {
+          const e = realFinalized[i]!;
+          const award = awardXp({
+            position: i + 1,
+            totalRealUsers: realCount,
+            contestMultiplier: xpMultiplier,
+            contestType: contest.type === 'bear' ? 'bear' : 'bull',
+          });
+          try {
+            await db.transaction(async (tx) => {
+              await tx.insert(xpEvents).values({
+                userId: e.userId!,
+                contestId,
+                ...(seasonId !== undefined && { seasonId }),
+                deltaXp: award.total,
+                reason: 'contest_finalized',
+                breakdown: award.breakdown as unknown as Record<string, unknown>,
+              });
+              const [u] = await tx
+                .select({ xpTotal: users.xpTotal, currentRank: users.currentRank })
+                .from(users)
+                .where(eq(users.id, e.userId!))
+                .limit(1);
+              const newXpTotal = (u?.xpTotal ?? 0) + award.total;
+              const newRank = rankFromXp(newXpTotal).rank;
+              await tx
+                .update(users)
+                .set({
+                  xpTotal: sql`${users.xpTotal} + ${award.total}`,
+                  xpSeason: sql`${users.xpSeason} + ${award.total}`,
+                  currentRank: sql`GREATEST(${users.currentRank}, ${newRank})`,
+                  careerHighestRank: sql`GREATEST(${users.careerHighestRank}, ${newRank})`,
+                })
+                .where(eq(users.id, e.userId!));
+            });
+          } catch (err) {
+            // INV-7: never let an XP failure block prize payouts.
+            log.error({ err, userId: e.userId, contestId }, 'xp award failed');
+          }
+        }
+      }
+
+      // 7. Payouts (idempotent — INV-9 each via currency.transact).
       let paidCount = 0;
       let totalCents = 0;
       for (const p of result.payouts) {

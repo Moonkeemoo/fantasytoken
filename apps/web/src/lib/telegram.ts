@@ -10,6 +10,8 @@ export const telegram = {
   showAlert: (msg: string) => WebApp.showAlert(msg),
   hapticImpact: (style: 'light' | 'medium' | 'heavy' = 'light') =>
     WebApp.HapticFeedback.impactOccurred(style),
+  hapticNotification: (type: 'success' | 'error' | 'warning' = 'success') =>
+    WebApp.HapticFeedback.notificationOccurred(type),
   shareToChat: (url: string, text: string) => {
     // URLSearchParams encodes spaces as '+' which TG renders literally in the caption.
     // Use percent-encoded form (RFC 3986) so spaces stay spaces in the chat preview.
