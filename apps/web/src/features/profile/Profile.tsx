@@ -12,6 +12,8 @@ import { formatCents } from '../../lib/format.js';
 import { useProfile } from './useProfile.js';
 import { useRank } from '../rank/useRank.js';
 import { TierIcon } from '../rank/TierIcon.js';
+import { ReferralsSection } from '../referrals/ReferralsSection.js';
+import { telegram } from '../../lib/telegram.js';
 
 export function Profile() {
   const navigate = useNavigate();
@@ -46,6 +48,15 @@ export function Profile() {
       <div className="px-3 pt-3">
         <BalanceCard balanceCents={data.balanceCents} onTopUp={() => setTopUpOpen(true)} />
       </div>
+
+      {(() => {
+        const tgId = telegram.user()?.id;
+        return tgId ? (
+          <div className="px-3 pt-3">
+            <ReferralsSection telegramId={tgId} />
+          </div>
+        ) : null;
+      })()}
 
       <div className="px-3 pt-4">
         <Label>track record</Label>

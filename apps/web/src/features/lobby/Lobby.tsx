@@ -13,6 +13,8 @@ import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { NextRankTeaser } from '../rank/NextRankTeaser.js';
 import { useRank, useTeaser } from '../rank/useRank.js';
+import { InviteTeaser } from '../referrals/InviteTeaser.js';
+import { telegram } from '../../lib/telegram.js';
 
 const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 
@@ -77,6 +79,10 @@ export function Lobby() {
       />
       <ActiveBanner inProgress={myInProgress} onView={goLive} />
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
+      {(() => {
+        const tgId = telegram.user()?.id;
+        return tgId ? <InviteTeaser telegramId={tgId} /> : null;
+      })()}
       <Tabs active={filter} counts={counts} onChange={setFilter} />
       {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
       <ContestList
