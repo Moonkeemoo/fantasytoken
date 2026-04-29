@@ -1,8 +1,6 @@
-import { Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { Lobby } from './features/lobby/Lobby.js';
 import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
-import { useMe } from './features/me/useMe.js';
-import { formatCents } from './lib/format.js';
 import { StatusPage } from './features/status/StatusPage.js';
 import { Live } from './features/live/Live.js';
 import { LiveList } from './features/live-list/LiveList.js';
@@ -10,34 +8,7 @@ import { Rankings } from './features/rankings/Rankings.js';
 import { Result } from './features/result/Result.js';
 import { Loading } from './features/loading/Loading.js';
 import { Tutorial } from './features/tutorial/Tutorial.js';
-
-function ScreenPlaceholder({ title }: { title: string }) {
-  const me = useMe();
-  const navigate = useNavigate();
-  return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <div className="flex items-center gap-2 border-b-[1.5px] border-ink px-3 py-2">
-        <button
-          onClick={() => navigate('/lobby')}
-          className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper text-[12px] leading-none"
-        >
-          ‹
-        </button>
-        <h1 className="text-[14px] font-bold">{title}</h1>
-      </div>
-      <div className="p-6">
-        {me.isLoading && <p className="text-muted">loading…</p>}
-        {me.isError && <p className="text-hl-red">error: {String(me.error)}</p>}
-        {me.data && (
-          <p className="mt-2 text-sm">
-            Hi, {me.data.user.first_name} · balance {formatCents(me.data.balanceCents)}
-          </p>
-        )}
-        <p className="mt-4 text-xs text-muted">This screen isn&apos;t built yet.</p>
-      </div>
-    </div>
-  );
-}
+import { Profile } from './features/profile/Profile.js';
 
 export function App() {
   return (
@@ -50,7 +21,7 @@ export function App() {
       <Route path="/contests/:id/result" element={<Result />} />
       <Route path="/live" element={<LiveList />} />
       <Route path="/rankings" element={<Rankings />} />
-      <Route path="/me" element={<ScreenPlaceholder title="Profile (stub)" />} />
+      <Route path="/me" element={<Profile />} />
       <Route path="/status" element={<StatusPage />} />
       <Route
         path="*"

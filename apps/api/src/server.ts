@@ -44,6 +44,9 @@ import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
 import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
 import { createRankingsService } from './modules/rankings/rankings.service.js';
 import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
+import { createProfileRepo } from './modules/profile/profile.repo.js';
+import { createProfileService } from './modules/profile/profile.service.js';
+import { makeProfileRoutes } from './modules/profile/profile.routes.js';
 
 export interface ServerDeps {
   config: Config;
@@ -149,6 +152,9 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const shareRepo = createShareRepo(deps.db);
   const share = createShareService(shareRepo);
 
+  const profileRepo = createProfileRepo(deps.db);
+  const profile = createProfileService(profileRepo);
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
@@ -165,6 +171,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     { prefix: '/share' },
   );
   await app.register(makeRankingsRoutes({ rankings, friends, users }), { prefix: '/rankings' });
+  await app.register(makeProfileRoutes({ profile, users }), { prefix: '/profile' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
   // Crons. INV-7 logging is inside scheduleEvery.
