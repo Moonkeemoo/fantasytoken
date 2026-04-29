@@ -1,16 +1,28 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { ContestFilter, ContestListResponse } from '@fantasytoken/shared';
+import type { Database } from '../../db/client.js';
+import { users as usersTable } from '../../db/schema/index.js';
 import { errors } from '../../lib/errors.js';
 import { tryTelegramUser, upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import type { ContestsService } from './contests.service.js';
 import type { UsersService } from '../users/users.service.js';
 
-const ListQuery = z.object({ filter: ContestFilter.default('cash') });
+const ListQuery = z.object({
+  filter: ContestFilter.default('cash'),
+  /** When false, hide contests with min_rank > caller's currentRank.
+   * Default true (aspirational locked cards). */
+  include_locked: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+});
 
 export interface ContestsRoutesDeps {
   contests: ContestsService;
   users: UsersService;
+  db: Database;
 }
 
 /**
@@ -33,10 +45,23 @@ export function makeContestsRoutes(deps: ContestsRoutesDeps): FastifyPluginAsync
     app.get('/', async (req) => {
       const userId = await authedUser(req, deps);
       const q = ListQuery.parse(req.query);
-      const items = await deps.contests.list({
+      let items = await deps.contests.list({
         filter: q.filter,
         ...(userId !== undefined && { userId }),
       });
+
+      // include_locked=false → hide contests above caller's rank, EXCEPT ones the
+      // caller already entered (legacy entries should remain visible regardless).
+      if (!q.include_locked && userId !== undefined) {
+        const [u] = await deps.db
+          .select({ currentRank: usersTable.currentRank })
+          .from(usersTable)
+          .where(eq(usersTable.id, userId))
+          .limit(1);
+        const callerRank = u?.currentRank ?? 1;
+        items = items.filter((c) => c.userHasEntered || c.minRank <= callerRank);
+      }
+
       const response: typeof ContestListResponse._type = {
         items: items.map((r) => ({
           id: r.id,

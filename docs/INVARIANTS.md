@@ -31,6 +31,10 @@
 
 **INV-10** — Lineup picks (5 токенів і їх allocations) immutable після `entries.submitted_at`. Жодного UPDATE на `entries.picks` після submit. Consequence: гравець перебудовує lineup ретроспективно, ламає чесність контесту.
 
+**INV-11** — XP awards immutable. Запис у `xp_events` ніколи не UPDATE; коригування пишуться як новий рядок з `reason='reversal'`. `users.xp_total` / `users.xp_season` — denormalized cache; `xp_events` — source of truth (повторює INV-9 для XP-аудиту). Consequence: drift XP від audit log → disputable rank, неможливо відтворити стан.
+
+**INV-12** — Rank monotonic в межах сезону. `users.current_rank` тільки росте від `awardXp` через `GREATEST(current_rank, new_rank)`. Єдине виключення — soft-reset наприкінці сезону (`max(5, current_rank - 5)`). Consequence: юзер втрачає прогрес посеред сезону і кидає app.
+
 ## Maintenance
 
 - Знайшов невидимий контракт у коді → додай як `INV-N`.

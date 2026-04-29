@@ -172,7 +172,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeRankRoutes({ db: deps.db, users }), { prefix: '/me' });
   await app.register(makeSeasonsRoutes({ seasons: seasonsSvc }), { prefix: '/seasons' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
-  await app.register(makeContestsRoutes({ contests, users }), { prefix: '/contests' });
+  await app.register(makeContestsRoutes({ contests, users, db: deps.db }), { prefix: '/contests' });
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
