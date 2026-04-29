@@ -28,7 +28,37 @@ export function Scoreboard({
 }: ScoreboardProps) {
   const isPreStart = status === 'scheduled';
   const ms = useCountdown(isPreStart ? startsAt : endsAt);
-  const timeLabel = isPreStart ? 'starts in' : 'time left';
+  // When countdown to start is exhausted, the contest is technically still 'scheduled'
+  // until the next tick locks it (≤10s). Show a transient "LOCKING" state instead of $0.
+  const locking = isPreStart && ms <= 0;
+
+  if (isPreStart) {
+    return (
+      <Card variant="dim" shadow className="m-3 px-[14px] py-4 text-center">
+        <Label>{locking ? 'locking lineup' : 'starts in'}</Label>
+        <div className="my-[10px] font-mono text-[42px] font-extrabold leading-none tracking-tight">
+          {locking ? '…' : formatTimeLeft(ms)}
+        </div>
+        <div className="text-[11px] text-muted">
+          {locking
+            ? 'Bots filling empty seats'
+            : `Get comfy — your $${startUsd.toFixed(0)} portfolio is set`}
+        </div>
+        <div className="mt-3 flex justify-between border-t border-dashed border-rule pt-[10px]">
+          <Stat
+            label="players"
+            primary={`${totalEntries}`}
+            sub={totalEntries === 1 ? 'just you so far' : 'in this room'}
+          />
+          <Stat
+            label="potential prize"
+            primary={formatCents(projectedPrizeCents)}
+            sub="if end now"
+          />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
@@ -48,7 +78,7 @@ export function Scoreboard({
           primary={formatCents(projectedPrizeCents)}
           sub="top 30% pays"
         />
-        <Stat label={timeLabel} primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
+        <Stat label="time left" primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
       </div>
     </Card>
   );

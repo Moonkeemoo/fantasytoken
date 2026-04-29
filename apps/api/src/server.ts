@@ -176,8 +176,10 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  // Tick every 10s so the gap between startsAt and active state is at most 10s.
+  // Cheap (one indexed query per state transition); runs locally on the API node.
   const stopTick = scheduleEvery({
-    intervalMs: MINUTE,
+    intervalMs: 10_000,
     fn: async () => {
       await tick.tick();
     },
@@ -186,8 +188,11 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  // Active-token price sync: refresh every 30s during a live contest so
+  // Live screen actually reflects market movement (CG free tier cap is 10-30
+  // req/min; one batched call per 30s is well below that).
   const stopActiveSync = scheduleEvery({
-    intervalMs: 5 * MINUTE,
+    intervalMs: 30_000,
     fn: async () => {
       await tokens.syncActive();
     },

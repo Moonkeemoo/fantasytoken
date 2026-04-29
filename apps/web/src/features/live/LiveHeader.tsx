@@ -14,7 +14,8 @@ export function LiveHeader({ contestName, startsAt, endsAt, status }: LiveHeader
   const navigate = useNavigate();
   const isPreStart = status === 'scheduled';
   const ms = useCountdown(isPreStart ? startsAt : endsAt);
-  const captionPrefix = isPreStart ? 'starts in' : 'ends in';
+  const locking = isPreStart && ms <= 0;
+  const captionPrefix = locking ? 'locking…' : isPreStart ? 'starts in' : 'ends in';
 
   return (
     <div className="flex items-center justify-between border-b-[1.5px] border-ink px-3 py-2">
@@ -24,9 +25,7 @@ export function LiveHeader({ contestName, startsAt, endsAt, status }: LiveHeader
         </span>
         <div className="text-left">
           <div className="text-[12px] font-bold leading-tight">{contestName}</div>
-          <Label>
-            {captionPrefix} {formatTimeLeft(ms)}
-          </Label>
+          <Label>{locking ? captionPrefix : `${captionPrefix} ${formatTimeLeft(ms)}`}</Label>
         </div>
       </button>
       {status === 'active' && (
@@ -34,11 +33,16 @@ export function LiveHeader({ contestName, startsAt, endsAt, status }: LiveHeader
           ● LIVE
         </span>
       )}
-      {status === 'scheduled' && (
-        <span className="rounded-[3px] border-[1.5px] border-ink bg-paper-dim px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-muted">
-          PRE-START
-        </span>
-      )}
+      {status === 'scheduled' &&
+        (locking ? (
+          <span className="rounded-[3px] border-[1.5px] border-accent bg-paper-dim px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-accent">
+            LOCKING
+          </span>
+        ) : (
+          <span className="rounded-[3px] border-[1.5px] border-ink bg-paper-dim px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-muted">
+            PRE-START
+          </span>
+        ))}
     </div>
   );
 }
