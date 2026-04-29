@@ -27,17 +27,7 @@ export const REPLENISH_TEMPLATES = [
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
-    minRank: 2,
-    xpMultiplier: '1.00',
-  },
-  {
-    name: 'Memecoin Madness',
-    type: 'bull' as const,
-    entryFeeCents: 500n,
-    prizePoolCents: 0n,
-    maxCapacity: 20,
-    isFeatured: true,
-    minRank: 3,
+    minRank: 1,
     xpMultiplier: '1.00',
   },
   {
@@ -47,8 +37,18 @@ export const REPLENISH_TEMPLATES = [
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
-    minRank: 5,
+    minRank: 3,
     xpMultiplier: '1.50',
+  },
+  {
+    name: 'Memecoin Madness',
+    type: 'bull' as const,
+    entryFeeCents: 500n,
+    prizePoolCents: 0n,
+    maxCapacity: 20,
+    isFeatured: false,
+    minRank: 5,
+    xpMultiplier: '1.00',
   },
   // High-rank contests below: entry fees are placeholder USD-cents until the TON
   // payment rail lands. Names mirror RANK_UNLOCKS (packages/shared/src/ranks/unlocks.ts)

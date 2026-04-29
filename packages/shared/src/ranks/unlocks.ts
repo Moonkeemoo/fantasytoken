@@ -10,17 +10,13 @@ export interface RankUnlock {
 }
 
 export const RANK_UNLOCKS: readonly RankUnlock[] = [
-  {
-    rank: 2,
-    name: 'Quick Match',
-    type: 'contest',
-    description: '$1-entry contest unlocks',
-  },
+  // Quick Match unlocks at Rank 1 (the starter cash contest) — no teaser entry,
+  // since you start with it the moment you sign up.
   {
     rank: 3,
-    name: 'Memecoin Madness',
+    name: 'Bear Trap',
     type: 'contest',
-    description: '$5 themed lineup',
+    description: 'Most-losing wins · core differentiator',
   },
   {
     rank: 4,
@@ -30,9 +26,9 @@ export const RANK_UNLOCKS: readonly RankUnlock[] = [
   },
   {
     rank: 5,
-    name: 'Bear Trap',
+    name: 'Memecoin Madness',
     type: 'contest',
-    description: 'Most-losing wins · core differentiator',
+    description: '$5 themed lineup',
   },
   {
     rank: 7,

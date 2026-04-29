@@ -35,9 +35,16 @@ export function Lobby() {
 
   const currentList = filter === 'cash' ? cash : free;
   const items = currentList.data?.items ?? [];
-  const featured = useMemo(() => items.find((c) => c.isFeatured), [items]);
   // Unlocked-first, then locked sorted by min_rank ascending. Aspirational, not frustrating.
   const userRank = rank.data?.currentRank ?? 1;
+  // Featured = the highest-min_rank contest the user has actually unlocked.
+  // The latest unlock becomes the headline; older unlocks demote to All Contests.
+  // No fallback to a static is_featured flag — keeps the headline truthful per user.
+  const featured = useMemo(() => {
+    const unlocked = items.filter((c) => c.minRank <= userRank);
+    if (unlocked.length === 0) return undefined;
+    return unlocked.reduce((best, c) => (c.minRank > best.minRank ? c : best), unlocked[0]!);
+  }, [items, userRank]);
   const others = useMemo(() => {
     const list = featured ? items.filter((c) => c.id !== featured.id) : items;
     return list.slice().sort((a, b) => {
