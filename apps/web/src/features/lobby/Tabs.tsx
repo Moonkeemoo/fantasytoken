@@ -1,6 +1,8 @@
 import { Pill } from '../../components/ui/Pill.js';
 
-export type LobbyFilter = 'cash' | 'free';
+// 'all' is a frontend-only concept (cash + free merged client-side).
+// Order matters — pills render left-to-right in this order.
+export type LobbyFilter = 'all' | 'cash' | 'free';
 
 export interface TabsProps {
   active: LobbyFilter;
@@ -9,6 +11,7 @@ export interface TabsProps {
 }
 
 const LABELS: Record<LobbyFilter, string> = {
+  all: 'All',
   cash: 'Cash',
   free: 'Free',
 };

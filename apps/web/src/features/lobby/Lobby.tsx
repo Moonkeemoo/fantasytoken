@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ContestFilter } from '@fantasytoken/shared';
 import { useMe } from '../me/useMe.js';
 import { useContests } from './useContests.js';
 import { Header } from './Header.js';
-import { Tabs } from './Tabs.js';
+import { Tabs, type LobbyFilter } from './Tabs.js';
 import { FeaturedHero } from './FeaturedHero.js';
 import { ContestList } from './ContestList.js';
 import { ActiveBanner } from './ActiveBanner.js';
@@ -22,7 +21,9 @@ const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 export function Lobby() {
   const navigate = useNavigate();
   const me = useMe();
-  const [filter, setFilter] = useState<Exclude<ContestFilter, 'my'>>('cash');
+  // Default to 'all' so a fresh user sees both Practice (free) and the cash
+  // ladder in one list — mirrors what most players want before they specialise.
+  const [filter, setFilter] = useState<LobbyFilter>('all');
   const [topUpOpen, setTopUpOpen] = useState(false);
 
   const cash = useContests('cash');
@@ -32,21 +33,28 @@ export function Lobby() {
   const teaser = useTeaser();
   const referralsSummary = useReferralsSummary();
 
-  const counts = {
-    cash: cash.data?.items.length ?? 0,
-    free: free.data?.items.length ?? 0,
+  const cashItems = cash.data?.items ?? [];
+  const freeItems = free.data?.items ?? [];
+  // 'all' = cash + free merged client-side. Backend has no 'all' filter
+  // since cash/free already cover the full schedule for any logged-in user.
+  const allItems = useMemo(() => [...cashItems, ...freeItems], [cashItems, freeItems]);
+
+  const counts: Record<LobbyFilter, number> = {
+    all: allItems.length,
+    cash: cashItems.length,
+    free: freeItems.length,
   };
 
-  const currentList = filter === 'cash' ? cash : free;
-  const items = currentList.data?.items ?? [];
+  const items = filter === 'all' ? allItems : filter === 'cash' ? cashItems : freeItems;
   // Unlocked-first, then locked sorted by min_rank ascending. Aspirational, not frustrating.
   const userRank = rank.data?.currentRank ?? 1;
-  // Featured = the highest-min_rank contest the user has actually unlocked.
-  // The latest unlock becomes the headline; older unlocks demote to All Contests.
-  // No fallback to a static is_featured flag — keeps the headline truthful per user.
-  // Cash-tab fallback: if the user hasn't unlocked any cash contest yet (fresh
-  // Rank-1 player), surface a Free contest (typically Practice) so the lobby
-  // has a real "Enter contest →" headline instead of an empty hero slot.
+  // Featured = the highest-min_rank contest the user has actually unlocked
+  // within the current tab. The latest unlock becomes the headline; older
+  // unlocks demote to All Contests. No fallback to a static is_featured flag
+  // — keeps the headline truthful per user.
+  // Cash-tab fallback: if the user hasn't unlocked any cash contest yet
+  // (fresh Rank-1 player), surface a Free contest (typically Practice) so the
+  // lobby has a real "Enter contest →" headline instead of an empty hero slot.
   const featured = useMemo(() => {
     const pickHighest = (pool: typeof items) => {
       const unlocked = pool.filter((c) => c.minRank <= userRank);
@@ -55,9 +63,9 @@ export function Lobby() {
     };
     const primary = pickHighest(items);
     if (primary) return primary;
-    if (filter === 'cash') return pickHighest(free.data?.items ?? []);
+    if (filter === 'cash') return pickHighest(freeItems);
     return undefined;
-  }, [items, userRank, filter, free.data?.items]);
+  }, [items, userRank, filter, freeItems]);
   const others = useMemo(() => {
     const list = featured ? items.filter((c) => c.id !== featured.id) : items;
     return list.slice().sort((a, b) => {
