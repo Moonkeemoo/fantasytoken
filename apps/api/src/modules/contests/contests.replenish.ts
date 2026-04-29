@@ -6,7 +6,20 @@ import type { Logger } from '../../logger.js';
 // prize_pool_cents = guaranteed minimum (overlay floor). Actual pool is derived
 // from real entries × fee × (1 - rake). Set to 0 → pure pari-mutuel; non-zero
 // becomes house-funded floor.
+// min_rank gates content; xp_multiplier feeds awardXp on finalize. Bear contest is
+// 1.5x to incentivize the differentiator (RANK_SYSTEM.md §2.3). Welcome Match is
+// always available so a Rank-1 user can play immediately and earn XP into Rank 2+.
 export const REPLENISH_TEMPLATES = [
+  {
+    name: 'Welcome Match',
+    type: 'bull' as const,
+    entryFeeCents: 0n,
+    prizePoolCents: 0n,
+    maxCapacity: 20,
+    isFeatured: false,
+    minRank: 1,
+    xpMultiplier: '1.00',
+  },
   {
     name: 'Quick Match',
     type: 'bull' as const,
@@ -14,6 +27,8 @@ export const REPLENISH_TEMPLATES = [
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
+    minRank: 2,
+    xpMultiplier: '1.00',
   },
   {
     name: 'Memecoin Madness',
@@ -22,6 +37,8 @@ export const REPLENISH_TEMPLATES = [
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: true,
+    minRank: 3,
+    xpMultiplier: '1.00',
   },
   {
     name: 'Bear Trap',
@@ -30,6 +47,8 @@ export const REPLENISH_TEMPLATES = [
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
+    minRank: 5,
+    xpMultiplier: '1.50',
   },
 ] as const;
 
@@ -93,6 +112,8 @@ export function createReplenishService(deps: ReplenishServiceDeps): ReplenishSer
           prizePoolCents: t.prizePoolCents,
           maxCapacity: t.maxCapacity,
           isFeatured: t.isFeatured,
+          minRank: t.minRank,
+          xpMultiplier: t.xpMultiplier,
           startsAt,
           endsAt,
           createdByUserId: adminId,

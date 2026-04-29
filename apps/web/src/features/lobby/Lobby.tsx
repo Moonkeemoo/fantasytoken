@@ -36,10 +36,18 @@ export function Lobby() {
   const currentList = filter === 'cash' ? cash : free;
   const items = currentList.data?.items ?? [];
   const featured = useMemo(() => items.find((c) => c.isFeatured), [items]);
-  const others = useMemo(
-    () => (featured ? items.filter((c) => c.id !== featured.id) : items),
-    [items, featured],
-  );
+  // Unlocked-first, then locked sorted by min_rank ascending. Aspirational, not frustrating.
+  const userRank = rank.data?.currentRank ?? 1;
+  const others = useMemo(() => {
+    const list = featured ? items.filter((c) => c.id !== featured.id) : items;
+    return list.slice().sort((a, b) => {
+      const aLocked = !a.userHasEntered && a.minRank > userRank;
+      const bLocked = !b.userHasEntered && b.minRank > userRank;
+      if (aLocked !== bLocked) return aLocked ? 1 : -1;
+      if (aLocked && bLocked) return a.minRank - b.minRank;
+      return 0;
+    });
+  }, [items, featured, userRank]);
 
   // Banner shows ANY user-entered contest that isn't yet finalized — quick jump to Live.
   const myInProgress = (my.data?.items ?? []).filter((c) => IN_PROGRESS_STATUSES.has(c.status));
@@ -67,6 +75,7 @@ export function Lobby() {
       <ContestList
         items={others}
         balanceCents={me.data.balanceCents}
+        userRank={userRank}
         onJoin={goTeamBuilder}
         onView={goLive}
         onResult={goResult}

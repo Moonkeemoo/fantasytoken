@@ -11,6 +11,7 @@ import { Card } from '../../components/ui/Card.js';
 import { Button } from '../../components/ui/Button.js';
 import { Label } from '../../components/ui/Label.js';
 import { Avatar } from '../../components/ui/Avatar.js';
+import { TierIcon } from '../rank/TierIcon.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
@@ -114,11 +115,16 @@ function FriendsView({
                 <strong className="font-mono text-[10px]">#{r.rank}</strong>
                 <Avatar name={r.displayName} url={r.avatarUrl} size={26} />
                 <span className="flex flex-col leading-tight">
-                  <span>
+                  <span className={r.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
                     {r.displayName}
                     {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
                   </span>
-                  <span className="text-[9px] text-muted">{r.contestsPlayed} contests</span>
+                  <span className="flex items-center gap-[6px] text-[9px] text-muted">
+                    <TierIcon rank={r.tierRank} size={14} showNumber={false} />
+                    <span>
+                      Rank {r.tierRank} · {r.contestsPlayed} contests
+                    </span>
+                  </span>
                 </span>
               </span>
               <span
@@ -165,7 +171,8 @@ function GlobalView({
               <span className="flex items-center gap-[8px] text-[12px]">
                 <strong className="font-mono text-[10px]">#{r.rank}</strong>
                 <Avatar name={r.displayName} url={r.avatarUrl} size={22} />
-                <span>
+                <TierIcon rank={r.tierRank} size={16} showNumber={false} />
+                <span className={r.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
                   {r.displayName}
                   {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
                 </span>
@@ -186,7 +193,8 @@ function GlobalView({
             <span className="flex items-center gap-[8px] text-[12px]">
               <strong className="font-mono text-[10px]">#{data.me.rank}</strong>
               <Avatar name={data.me.displayName} url={data.me.avatarUrl} size={22} />
-              <span>
+              <TierIcon rank={data.me.tierRank} size={16} showNumber={false} />
+              <span className={data.me.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
                 {data.me.displayName} <span className="text-[10px] text-muted">(you)</span>
               </span>
             </span>

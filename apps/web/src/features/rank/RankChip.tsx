@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import type { RankResponse } from '@fantasytoken/shared';
+import { TierIcon } from './TierIcon.js';
 
 /**
- * Compact ladder chip — `(7) Trader II · 240/350 XP`. Rank-circle on left
- * (filled with tier color), display + XP progress on right. Tap → /me.
+ * Compact ladder chip — TierIcon evolves with tier, display + XP progress on right.
+ * Visually identical to Profile rank section's tier icon for continuity.
  */
 export function RankChip({ rank }: { rank: RankResponse }) {
   const navigate = useNavigate();
@@ -12,12 +13,7 @@ export function RankChip({ rank }: { rank: RankResponse }) {
       onClick={() => navigate('/me')}
       className="flex items-center gap-[6px] rounded-[3px] border-[1.5px] border-ink bg-ink px-[5px] py-[3px] text-paper"
     >
-      <span
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full font-mono text-[10px] font-extrabold text-ink"
-        style={{ backgroundColor: rank.color }}
-      >
-        {rank.currentRank}
-      </span>
+      <TierIcon rank={rank.currentRank} size={18} />
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.04em]">
         {rank.display}
       </span>

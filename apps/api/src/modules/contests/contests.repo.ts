@@ -42,6 +42,7 @@ function rowFromDbRow(
     startsAt: row.startsAt.toISOString(),
     endsAt: row.endsAt.toISOString(),
     isFeatured: row.isFeatured,
+    minRank: row.minRank,
     userHasEntered,
   };
 }
