@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<title>Referral System — Implementation TZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f6f1e8;
+    --paper-dim: #eee5d2;
+    --ink: #1a1814;
+    --ink-soft: #4a4540;
+    --muted: #8a8478;
+    --rule: #d0c5b0;
+    --accent: #d4441c;
+    --note: #fef08a;
+    --green: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+  .doc { max-width: 880px; margin: 0 auto; padding: 56px 48px 96px; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* Header */
+  .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+  h1 { font-size: 48px; font-weight: 900; letter-spacing: -0.035em;
+    line-height: 0.98; margin: 8px 0 12px; max-width: 18ch; }
+  h1 .accent { color: var(--accent); }
+  .lead { font-size: 17px; color: var(--ink-soft); max-width: 60ch; margin-bottom: 32px; }
+
+  /* Section */
+  section { margin-top: 56px; }
+  section.first { margin-top: 36px; }
+  h2 {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--accent); margin: 0 0 8px;
+  }
+  h2 .num { color: var(--ink); }
+  h3 {
+    font-size: 28px; font-weight: 800; letter-spacing: -0.025em;
+    line-height: 1.05; margin: 0 0 18px; max-width: 28ch;
+  }
+  h4 {
+    font-size: 14px; font-weight: 700;
+    margin: 18px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed var(--rule);
+  }
+
+  p { margin: 0 0 12px; max-width: 64ch; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; max-width: 64ch; }
+  li { margin: 4px 0; }
+  li > code, p > code, td code { font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; background: var(--paper-dim);
+    padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+
+  b, strong { font-weight: 700; }
+
+  /* Cards */
+  .card {
+    border: 1.5px solid var(--ink); border-radius: 4px;
+    background: var(--paper-dim);
+    padding: 14px 18px;
+    margin: 14px 0;
+  }
+  .card.note { background: var(--note); }
+  .card.accent { background: var(--accent); color: var(--paper); }
+  .card.accent code { background: rgba(0,0,0,0.18); color: var(--paper); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 18px;
+    border: 1.5px solid var(--ink); font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; vertical-align: top;
+    border-bottom: 1px solid var(--rule); }
+  th { background: var(--paper-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+  td.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  td.num { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+  /* Surface block */
+  .surface {
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 18px;
+    margin: 24px 0;
+  }
+  .surface .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent);
+    font-weight: 700;
+  }
+  .surface h3 { font-size: 22px; margin: 4px 0 10px; }
+
+  /* Pill */
+  .pill {
+    display: inline-block;
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    padding: 2px 8px; border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .pill.accent { background: var(--accent); color: var(--paper); border-color: var(--ink); }
+  .pill.note { background: var(--note); }
+  .pill.green { background: #dff5e6; color: var(--green); border-color: var(--green); }
+
+  /* Spec list */
+  .spec {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 4px 18px;
+    margin: 12px 0 8px;
+    font-size: 13.5px;
+  }
+  .spec dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    padding-top: 2px;
+  }
+  .spec dd { margin: 0 0 6px; }
+
+  /* Code block */
+  pre {
+    background: var(--ink); color: var(--paper);
+    padding: 14px 16px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.55;
+    overflow-x: auto; margin: 8px 0 16px;
+  }
+  pre .c { color: #8a8478; }
+  pre .k { color: var(--note); }
+  pre .s { color: #c8e6a0; }
+
+  /* Rule */
+  hr {
+    border: none;
+    border-top: 1.5px solid var(--ink);
+    margin: 64px 0 0;
+  }
+
+  /* TOC */
+  .toc {
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 14px 18px;
+    background: var(--paper);
+    margin: 28px 0 8px;
+  }
+  .toc ol { margin: 0; padding-left: 18px; column-count: 2; column-gap: 24px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  /* Footer */
+  footer {
+    margin-top: 80px; padding-top: 18px;
+    border-top: 1.5px solid var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    display: flex; justify-content: space-between;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* Numbered subsection */
+  .subnum {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent); font-weight: 700;
+    margin-right: 8px;
+  }
+
+  /* Inline links */
+  a.ref { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <div class="meta">TZ · v1.0 · for engineering</div>
+  <h1>Referral System<br/><span class="accent">Implementation Spec</span></h1>
+  <p class="lead">
+    Six surfaces, one flow. This document covers behavior, data, edge cases, and per-screen specs
+    for the Fantasy Token referral system. Designs are in <code>Referral System.html</code>.
+  </p>
+
+  <div class="toc">
+    <div class="meta" style="margin-bottom:6px">Contents</div>
+    <ol>
+      <li><a href="#overview">Overview &amp; goals</a></li>
+      <li><a href="#mechanics">Reward mechanics</a></li>
+      <li><a href="#data">Data model</a></li>
+      <li><a href="#api">API endpoints</a></li>
+      <li><a href="#tracking">Attribution &amp; tracking</a></li>
+      <li><a href="#profile">Surface 1 — Profile section</a></li>
+      <li><a href="#lobby">Surface 2 — Lobby carousel</a></li>
+      <li><a href="#welcome">Surface 3 — Welcome screen</a></li>
+      <li><a href="#botdm">Surface 4 — Bot DM digest</a></li>
+      <li><a href="#toast">Surface 5 — In-app toast</a></li>
+      <li><a href="#share">Surface 6 — Share sheet</a></li>
+      <li><a href="#edges">Edge cases &amp; abuse</a></li>
+      <li><a href="#analytics">Analytics events</a></li>
+      <li><a href="#rollout">Rollout plan</a></li>
+      <li><a href="#refkeep">Don't lose the referrer link</a></li>
+    </ol>
+  </div>
+
+  <!-- ─────────── 1. Overview ─────────── -->
+  <section id="overview" class="first">
+    <h2><span class="num">§ 01</span> · Overview &amp; goals</h2>
+    <h3>Why we're building this</h3>
+    <p>
+      Drive viral acquisition through a paid referral program. Users earn a percentage of their friends'
+      contest winnings — forever, while the friend keeps playing. Both sides get a one-time cash bonus
+      after the friend's first contest.
+    </p>
+
+    <h4>Success metrics</h4>
+    <ul>
+      <li><b>Activation</b> — % of new users who arrive via referral link (target: 30%+ at steady state)</li>
+      <li><b>Conversion</b> — % of referred users who complete first contest within 7 days (target: 50%+)</li>
+      <li><b>Retention multiplier</b> — D30 retention of referred vs organic (expect 1.4×)</li>
+      <li><b>K-factor</b> — avg invites sent per active user (target: 0.4 at month 3)</li>
+    </ul>
+
+    <h4>Out of scope (this milestone)</h4>
+    <ul>
+      <li>Tier-based commission rates (e.g. higher % for Gold tier referrers)</li>
+      <li>Group/team referrals</li>
+      <li>Anti-fraud KYC flow — handled separately by trust &amp; safety</li>
+    </ul>
+  </section>
+
+  <!-- ─────────── 2. Mechanics ─────────── -->
+  <section id="mechanics">
+    <h2><span class="num">§ 02</span> · Reward mechanics</h2>
+    <h3>Two reward types, two levels</h3>
+
+    <h4>One-time bonus</h4>
+    <table>
+      <thead><tr><th>Recipient</th><th>Amount</th><th>Trigger</th><th>Locked?</th></tr></thead>
+      <tbody>
+        <tr><td>Referee (new user)</td><td class="num">$25</td><td>On first contest <i>completion</i> (not just join)</td><td>Yes — until trigger</td></tr>
+        <tr><td>Referrer (existing)</td><td class="num">$25</td><td>Same — credited to balance immediately</td><td>No</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Lifetime commission</h4>
+    <table>
+      <thead><tr><th>Level</th><th>Rate</th><th>Source</th><th>Applies to</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill">L1 direct</span></td><td class="num">5%</td><td>Friend's contest <b>winnings only</b></td><td>USD, STARS, TON</td></tr>
+        <tr><td><span class="pill">L2 indirect</span></td><td class="num">1%</td><td>Friend-of-friend's winnings</td><td>USD, STARS, TON</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card note">
+      <b>Critical:</b> commission applies to <b>net winnings</b> (prize − entry fee), not gross prize pool.
+      Commission is paid from house margin, never from the friend's payout. Friends never see less because
+      they were referred.
+    </div>
+
+    <h4>Per-currency rates (override)</h4>
+    <p>For STARS and TON, rates differ slightly to absorb on-chain costs:</p>
+    <table>
+      <thead><tr><th>Currency</th><th>L1</th><th>L2</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">USD</td><td class="num">5%</td><td class="num">1%</td></tr>
+        <tr><td class="mono">STARS</td><td class="num">3%</td><td class="num">0.5%</td></tr>
+        <tr><td class="mono">TON</td><td class="num">2.5%</td><td class="num">0.5%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─────────── 3. Data model ─────────── -->
+  <section id="data">
+    <h2><span class="num">§ 03</span> · Data model</h2>
+    <h3>Core tables</h3>
+
+    <h4><code>referrals</code></h4>
+    <pre><span class="c">-- one row per referrer→referee link</span>
+<span class="k">id</span>              uuid PK
+<span class="k">referrer_id</span>     uuid FK users
+<span class="k">referee_id</span>      uuid FK users (UNIQUE — user can only be referred once)
+<span class="k">level</span>           smallint  <span class="c">-- always 1; L2 derived via JOIN</span>
+<span class="k">code_used</span>       text      <span class="c">-- e.g. 'REF-TARAS'</span>
+<span class="k">source</span>          text      <span class="c">-- 'tg-share' | 'qr' | 'copy-link' | 'channel'</span>
+<span class="k">created_at</span>      timestamptz
+<span class="k">activated_at</span>    timestamptz NULL  <span class="c">-- set when referee completes 1st contest</span></pre>
+
+    <h4><code>referral_codes</code></h4>
+    <pre><span class="k">user_id</span>         uuid PK FK users
+<span class="k">code</span>            text UNIQUE  <span class="c">-- 'REF-{handle uppercased}', fallback 'REF-{base32(8)}'</span>
+<span class="k">created_at</span>      timestamptz</pre>
+
+    <h4><code>referral_commissions</code></h4>
+    <pre><span class="c">-- one row per commission event</span>
+<span class="k">id</span>              uuid PK
+<span class="k">referrer_id</span>     uuid FK
+<span class="k">referee_id</span>     uuid FK
+<span class="k">contest_id</span>      uuid FK
+<span class="k">level</span>           smallint  <span class="c">-- 1 or 2</span>
+<span class="k">currency</span>        text      <span class="c">-- 'USD' | 'STARS' | 'TON'</span>
+<span class="k">winnings</span>        numeric   <span class="c">-- friend's net winnings</span>
+<span class="k">rate</span>            numeric   <span class="c">-- 0.05, 0.01, etc</span>
+<span class="k">amount</span>          numeric   <span class="c">-- credited to referrer</span>
+<span class="k">created_at</span>      timestamptz</pre>
+
+    <h4><code>referral_bonuses</code></h4>
+    <pre><span class="c">-- one-time $25 bonuses</span>
+<span class="k">id</span>              uuid PK
+<span class="k">user_id</span>         uuid FK   <span class="c">-- recipient (referrer OR referee)</span>
+<span class="k">role</span>            text      <span class="c">-- 'referrer' | 'referee'</span>
+<span class="k">referral_id</span>     uuid FK referrals
+<span class="k">amount</span>          numeric DEFAULT 25
+<span class="k">currency</span>        text DEFAULT 'USD'
+<span class="k">status</span>          text      <span class="c">-- 'pending' | 'credited' | 'expired'</span>
+<span class="k">expires_at</span>      timestamptz  <span class="c">-- referee bonus: 7d after signup</span>
+<span class="k">credited_at</span>     timestamptz NULL</pre>
+  </section>
+
+  <!-- ─────────── 4. API ─────────── -->
+  <section id="api">
+    <h2><span class="num">§ 04</span> · API endpoints</h2>
+
+    <table>
+      <thead><tr><th>Method &amp; path</th><th>Purpose</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">GET /me/referrals</td>
+          <td>Compact + expanded view data</td>
+          <td><code>{ code, totals: {l1, l2, byCurrency}, friends: [...], topEarners: [...] }</code></td>
+        </tr>
+        <tr>
+          <td class="mono">GET /me/referrals/code</td>
+          <td>Get/regenerate share code</td>
+          <td><code>{ code, deeplink, qr_url }</code></td>
+        </tr>
+        <tr>
+          <td class="mono">POST /referrals/attribute</td>
+          <td>Called on signup with <code>?ref=</code> param</td>
+          <td><code>{ ok, referrer: { name, avatar } }</code></td>
+        </tr>
+        <tr>
+          <td class="mono">GET /me/referrals/feed</td>
+          <td>Recent commission events for toast/digest</td>
+          <td><code>{ events: [{type, amount, friend, contest, ts}] }</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Deeplink format</h4>
+    <p>
+      Share URL: <code>t.me/ftbot/app?startapp=ref_{CODE}</code> (TG Mini App native deep link).
+      Bot reads <code>start_param</code> on first launch and POSTs to <code>/referrals/attribute</code>.
+    </p>
+  </section>
+
+  <!-- ─────────── 5. Tracking ─────────── -->
+  <section id="tracking">
+    <h2><span class="num">§ 05</span> · Attribution &amp; tracking</h2>
+
+    <h4>Attribution rules (in order)</h4>
+    <ol>
+      <li>If user opens app via <code>?startapp=ref_X</code> → attribute to code X.</li>
+      <li>If user already has a Telegram account that's signed up → <b>no attribution</b> (one-shot).</li>
+      <li>If code is invalid/self-referral → log warning, proceed without attribution.</li>
+      <li>Attribution window: <b>7 days</b> from first link click → first signup.</li>
+    </ol>
+
+    <h4>Bonus crediting</h4>
+    <ul>
+      <li>On signup: create <code>referrals</code> row, two <code>referral_bonuses</code> rows (status=pending).</li>
+      <li>On referee's first contest <b>completion</b> (any outcome): mark both bonuses credited, push to balance.</li>
+      <li>If referee doesn't complete a contest within 7d: expire referee bonus, leave referrer bonus pending until 30d.</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 1: Profile ─────────── -->
+  <section id="profile">
+    <h2><span class="num">§ 06 · SURFACE 1</span></h2>
+    <div class="surface">
+      <div class="label">Profile · /me</div>
+      <h3>Embedded compact card → full expanded view</h3>
+    </div>
+
+    <dl class="spec">
+      <dt>Position</dt>
+      <dd>Inside <code>/me</code> page · between Track Record stats grid and Recent Contests list</dd>
+      <dt>States</dt>
+      <dd>(a) Compact card (default) · (b) Expanded view (after tap on "Details ›")</dd>
+      <dt>Navigation</dt>
+      <dd>Expanded view = sub-route <code>/me/referrals</code> · back chevron returns to /me at scroll position</dd>
+    </dl>
+
+    <h4>Compact card — content</h4>
+    <ul>
+      <li>Header: <code>YOUR NETWORK</code> · <code>+$487 lifetime</code> (in accent red)</li>
+      <li>2-cell grid: L1 ($398, 5%, 8 active · 12 invited) · L2 ($89, 1%, 4 active)</li>
+      <li>Bottom row: stacked avatars (5 + "+N") · "Details ›" button (accent fill)</li>
+      <li>If 0 invites: replace with "Earn 5% · Send invite" CTA, hide grid</li>
+    </ul>
+
+    <h4>Expanded view — content (top→bottom)</h4>
+    <ol>
+      <li>Sub-page header with back chevron, title "Your network", route label</li>
+      <li>Hero block: $487 in accent red, "from 12 friends across 2 levels"</li>
+      <li>L1/L2 mini-row breakdown</li>
+      <li>By currency table (USD, STARS, TON · 3 rows)</li>
+      <li>Top earners this month (4 rows · avatar + name + meta + amount)</li>
+      <li>Tree visualization (L1 row of avatars + L2 row, both with active counts)</li>
+      <li>CTAs: "Send invite link" (accent), Copy link / Show QR (ghost row)</li>
+    </ol>
+
+    <h4>Empty state</h4>
+    <p>
+      0 invites → compact card collapses to single CTA: <i>"Earn 5% of every win your friends rack up.
+      Send an invite — both get $25."</i> + accent button. Expanded view still accessible to read about the program.
+    </p>
+
+    <h4>Tap targets</h4>
+    <ul>
+      <li>Whole compact card → opens expanded view</li>
+      <li>"Details ›" button → opens expanded view (highlighted)</li>
+      <li>Avatar stack → opens expanded view scrolled to Top earners</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 2: Lobby ─────────── -->
+  <section id="lobby">
+    <h2><span class="num">§ 07 · SURFACE 2</span></h2>
+    <div class="surface">
+      <div class="label">Lobby · promo carousel</div>
+      <h3>Invite is one slot in a rotating promo strip</h3>
+    </div>
+
+    <p>
+      Lobby gets a horizontal carousel of "promo" cards above the Open Contests list.
+      <b>Featured contest</b> is the primary slot (always shown first). Other slots — <b>Next unlock</b>,
+      <b>Invite friends</b> — rotate behind it.
+    </p>
+
+    <dl class="spec">
+      <dt>Position</dt>
+      <dd>Lobby · directly under user header bar · above "Open contests" list</dd>
+      <dt>Layout</dt>
+      <dd>320×168 cards · 10px gap · 1 active visible + peek of next · horizontal swipe</dd>
+      <dt>Indicator</dt>
+      <dd>Dots above carousel · active dot stretches to pill (16×5px)</dd>
+      <dt>Auto-advance</dt>
+      <dd>None on first load · auto-advance only after manual swipe (respect user choice)</dd>
+    </dl>
+
+    <h4>Slot priority logic</h4>
+    <ol>
+      <li><b>Featured contest</b> — always slot 1, sourced from <code>/lobby/featured</code></li>
+      <li><b>Invite friends</b> — slot 2 if user has &lt;5 active referrals · otherwise slot 3</li>
+      <li><b>Next unlock</b> — slot 2 if user is &lt;1000 XP from next tier · otherwise slot 3</li>
+      <li>If user has 5+ referrals AND is not close to next tier → drop those slots, show only Featured + system promos</li>
+    </ol>
+
+    <h4>Invite slot — content</h4>
+    <ul>
+      <li>Kind label: <code>INVITE FRIENDS</code> · F-tile mark in top-right</li>
+      <li>Title: "Earn <span style="color:var(--accent)">5%</span> forever"</li>
+      <li>Sub: "Both get $25 after their first contest"</li>
+      <li>Meta: "Per friend" / "$25 + 5%"</li>
+      <li>CTA: "Send link →" (accent button)</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 3: Welcome ─────────── -->
+  <section id="welcome">
+    <h2><span class="num">§ 08 · SURFACE 3</span></h2>
+    <div class="surface">
+      <div class="label">Welcome · referee's first launch</div>
+      <h3>BEFORE tutorial — hero + bonus card + start tour</h3>
+    </div>
+
+    <p>
+      Replaces the standard tutorial entry when a user arrives via referral link.
+      Shown as <b>Step 0/4</b> before the regular onboarding tour.
+    </p>
+
+    <dl class="spec">
+      <dt>Trigger</dt>
+      <dd>First app open with <code>start_param</code> matching a valid referral code</dd>
+      <dt>Skip behavior</dt>
+      <dd>"Skip · find a contest" still credits user with $25 welcome bonus · only second $25 is gated by first contest</dd>
+      <dt>Persistence</dt>
+      <dd>Shown once · subsequent opens go to lobby</dd>
+    </dl>
+
+    <h4>Content blocks (top → bottom)</h4>
+    <ol>
+      <li>Accent hero: F+T tile · "via referral" stamp · headline "You're in, Bohdan." · subline with <i>referrer's name highlighted in note yellow</i></li>
+      <li>Bonus card (yellow note): Welcome credit $25 (now, ●) · Referral bonus +$25 (after 1st game, ○) · Total $50</li>
+      <li>Body copy: "One contest unlocks the second $25 — and Andriy gets a thank-you too. We'll walk you through it in 30 seconds."</li>
+      <li>CTAs: "Start the tour →" (ink) · "Skip · find a contest" (ghost)</li>
+      <li>Footer: tutorial step indicator (Step 0/4)</li>
+    </ol>
+
+    <h4>Data needed</h4>
+    <ul>
+      <li><code>referrer.name</code>, <code>referrer.avatar</code></li>
+      <li><code>bonuses.welcome.amount</code>, <code>bonuses.welcome.expires_at</code></li>
+      <li><code>bonuses.referral.amount</code>, trigger condition</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 4: Bot DM ─────────── -->
+  <section id="botdm">
+    <h2><span class="num">§ 09 · SURFACE 4</span></h2>
+    <div class="surface">
+      <div class="label">Telegram bot DM · hourly digest</div>
+      <h3>Batched commission notifications via TG bot</h3>
+    </div>
+
+    <p>
+      The bot DMs the user when their referrals win contests. <b>Batched hourly</b> to avoid notification fatigue.
+      Sent via standard <code>sendMessage</code> + <code>InlineKeyboardMarkup</code>.
+    </p>
+
+    <dl class="spec">
+      <dt>Frequency</dt>
+      <dd>Max 1 message per hour · only if commission events occurred in window</dd>
+      <dt>Quiet hours</dt>
+      <dd>22:00–08:00 in user's TG timezone · accumulate, send next active window</dd>
+      <dt>User control</dt>
+      <dd>"Pause hourly digest 🔕" inline button → opt-out (still tracks commission, no DMs)</dd>
+      <dt>API</dt>
+      <dd><code>sendMessage</code> with <code>parse_mode=HTML</code> · inline keyboard with <code>web_app</code> button to open Mini App</dd>
+    </dl>
+
+    <h4>Message content</h4>
+    <ul>
+      <li>Opening line: "<b>{N} friends</b> just won contests · last hour"</li>
+      <li>Indented block (rendered with HTML <code>&lt;pre&gt;</code> or formatted text):
+        <ul>
+          <li>Per friend: avatar initial · name · contest · level pill (L1/L2) · commission amount</li>
+          <li>Footer row: "Total this hour" · sum in green</li>
+        </ul>
+      </li>
+      <li>Inline keyboard:
+        <ul>
+          <li>Row 1: <code>[🎯 Open app]</code> (web_app)</li>
+          <li>Row 2: <code>[See breakdown]</code> · <code>[Invite more]</code></li>
+          <li>Row 3: <code>[🔕 Pause hourly digest]</code></li>
+        </ul>
+      </li>
+    </ul>
+
+    <div class="card note">
+      <b>Note on TG capabilities:</b> TG bots cannot render arbitrary HTML/CSS in messages.
+      The "data table" inside the message is plain text with monospace alignment (<code>&lt;pre&gt;</code> or
+      manual padding). Rich card visuals require <code>sendPhoto</code> with a server-rendered PNG —
+      acceptable fallback if monospace looks weak in client tests.
+    </div>
+
+    <h4>Singleton case</h4>
+    <p>
+      If only 1 friend won in the hour: simplify copy to "<b>Andriy</b> just won $87 in Bear Trap. You earned <b>+$4.35</b>."
+      Same inline keyboard.
+    </p>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 5: Toast ─────────── -->
+  <section id="toast">
+    <h2><span class="num">§ 10 · SURFACE 5</span></h2>
+    <div class="surface">
+      <div class="label">In-app toast · live commission</div>
+      <h3>Paper card with accent border, F-tile $ glyph</h3>
+    </div>
+
+    <dl class="spec">
+      <dt>Trigger</dt>
+      <dd>User is in-app when a commission event fires for them</dd>
+      <dt>Position</dt>
+      <dd>Slides down from top · 14px from edges · respects status bar safe area</dd>
+      <dt>Dismiss</dt>
+      <dd>Tap "VIEW" → opens /me/referrals expanded view · tap elsewhere on toast → dismisses · auto-dismiss after 8s if untouched</dd>
+      <dt>Stacking</dt>
+      <dd>Max 1 visible · new event while shown → replace contents with crossfade (200ms)</dd>
+    </dl>
+
+    <h4>Content</h4>
+    <ul>
+      <li>Left: F-tile (accent fill, $ glyph), 36×36</li>
+      <li>Center: caption "Andriy won · L1 · 5%" (mono, muted) · primary "+$4.35" (22px black)</li>
+      <li>Right: ink chip "VIEW"</li>
+      <li>Card: paper bg · 2px accent red border · 3px ink drop shadow (no blur)</li>
+    </ul>
+
+    <h4>Suppression rules</h4>
+    <ul>
+      <li>Don't show during contest active gameplay (would distract)</li>
+      <li>Don't show during onboarding tutorial</li>
+      <li>Don't show within 30s of another toast (prevent spam)</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── Surface 6: Share ─────────── -->
+  <section id="share">
+    <h2><span class="num">§ 11 · SURFACE 6</span></h2>
+    <div class="surface">
+      <div class="label">Share sheet · invite modal</div>
+      <h3>Postcard with QR + your code + share actions</h3>
+    </div>
+
+    <dl class="spec">
+      <dt>Trigger</dt>
+      <dd>Any "Send invite link" / "Send link" CTA (Profile, Lobby carousel, Welcome, Bot DM action)</dd>
+      <dt>Layout</dt>
+      <dd>Full-screen modal · paper texture bg (45° hatched) · centered postcard with 6px ink drop shadow</dd>
+      <dt>Dismiss</dt>
+      <dd>Back gesture · tap outside card area · "✕" in card top-right (not shown — back chevron in header)</dd>
+    </dl>
+
+    <h4>Card content</h4>
+    <ul>
+      <li>Header: "Your invite card" (mono cap) · "5% forever" stamp (rotated 6deg, accent red)</li>
+      <li>Title: "Bring a friend.<br>Pocket the cut." (26px black)</li>
+      <li>Sub: "They join via your link, play one contest, you both get $25."</li>
+      <li>QR + code panel (paper-dim bg, ink border):
+        <ul>
+          <li>Left: 88×88 QR code · ink border · server-rendered PNG (cached)</li>
+          <li>Right: <code>YOUR CODE</code> mono cap · <code>REF-TARAS</code> in accent red, 18px mono · full URL below in muted</li>
+        </ul>
+      </li>
+      <li>CTAs:
+        <ul>
+          <li>Primary: "Share via Telegram" (accent, full-width) → invokes <code>tg.openLink</code> with prefilled share intent</li>
+          <li>Row: "Copy link" (ghost) · "Save card" (ghost) → saves the postcard as PNG to user's gallery</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4>Share intent payload (TG)</h4>
+    <pre><span class="k">tg.openLink</span>(`https://t.me/share/url?url=${encodeURIComponent(deeplink)}&text=${encodeURIComponent(message)}`)
+
+<span class="c">// message:</span>
+<span class="s">"Join me on Fantasy Token — pick coins, win contests. We both get $25 when you play your first round. {deeplink}"</span></pre>
+
+    <h4>QR code generation</h4>
+    <ul>
+      <li>Server-rendered PNG · cache key = <code>{user_id}_{code_hash}</code></li>
+      <li>Include 4-module quiet zone · ink modules on paper bg (match brand)</li>
+      <li>Center: optional F-tile mark with 25% module overlap (use ECC-H to compensate)</li>
+    </ul>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── 12. Edges ─────────── -->
+  <section id="edges">
+    <h2><span class="num">§ 12</span> · Edge cases &amp; abuse prevention</h2>
+
+    <table>
+      <thead><tr><th>Case</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Self-referral (user uses own code)</td><td>Reject at attribution · log <code>self_referral_attempt</code></td></tr>
+        <tr><td>Already referred</td><td>Reject · keep original attribution · show toast "Welcome back!"</td></tr>
+        <tr><td>Code expired/invalid</td><td>Proceed signup without attribution · do NOT show error to user</td></tr>
+        <tr><td>Referee never completes contest</td><td>Both bonuses expire · referrer notified once at 30d "Andriy hasn't played yet — give them a nudge?"</td></tr>
+        <tr><td>Referee makes contest, then refunds</td><td>Reverse commissions · debit referrer balance (with note in tx log)</td></tr>
+        <tr><td>Friend deletes account</td><td>Mark referral inactive · stop commission accrual · keep historical records</td></tr>
+        <tr><td>Suspected fraud (multi-account)</td><td>Freeze bonuses, escalate to T&amp;S · don't auto-deny (false positives)</td></tr>
+        <tr><td>Currency mismatch (referee plays in TON, referrer in USD)</td><td>Commission accrues in friend's currency · referrer wallet shows multi-currency balance</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Hard limits</h4>
+    <ul>
+      <li>Max 100 active referrals per user (soft cap, contact support to lift)</li>
+      <li>Max $50,000 lifetime commission per user before manual review</li>
+      <li>Same IP signup within 24h → flag, don't block</li>
+    </ul>
+  </section>
+
+  <!-- ─────────── 13. Analytics ─────────── -->
+  <section id="analytics">
+    <h2><span class="num">§ 13</span> · Analytics events</h2>
+
+    <table>
+      <thead><tr><th>Event</th><th>When</th><th>Properties</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ref_link_clicked</td><td>Deeplink opened (before signup)</td><td>code, source</td></tr>
+        <tr><td class="mono">ref_attributed</td><td>Signup with valid code</td><td>code, referrer_id, referee_id</td></tr>
+        <tr><td class="mono">ref_first_contest</td><td>Referee completes 1st contest</td><td>referee_id, contest_id, days_since_signup</td></tr>
+        <tr><td class="mono">ref_bonus_credited</td><td>$25 bonus paid (either side)</td><td>role, amount, currency</td></tr>
+        <tr><td class="mono">ref_commission_earned</td><td>Per-event commission paid</td><td>level, amount, currency, contest_id</td></tr>
+        <tr><td class="mono">ref_share_intent</td><td>"Send invite link" tapped</td><td>surface (profile|lobby|welcome|bot|share)</td></tr>
+        <tr><td class="mono">ref_share_completed</td><td>TG share dialog dismissed (best-effort)</td><td>channel</td></tr>
+        <tr><td class="mono">ref_qr_shown</td><td>Show QR / Save card tapped</td><td>action</td></tr>
+        <tr><td class="mono">ref_toast_shown</td><td>In-app toast rendered</td><td>commission_id</td></tr>
+        <tr><td class="mono">ref_toast_clicked</td><td>Toast tapped (VIEW)</td><td>commission_id</td></tr>
+        <tr><td class="mono">ref_dm_sent</td><td>Hourly digest DM sent</td><td>friend_count, total_amount</td></tr>
+        <tr><td class="mono">ref_dm_paused</td><td>User pauses digest</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─────────── 14. Rollout ─────────── -->
+  <section id="rollout">
+    <h2><span class="num">§ 14</span> · Rollout plan</h2>
+
+    <h4>Phased release</h4>
+    <table>
+      <thead><tr><th>Phase</th><th>What ships</th><th>Audience</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill">Phase 1</span></td><td>Profile section · Share sheet · Welcome screen · Attribution backend</td><td>Internal · 50 users</td></tr>
+        <tr><td><span class="pill">Phase 2</span></td><td>+ Lobby carousel · In-app toast · One-time bonuses live</td><td>10% rollout</td></tr>
+        <tr><td><span class="pill">Phase 3</span></td><td>+ Commission system · Bot DM digest</td><td>50% rollout</td></tr>
+        <tr><td><span class="pill green">GA</span></td><td>All surfaces, monitoring + abuse rules tuned</td><td>100%</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Pre-launch checklist</h4>
+    <ul>
+      <li>QR PNG generation infra deployed &amp; cached</li>
+      <li>TG bot has <code>web_app</code> button enabled in BotFather</li>
+      <li>Commission accrual + balance crediting under load test (5000 concurrent contest finishes)</li>
+      <li>Abuse rules in shadow mode for 1 week before enforcing</li>
+      <li>Legal review on T&amp;Cs ("forever" → "as long as program exists, min 1 year notice")</li>
+      <li>Support macros for common questions (where's my bonus, why expired, etc)</li>
+    </ul>
+
+    <h4>Open questions</h4>
+    <ol>
+      <li>Should L2 commission be opt-in (referrer's setting) or always-on?</li>
+      <li>Do we need a leaderboard for top referrers (separate surface)?</li>
+      <li>Holiday/seasonal bonus boost mechanic — defer to post-GA?</li>
+    </ol>
+  </section>
+
+  <hr/>
+
+  <!-- ─────────── 15. Don't lose the referrer ─────────── -->
+  <section id="refkeep">
+    <h2><span class="num">§ 15</span> · Don't lose the referrer link</h2>
+    <h3>The referee → referrer relationship is permanent and visible everywhere it matters</h3>
+
+    <p>
+      Once attribution happens, we treat <code>referrals.referrer_id</code> as <b>immutable, indexed, and surfaced</b>.
+      Engineering must not silently drop it during signup retries, account migrations, or wallet linking.
+      Below — where it lives in DB, when it's locked, and where the user actually sees it.
+    </p>
+
+    <h4>Database guarantees</h4>
+    <ul>
+      <li><code>referrals.referee_id</code> is <b>UNIQUE</b> — one referrer per user, forever. Re-attribution is impossible.</li>
+      <li><code>referrals.referrer_id</code> is <b>NOT NULL</b> on the <i>referee</i> side — never write a referral row without both ends.</li>
+      <li>Index <code>idx_referrals_referrer</code> on <code>referrer_id</code> (we query "all referees of X" constantly).</li>
+      <li>Index <code>idx_referrals_referee</code> on <code>referee_id</code> (we query "who referred X" on every contest finish).</li>
+      <li>Cascade rules: if referrer deletes account → mark <code>referrer_status='inactive'</code>, <b>do not delete the row</b>. Commissions stop, history stays.</li>
+    </ul>
+
+    <h4>Locking the link</h4>
+    <ul>
+      <li>Attribution is <b>write-once</b>. Once <code>referrals</code> row exists for a <code>referee_id</code>, no API path can overwrite it.</li>
+      <li>Account merge / wallet relink → carry <code>referrer_id</code> to the surviving account. Migration script must explicitly preserve it (add to merge test suite).</li>
+      <li>If a TG account is reset (same <code>tg_user_id</code>, new internal <code>user_id</code>) → carry the link via <code>tg_user_id</code> lookup.</li>
+    </ul>
+
+    <h4>Where the referrer is shown to the referee</h4>
+    <table>
+      <thead><tr><th>Surface</th><th>What's shown</th></tr></thead>
+      <tbody>
+        <tr><td>Welcome screen</td><td>Referrer's name (in note yellow) + avatar in hero. Persistent — always rendered if attributed.</td></tr>
+        <tr><td>Profile · /me</td><td>Small footer line under track record: <i>"Invited by Andriy · Jan 12"</i> with avatar tap → opens referrer's public profile.</td></tr>
+        <tr><td>First contest result</td><td>If referee just unlocked the $25 bonus → toast: "Bonus credited · thanks to Andriy".</td></tr>
+        <tr><td>Bot welcome message</td><td>Bot's first DM mentions referrer by name with link to thank them.</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Where the referee is shown to the referrer</h4>
+    <ul>
+      <li>Profile expanded view — full friends list with avatar, name, status (active / pending / inactive), L1 / L2 pill, lifetime contribution.</li>
+      <li>Bot hourly digest — names of friends who won that hour.</li>
+      <li>In-app toast — name of friend whose win triggered the commission.</li>
+      <li>30d nudge — if referee never played: <i>"Andriy hasn't played yet — give them a nudge?"</i> with deeplink to TG chat.</li>
+    </ul>
+
+    <h4>Edge cases that must NOT drop the link</h4>
+    <table>
+      <thead><tr><th>Scenario</th><th>Required behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Signup fails midway, retried</td><td>Idempotency key on <code>POST /referrals/attribute</code> · same <code>start_param</code> → same <code>referrals</code> row, never duplicated, never dropped.</td></tr>
+        <tr><td>User reinstalls TG Mini App</td><td>Link persists — keyed by <code>tg_user_id</code>, not session.</td></tr>
+        <tr><td>Welcome screen skipped / closed</td><td>Attribution already happened pre-Welcome · screen is informational only · skip ≠ unlink.</td></tr>
+        <tr><td>Referee changes handle / display name</td><td>Referrer's friends list reflects new name on next refresh · link unchanged.</td></tr>
+        <tr><td>Referrer changes handle</td><td>Old <code>code_used</code> string in <code>referrals</code> stays for audit · current code regenerates on demand.</td></tr>
+        <tr><td>Bonus expires (referee never played)</td><td>Bonus row → <code>status='expired'</code> · referral row stays · if referee plays later → no bonus, but commission still flows.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card accent">
+      <b>Hard rule for engineering:</b> any code path that touches <code>users</code>, <code>auth</code>, or
+      <code>wallet</code> tables must be reviewed against "does this preserve <code>referrals.referrer_id</code>?"
+      Add a regression test for every such path. Losing the link silently = lost commission = customer support hell.
+    </div>
+
+    <h4>Monitoring</h4>
+    <ul>
+      <li>Dashboard metric: <code>referrals_orphaned</code> (rows where referrer_id no longer exists in users) — should always be 0.</li>
+      <li>Dashboard metric: <code>signups_with_ref_param_no_attribution</code> — attribution failures · alert if &gt; 1% of signups.</li>
+      <li>Weekly audit: count of referrals created vs <code>ref_attributed</code> events — should match exactly.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Fantasy Token · Referral System TZ</span>
+    <span>v1.0 · ready for engineering review</span>
+  </footer>
+
+</div>
+</body>
+</html>

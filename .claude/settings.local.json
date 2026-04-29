@@ -4,7 +4,10 @@
       "Bash(rm -rf ~/.claude/skills/superpowers)",
       "Bash(rmdir ~/.claude/skills)",
       "Bash(mkdir -p /Users/tarasromaniuk/Documents/GitHub/fantasytoken/.claude/skills/find-skills)",
-      "Bash(cp /Users/tarasromaniuk/Documents/GitHub/ora-et-labora/.agents/skills/find-skills/SKILL.md /Users/tarasromaniuk/Documents/GitHub/fantasytoken/.claude/skills/find-skills/SKILL.md)"
+      "Bash(cp /Users/tarasromaniuk/Documents/GitHub/ora-et-labora/.agents/skills/find-skills/SKILL.md /Users/tarasromaniuk/Documents/GitHub/fantasytoken/.claude/skills/find-skills/SKILL.md)",
+      "Bash(rm '/Users/tarasromaniuk/Documents/GitHub/fantasytoken/.git/index 2' '/Users/tarasromaniuk/Documents/GitHub/fantasytoken/.git/logs/refs/remotes/origin/HEAD 2' '/Users/tarasromaniuk/Documents/GitHub/fantasytoken/.git/refs/remotes/origin/HEAD 2')",
+      "Bash(git fetch *)",
+      "Bash(git branch *)"
     ]
   }
 }
