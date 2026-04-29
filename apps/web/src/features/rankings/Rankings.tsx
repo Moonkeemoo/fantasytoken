@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FriendsRankingResponse, GlobalRankingResponse } from '@fantasytoken/shared';
+import {
+  FriendsRankingResponse,
+  GlobalRankingResponse,
+  ReferralsLeaderboardResponse,
+} from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 import { telegram } from '../../lib/telegram.js';
 import { useMe } from '../me/useMe.js';
@@ -19,13 +23,15 @@ import { formatCents } from '../../lib/format.js';
 const BOT_HANDLE = 'fantasytokenbot';
 const APP_SHORT = 'fantasytoken';
 
-type Tab = 'friends' | 'global';
+type Tab = 'friends' | 'global' | 'recruiters';
+type RecruitersScope = 'global' | 'friends';
 
 export function Rankings() {
   const me = useMe();
   const [tab, setTab] = useState<Tab>('friends');
   const [topUpOpen, setTopUpOpen] = useState(false);
 
+  const [recruitersScope, setRecruitersScope] = useState<RecruitersScope>('global');
   const friends = useQuery({
     queryKey: ['rankings', 'friends'],
     queryFn: () => apiFetch('/rankings/friends', FriendsRankingResponse),
@@ -36,6 +42,13 @@ export function Rankings() {
     queryKey: ['rankings', 'global'],
     queryFn: () => apiFetch('/rankings/global', GlobalRankingResponse),
     enabled: tab === 'global',
+    staleTime: 30_000,
+  });
+  const recruiters = useQuery({
+    queryKey: ['rankings', 'recruiters', recruitersScope],
+    queryFn: () =>
+      apiFetch(`/me/referrals/leaderboard?scope=${recruitersScope}`, ReferralsLeaderboardResponse),
+    enabled: tab === 'recruiters',
     staleTime: 30_000,
   });
 
@@ -59,24 +72,38 @@ export function Rankings() {
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
-      <div className="flex gap-2 px-3 py-2">
+      <div className="flex gap-2 overflow-x-auto px-3 py-2">
         <Pill active={tab === 'friends'} onClick={() => setTab('friends')}>
           Friends
         </Pill>
         <Pill active={tab === 'global'} onClick={() => setTab('global')}>
           Global · top 100
         </Pill>
+        <Pill active={tab === 'recruiters'} onClick={() => setTab('recruiters')}>
+          Recruiters
+        </Pill>
       </div>
 
-      {tab === 'friends' ? (
+      {tab === 'friends' && (
         <FriendsView
           data={friends.data}
           isLoading={friends.isLoading}
           isError={friends.isError}
           onInvite={handleInvite}
         />
-      ) : (
+      )}
+      {tab === 'global' && (
         <GlobalView data={global.data} isLoading={global.isLoading} isError={global.isError} />
+      )}
+      {tab === 'recruiters' && (
+        <RecruitersView
+          data={recruiters.data}
+          isLoading={recruiters.isLoading}
+          isError={recruiters.isError}
+          scope={recruitersScope}
+          onScope={setRecruitersScope}
+          onInvite={handleInvite}
+        />
       )}
 
       <div className="flex-1" />
@@ -236,4 +263,96 @@ function formatPnlCents(cents: number): string {
   if (cents === 0) return '$0.00';
   const sign = cents > 0 ? '+' : '-';
   return `${sign}${formatCents(Math.abs(cents))}`;
+}
+
+function RecruitersView({
+  data,
+  isLoading,
+  isError,
+  scope,
+  onScope,
+  onInvite,
+}: {
+  data: ReferralsLeaderboardResponse | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  scope: RecruitersScope;
+  onScope: (s: RecruitersScope) => void;
+  onInvite: () => void;
+}) {
+  return (
+    <>
+      <div className="mx-3 mt-1 flex gap-2 text-[11px]">
+        <Pill active={scope === 'global'} onClick={() => onScope('global')}>
+          Global
+        </Pill>
+        <Pill active={scope === 'friends'} onClick={() => onScope('friends')}>
+          Friends
+        </Pill>
+      </div>
+      {isLoading && <div className="px-3 pt-3 font-mono text-[11px] text-muted">loading…</div>}
+      {isError && (
+        <div className="px-3 pt-3 text-[12px] text-hl-red">
+          Couldn't load recruiters leaderboard.
+        </div>
+      )}
+      {data && data.items.length === 0 && (
+        <div className="px-3 pt-4">
+          <div className="rounded-[6px] border-[1.5px] border-ink bg-note px-[14px] py-3">
+            <div className="text-[13px] font-extrabold leading-tight">
+              No recruiters yet — be the first.
+            </div>
+            <div className="mt-1 text-[11px] text-muted">
+              Invite friends, earn 5% from their wins forever.
+            </div>
+          </div>
+          <div className="mt-3">
+            <InviteCard onInvite={onInvite} />
+          </div>
+        </div>
+      )}
+      {data && data.items.length > 0 && (
+        <div className="flex flex-col gap-[6px] px-3 pt-3">
+          {data.items.map((row) => (
+            <RecruiterRow key={row.userId} row={row} />
+          ))}
+          {data.myRow && !data.items.some((r) => r.userId === data.myRow!.userId) && (
+            <>
+              <div className="my-2 text-center font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
+                · · ·
+              </div>
+              <RecruiterRow row={data.myRow} />
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function RecruiterRow({ row }: { row: ReferralsLeaderboardResponse['items'][number] }) {
+  return (
+    <div
+      className={`flex items-center gap-[10px] rounded-[6px] border-[1.5px] border-ink bg-paper px-[10px] py-[8px] ${
+        row.isMe ? 'ring-2 ring-accent' : ''
+      }`}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper-dim font-mono text-[11px] font-bold">
+        #{row.rank}
+      </div>
+      <Avatar name={row.firstName ?? '?'} url={row.photoUrl} size={32} />
+      <div className="flex-1">
+        <div className="text-[13px] font-bold leading-tight">
+          {row.firstName ?? 'anonymous'}
+          {row.isMe && <span className="ml-1 text-accent">· you</span>}
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">
+          {row.l1Count} L1 invited
+        </div>
+      </div>
+      <div className="font-mono text-[14px] font-extrabold text-hl-green">
+        +{formatCents(row.totalEarnedCents)}
+      </div>
+    </div>
+  );
 }

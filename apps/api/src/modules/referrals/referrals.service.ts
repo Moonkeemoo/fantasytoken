@@ -9,6 +9,7 @@ import {
 import type { Logger } from '../../logger.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 import type { DmQueueService } from '../bot/queue.service.js';
+import type { RealtimeHub } from '../realtime/hub.js';
 
 export interface ReferralChainLink {
   /** 1 = direct inviter, 2 = inviter's inviter. */
@@ -129,6 +130,59 @@ export interface ReferralsRepo {
     sourceUserId: string;
     sourceContestId: string;
   }): Promise<{ sourceFirstName: string | null; contestName: string | null }>;
+
+  /** Global / friends-scoped leaderboard of top recruiters by total earned. */
+  getLeaderboard(args: {
+    callerUserId: string;
+    scope: 'global' | 'friends';
+    friendIds: string[];
+    limit: number;
+  }): Promise<{
+    items: Array<{
+      rank: number;
+      userId: string;
+      firstName: string | null;
+      photoUrl: string | null;
+      totalEarnedCents: bigint;
+      l1Count: number;
+    }>;
+    myRow: {
+      rank: number;
+      userId: string;
+      firstName: string | null;
+      photoUrl: string | null;
+      totalEarnedCents: bigint;
+      l1Count: number;
+    } | null;
+  }>;
+
+  /** Drill-in: one friend's profile + per-level contribution + their recent
+   * payouts (capped). Returns null if the requested friend isn't actually in
+   * the caller's referral chain (anti-snoop). */
+  getFriendDetail(args: {
+    callerUserId: string;
+    friendUserId: string;
+    payoutsLimit: number;
+  }): Promise<{
+    userId: string;
+    firstName: string | null;
+    photoUrl: string | null;
+    joinedAt: Date;
+    contestsPlayed: number;
+    totalContributedCents: bigint;
+    l1ContributedCents: bigint;
+    l2ContributedCents: bigint;
+    recentPayouts: Array<{
+      id: string;
+      level: 1 | 2;
+      payoutCents: bigint;
+      sourcePrizeCents: bigint;
+      currencyCode: string;
+      sourceFirstName: string | null;
+      contestName: string | null;
+      createdAt: Date;
+    }>;
+  } | null>;
 }
 
 export interface ReferralsServiceDeps {
@@ -138,6 +192,9 @@ export interface ReferralsServiceDeps {
   /** Optional — when present, payCommissions enqueues a TG bot DM after each
    * successful credit. Tests pass undefined; the in-app toast still works. */
   dmQueue?: DmQueueService;
+  /** Optional — when present, payCommissions also pushes a realtime event so
+   * the FE in-app toast shows in <1s instead of waiting for 30s polling. */
+  realtimeHub?: RealtimeHub;
 }
 
 export interface ReferralsService {
@@ -164,6 +221,17 @@ export interface ReferralsService {
   getStats(userId: string): ReturnType<ReferralsRepo['getStats']>;
   getTree(userId: string): ReturnType<ReferralsRepo['getTree']>;
   getPayouts(userId: string, limit: number): ReturnType<ReferralsRepo['getPayouts']>;
+  getFriendDetail(args: {
+    callerUserId: string;
+    friendUserId: string;
+    payoutsLimit: number;
+  }): ReturnType<ReferralsRepo['getFriendDetail']>;
+  getLeaderboard(args: {
+    callerUserId: string;
+    scope: 'global' | 'friends';
+    friendIds: string[];
+    limit: number;
+  }): ReturnType<ReferralsRepo['getLeaderboard']>;
 }
 
 export function createReferralsService(deps: ReferralsServiceDeps): ReferralsService {
@@ -226,6 +294,25 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
                   },
                 });
               }
+              // Realtime push for the in-app toast — best-effort, no-op if no
+              // hub configured (test env) or recipient offline.
+              if (deps.realtimeHub) {
+                if (dmContext === null) {
+                  dmContext = await deps.repo.lookupCommissionDmContext({
+                    sourceUserId: args.sourceUserId,
+                    sourceContestId: args.sourceContestId,
+                  });
+                }
+                deps.realtimeHub.publish(link.userId, {
+                  kind: 'commission',
+                  payoutCents: Number(calc.payoutCents),
+                  sourcePrizeCents: Number(args.sourcePrizeCents),
+                  sourceFirstName: dmContext.sourceFirstName,
+                  contestName: dmContext.contestName,
+                  level: link.level,
+                  currencyCode: args.currency,
+                });
+              }
             }
           } catch (err) {
             // INV-7: a single-level failure must not stop us paying the other level.
@@ -257,6 +344,12 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
     },
     async getPayouts(userId, limit) {
       return deps.repo.getPayouts(userId, limit);
+    },
+    async getFriendDetail(args) {
+      return deps.repo.getFriendDetail(args);
+    },
+    async getLeaderboard(args) {
+      return deps.repo.getLeaderboard(args);
     },
     async maybeUnlockSignupBonuses({ userId, triggeredByEntryId }) {
       let unlockedCount = 0;

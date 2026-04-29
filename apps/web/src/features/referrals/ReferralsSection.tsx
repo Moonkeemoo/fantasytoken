@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
 import { Button } from '../../components/ui/Button.js';
@@ -6,6 +8,7 @@ import { formatCents } from '../../lib/format.js';
 import { telegram } from '../../lib/telegram.js';
 import { buildInviteUrl, openInviteShareSheet } from '../../lib/referral.js';
 import { useReferralsSummary, useReferralsTree } from './useReferrals.js';
+import { InviteQR } from './InviteQR.js';
 
 /**
  * Profile referrals block — REFERRAL_SYSTEM.md §6.1.
@@ -50,7 +53,15 @@ export function ReferralsSection({ telegramId }: { telegramId: number }) {
   if (s.l1Count === 0) {
     return <EmptyState onInvite={onInvite} />;
   }
-  return <Populated summary={s} tree={tree.data} onInvite={onInvite} onCopy={onCopy} />;
+  return (
+    <Populated
+      summary={s}
+      tree={tree.data}
+      telegramId={telegramId}
+      onInvite={onInvite}
+      onCopy={onCopy}
+    />
+  );
 }
 
 function EmptyState({ onInvite }: { onInvite: () => void }) {
@@ -75,14 +86,18 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
 function Populated({
   summary,
   tree,
+  telegramId,
   onInvite,
   onCopy,
 }: {
   summary: ReturnType<typeof useReferralsSummary>['data'] & object;
   tree: ReturnType<typeof useReferralsTree>['data'];
+  telegramId: number;
   onInvite: () => void;
   onCopy: () => void;
 }) {
+  const [showQr, setShowQr] = useState(false);
+  const navigate = useNavigate();
   // Top earners: highest contributedCents from L1, capped to 5 for breathing room.
   const topEarners = (tree?.l1 ?? [])
     .filter((n) => n.totalContributedCents > 0)
@@ -120,9 +135,10 @@ function Populated({
         <div className="flex flex-col gap-[4px]">
           <Label>top earners</Label>
           {topEarners.map((n) => (
-            <div
+            <button
               key={n.userId}
-              className="flex items-center gap-[8px] rounded-[4px] border border-rule bg-paper px-[8px] py-[6px]"
+              onClick={() => navigate(`/me/referrals/${n.userId}`)}
+              className="flex items-center gap-[8px] rounded-[4px] border border-rule bg-paper px-[8px] py-[6px] text-left transition active:scale-[0.99]"
             >
               <Avatar name={n.firstName ?? '?'} url={n.photoUrl} size={28} />
               <div className="flex-1 text-[12px] font-bold leading-tight">
@@ -131,20 +147,26 @@ function Populated({
               <div className="font-mono text-[11px] font-bold text-hl-green">
                 +{formatCents(n.totalContributedCents)}
               </div>
-            </div>
+              <span className="font-mono text-[12px] text-muted">›</span>
+            </button>
           ))}
         </div>
       )}
 
-      {/* CTAs — primary share, secondary copy. (Show QR is V2 per spec §14.) */}
-      <div className="flex gap-2">
+      {/* CTAs — primary share, secondary copy + QR toggle. */}
+      <div className="flex flex-wrap gap-2">
         <Button variant="primary" size="sm" onClick={onInvite}>
           📨 Invite friends · earn 5%
         </Button>
         <Button variant="ghost" size="sm" onClick={onCopy}>
           Copy link
         </Button>
+        <Button variant="ghost" size="sm" onClick={() => setShowQr((v) => !v)}>
+          {showQr ? 'Hide QR' : 'Show QR'}
+        </Button>
       </div>
+
+      {showQr && <InviteQR telegramId={telegramId} />}
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  ReferralsFriendResponse,
   ReferralsPayoutsResponse,
   ReferralsSummaryResponse,
   ReferralsTreeResponse,
@@ -30,6 +31,16 @@ export function useReferralsPayouts(limit = 20) {
   return useQuery({
     queryKey: ['referrals', 'payouts', limit],
     queryFn: () => apiFetch(`/me/referrals/payouts?limit=${limit}`, ReferralsPayoutsResponse),
+    staleTime: 30_000,
+  });
+}
+
+// Per-friend drill-in. 404 from backend (anti-snoop) bubbles as a hook error.
+export function useReferralFriend(friendUserId: string | null) {
+  return useQuery({
+    queryKey: ['referrals', 'friend', friendUserId],
+    queryFn: () => apiFetch(`/me/referrals/friend/${friendUserId}`, ReferralsFriendResponse),
+    enabled: friendUserId !== null,
     staleTime: 30_000,
   });
 }

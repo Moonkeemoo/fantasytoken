@@ -200,11 +200,20 @@ function buildCard(data: ShareCardData): VNode {
           fontWeight: 700,
         },
         [
-          el(
-            'div',
-            { display: 'flex' },
-            `${data.user.username ? '@' + data.user.username : data.user.displayName}  ·  ${shortDate(data.finishedAt)}`,
-          ),
+          el('div', { display: 'flex', flexDirection: 'column', gap: '4px' }, [
+            el(
+              'div',
+              { display: 'flex' },
+              `${data.user.username ? '@' + data.user.username : data.user.displayName}  ·  ${shortDate(data.finishedAt)}`,
+            ),
+            data.recruiter
+              ? el(
+                  'div',
+                  { display: 'flex', color: MUTED, fontSize: '14px', fontWeight: 500 },
+                  `via ${data.recruiter.username ? '@' + data.recruiter.username : data.recruiter.displayName}`,
+                )
+              : el('div', { display: 'flex' }, ''),
+          ]),
           el('div', { display: 'flex', color: MUTED }, refUrl),
         ],
       ),

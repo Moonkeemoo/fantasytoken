@@ -117,6 +117,12 @@ function makeFakeRepo(): FakeRepo {
     async lookupCommissionDmContext(_args) {
       return { sourceFirstName: null, contestName: null };
     },
+    async getFriendDetail(_args) {
+      return null;
+    },
+    async getLeaderboard(_args) {
+      return { items: [], myRow: null };
+    },
   };
   return repo;
 }

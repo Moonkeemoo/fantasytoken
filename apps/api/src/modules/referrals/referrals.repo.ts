@@ -349,6 +349,242 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
       };
     },
 
+    async getLeaderboard({ callerUserId, scope, friendIds, limit }) {
+      // Top recruiters by SUM(payout_cents) of incoming referral_payouts.
+      // For 'friends' scope we restrict to friendIds + the caller themselves
+      // (so they always see where they sit on their own friend leaderboard).
+      // Empty scope → empty leaderboard, no point hitting the DB.
+      const wantUserIds =
+        scope === 'global' ? null : Array.from(new Set([callerUserId, ...friendIds]));
+      if (scope === 'friends' && wantUserIds!.length === 0) {
+        return { items: [], myRow: null };
+      }
+
+      const rows = await db.execute<{
+        user_id: string;
+        first_name: string | null;
+        photo_url: string | null;
+        total_cents: string;
+        l1_count: number;
+        rank: number;
+      }>(sql`
+        WITH agg AS (
+          SELECT rp.recipient_user_id AS user_id,
+                 SUM(rp.payout_cents)::bigint AS total
+          FROM referral_payouts rp
+          ${
+            scope === 'friends'
+              ? sql`WHERE rp.recipient_user_id IN (${sql.join(
+                  wantUserIds!.map((id) => sql`${id}`),
+                  sql`, `,
+                )})`
+              : sql``
+          }
+          GROUP BY rp.recipient_user_id
+          HAVING SUM(rp.payout_cents) > 0
+        )
+        SELECT
+          a.user_id,
+          u.first_name,
+          u.photo_url,
+          a.total::text AS total_cents,
+          (SELECT COUNT(*)::int FROM users u2 WHERE u2.referrer_user_id = a.user_id) AS l1_count,
+          ROW_NUMBER() OVER (ORDER BY a.total DESC, a.user_id ASC)::int AS rank
+        FROM agg a
+        JOIN users u ON u.id = a.user_id
+        ORDER BY a.total DESC, a.user_id ASC
+        LIMIT ${limit}
+      `);
+      const list = (
+        rows as unknown as Array<{
+          user_id: string;
+          first_name: string | null;
+          photo_url: string | null;
+          total_cents: string;
+          l1_count: number;
+          rank: number;
+        }>
+      ).map((r) => ({
+        rank: r.rank,
+        userId: r.user_id,
+        firstName: r.first_name,
+        photoUrl: r.photo_url,
+        totalEarnedCents: BigInt(r.total_cents),
+        l1Count: r.l1_count,
+      }));
+
+      // Caller's own row, if not already in `items`. Computed via the same
+      // aggregate filter so a caller with zero earnings stays null.
+      const inList = list.find((r) => r.userId === callerUserId);
+      let myRow = inList ?? null;
+      if (!inList) {
+        const meRows = await db.execute<{
+          first_name: string | null;
+          photo_url: string | null;
+          total_cents: string;
+          l1_count: number;
+          rank: number;
+        }>(sql`
+          WITH agg AS (
+            SELECT rp.recipient_user_id AS user_id,
+                   SUM(rp.payout_cents)::bigint AS total
+            FROM referral_payouts rp
+            ${
+              scope === 'friends'
+                ? sql`WHERE rp.recipient_user_id IN (${sql.join(
+                    wantUserIds!.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`
+                : sql``
+            }
+            GROUP BY rp.recipient_user_id
+            HAVING SUM(rp.payout_cents) > 0
+          ),
+          ranked AS (
+            SELECT a.user_id, a.total,
+                   ROW_NUMBER() OVER (ORDER BY a.total DESC, a.user_id ASC)::int AS rank
+            FROM agg a
+          )
+          SELECT
+            r.rank,
+            r.total::text AS total_cents,
+            u.first_name,
+            u.photo_url,
+            (SELECT COUNT(*)::int FROM users u2 WHERE u2.referrer_user_id = ${callerUserId}) AS l1_count
+          FROM ranked r
+          JOIN users u ON u.id = r.user_id
+          WHERE r.user_id = ${callerUserId}
+        `);
+        const m = (
+          meRows as unknown as Array<{
+            rank: number;
+            total_cents: string;
+            first_name: string | null;
+            photo_url: string | null;
+            l1_count: number;
+          }>
+        )[0];
+        if (m) {
+          myRow = {
+            rank: m.rank,
+            userId: callerUserId,
+            firstName: m.first_name,
+            photoUrl: m.photo_url,
+            totalEarnedCents: BigInt(m.total_cents),
+            l1Count: m.l1_count,
+          };
+        }
+      }
+
+      return { items: list, myRow };
+    },
+
+    async getFriendDetail({ callerUserId, friendUserId, payoutsLimit }) {
+      // Anti-snoop guard: friendUserId must actually be in the caller's chain
+      // (L1 = direct, OR L2 = referee of one of caller's L1s).
+      const guard = await db.execute<{ ok: boolean }>(sql`
+        SELECT EXISTS (
+          SELECT 1 FROM ${users} u
+          WHERE u.id = ${friendUserId}
+            AND (
+              u.referrer_user_id = ${callerUserId}
+              OR u.referrer_user_id IN (
+                SELECT id FROM ${users} WHERE referrer_user_id = ${callerUserId}
+              )
+            )
+        ) AS ok
+      `);
+      const allowed = (guard as unknown as Array<{ ok: boolean }>)[0]?.ok ?? false;
+      if (!allowed) return null;
+
+      // Friend profile + per-level contribution split + counts.
+      const profileRows = await db.execute<{
+        first_name: string | null;
+        photo_url: string | null;
+        created_at: Date;
+        contests_played: number;
+        l1_cents: string;
+        l2_cents: string;
+      }>(sql`
+        SELECT
+          u.first_name,
+          u.photo_url,
+          u.created_at,
+          (SELECT COUNT(*)::int FROM entries e
+            WHERE e.user_id = u.id AND e.status = 'finalized') AS contests_played,
+          COALESCE((
+            SELECT SUM(rp.payout_cents)::text FROM referral_payouts rp
+            WHERE rp.recipient_user_id = ${callerUserId}
+              AND rp.source_user_id = u.id AND rp.level = 1
+          ), '0') AS l1_cents,
+          COALESCE((
+            SELECT SUM(rp.payout_cents)::text FROM referral_payouts rp
+            WHERE rp.recipient_user_id = ${callerUserId}
+              AND rp.source_user_id = u.id AND rp.level = 2
+          ), '0') AS l2_cents
+        FROM ${users} u
+        WHERE u.id = ${friendUserId}
+      `);
+      const p = (
+        profileRows as unknown as Array<{
+          first_name: string | null;
+          photo_url: string | null;
+          created_at: Date;
+          contests_played: number;
+          l1_cents: string;
+          l2_cents: string;
+        }>
+      )[0];
+      if (!p) return null;
+
+      // Recent payouts triggered by this friend's wins.
+      const payoutRows = await db
+        .select({
+          id: referralPayouts.id,
+          level: referralPayouts.level,
+          payoutCents: referralPayouts.payoutCents,
+          sourcePrizeCents: referralPayouts.sourcePrizeCents,
+          currencyCode: referralPayouts.currencyCode,
+          createdAt: referralPayouts.createdAt,
+          sourceFirstName: users.firstName,
+          contestName: contests.name,
+        })
+        .from(referralPayouts)
+        .leftJoin(users, eq(users.id, referralPayouts.sourceUserId))
+        .leftJoin(contests, eq(contests.id, referralPayouts.sourceContestId))
+        .where(
+          and(
+            eq(referralPayouts.recipientUserId, callerUserId),
+            eq(referralPayouts.sourceUserId, friendUserId),
+          ),
+        )
+        .orderBy(sql`${referralPayouts.createdAt} DESC`)
+        .limit(payoutsLimit);
+
+      const l1c = BigInt(p.l1_cents);
+      const l2c = BigInt(p.l2_cents);
+      return {
+        userId: friendUserId,
+        firstName: p.first_name,
+        photoUrl: p.photo_url,
+        joinedAt: p.created_at,
+        contestsPlayed: p.contests_played,
+        totalContributedCents: l1c + l2c,
+        l1ContributedCents: l1c,
+        l2ContributedCents: l2c,
+        recentPayouts: payoutRows.map((r) => ({
+          id: r.id,
+          level: (r.level === 1 ? 1 : 2) as 1 | 2,
+          payoutCents: r.payoutCents,
+          sourcePrizeCents: r.sourcePrizeCents,
+          currencyCode: r.currencyCode,
+          sourceFirstName: r.sourceFirstName ?? null,
+          contestName: r.contestName ?? null,
+          createdAt: r.createdAt,
+        })),
+      };
+    },
+
     async getPayouts(userId, limit) {
       const rows = await db
         .select({

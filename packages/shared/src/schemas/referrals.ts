@@ -60,6 +60,41 @@ export const ReferralsPayoutsResponse = z.object({
 });
 export type ReferralsPayoutsResponse = z.infer<typeof ReferralsPayoutsResponse>;
 
+const ReferralLeaderRow = z.object({
+  rank: z.number().int().positive(),
+  userId: z.string().uuid(),
+  firstName: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+  totalEarnedCents: z.number().int().nonnegative(),
+  l1Count: z.number().int().nonnegative(),
+  isMe: z.boolean(),
+});
+
+/** GET /referrals/leaderboard?scope=global|friends — top recruiters. */
+export const ReferralsLeaderboardResponse = z.object({
+  scope: z.enum(['global', 'friends']),
+  items: z.array(ReferralLeaderRow),
+  /** Caller's own row even if outside top N — null if they have no earnings. */
+  myRow: ReferralLeaderRow.nullable(),
+});
+export type ReferralsLeaderboardResponse = z.infer<typeof ReferralsLeaderboardResponse>;
+
+/** GET /me/referrals/friend/:userId — drill-in detail for one referee. */
+export const ReferralsFriendResponse = z.object({
+  userId: z.string().uuid(),
+  firstName: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+  joinedAt: z.string().datetime(),
+  contestsPlayed: z.number().int().nonnegative(),
+  totalContributedCents: z.number().int().nonnegative(),
+  /** Per-level split of what this friend has contributed. */
+  l1ContributedCents: z.number().int().nonnegative(),
+  l2ContributedCents: z.number().int().nonnegative(),
+  /** Recent payouts triggered by THIS friend (newest first). */
+  recentPayouts: z.array(ReferralPayoutItem),
+});
+export type ReferralsFriendResponse = z.infer<typeof ReferralsFriendResponse>;
+
 /** GET /me/welcome-status — onboarding bonus state for the welcome screen
  * countdown. Grandfathered users (welcome_credited_at NULL after migration
  * 0011) get state='grandfathered' and the rest of the fields are null.

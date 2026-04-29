@@ -1,9 +1,14 @@
-import { eq } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, users } from '../../db/schema/index.js';
 import type { ShareCardData, ShareRepo } from './share.service.js';
 
 export function createShareRepo(db: Database): ShareRepo {
+  // Self-join alias so we can pull the recruiter's profile alongside the
+  // entry owner's in a single round-trip.
+  const recruiter = alias(users, 'recruiter');
+
   return {
     async load(entryId) {
       const [row] = await db
@@ -24,10 +29,14 @@ export function createShareRepo(db: Database): ShareRepo {
           uUsername: users.username,
           uPhotoUrl: users.photoUrl,
           uTelegramId: users.telegramId,
+          uReferrerId: users.referrerUserId,
+          rDisplay: recruiter.firstName,
+          rUsername: recruiter.username,
         })
         .from(entries)
         .innerJoin(contests, eq(contests.id, entries.contestId))
         .leftJoin(users, eq(users.id, entries.userId))
+        .leftJoin(recruiter, eq(recruiter.id, users.referrerUserId))
         .where(eq(entries.id, entryId))
         .limit(1);
 
@@ -60,6 +69,13 @@ export function createShareRepo(db: Database): ShareRepo {
           avatarUrl: row.uPhotoUrl,
           telegramId: row.uTelegramId ?? 0,
         },
+        recruiter:
+          row.uReferrerId !== null
+            ? {
+                displayName: row.rDisplay ?? row.rUsername ?? 'a friend',
+                username: row.rUsername,
+              }
+            : null,
       };
       return data;
     },
@@ -67,19 +83,19 @@ export function createShareRepo(db: Database): ShareRepo {
 }
 
 async function countEntries(db: Database, contestId: string): Promise<number> {
-  const rows = await db
-    .select({ id: entries.id })
+  const [r] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
     .from(entries)
     .where(eq(entries.contestId, contestId));
-  return rows.length;
+  return r?.n ?? 0;
 }
 
 async function countRealEntries(db: Database, contestId: string): Promise<number> {
-  const rows = await db
-    .select({ id: entries.id })
+  const [r] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
     .from(entries)
     .where(eq(entries.contestId, contestId));
-  return rows.length; // bots filtered would matter but for share card total is enough — keep simple
+  return r?.n ?? 0;
 }
 
 async function rankInContest(

@@ -47,6 +47,9 @@ import { makeReferralsRoutes } from './modules/referrals/referrals.routes.js';
 import { createBot } from './modules/bot/bot.js';
 import { createDmQueueRepo } from './modules/bot/queue.repo.js';
 import { createDmQueueService } from './modules/bot/queue.service.js';
+import { createRealtimeHub } from './modules/realtime/hub.js';
+import { makeRealtimeRoutes } from './modules/realtime/realtime.routes.js';
+import websocketPlugin from '@fastify/websocket';
 import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
 import { createRankingsService } from './modules/rankings/rankings.service.js';
 import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
@@ -89,6 +92,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     allowedHeaders: ['content-type', 'x-telegram-init-data'],
   });
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+  await app.register(websocketPlugin);
 
   app.decorate('deps', deps);
 
@@ -143,6 +147,12 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     ? createDmQueueService({ repo: dmQueueRepo, bot, log: deps.logger })
     : undefined;
 
+  // Realtime push hub — in-memory pub/sub for the WS commission toast.
+  // Single-process today; promote to Redis pub/sub when scaling to N>1
+  // replicas (commission produced on node A would otherwise miss a recipient
+  // connected to node B).
+  const realtimeHub = createRealtimeHub(deps.logger);
+
   // Referrals must be live before finalizeRepo — finalize calls it as a sidecar.
   const referralsRepo = createReferralsRepo(deps.db);
   const referrals = createReferralsService({
@@ -150,6 +160,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     currency,
     log: deps.logger,
     ...(dmQueue ? { dmQueue } : {}),
+    realtimeHub,
   });
 
   const finalizeRepo = createContestsFinalizeRepo(
@@ -202,7 +213,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeRankRoutes({ db: deps.db, users }), { prefix: '/me' });
-  await app.register(makeReferralsRoutes({ referrals, users }), { prefix: '/me' });
+  await app.register(makeReferralsRoutes({ referrals, users, friends }), { prefix: '/me' });
+  await app.register(makeRealtimeRoutes({ hub: realtimeHub, users }), { prefix: '/ws' });
   await app.register(makeSeasonsRoutes({ seasons: seasonsSvc }), { prefix: '/seasons' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
   await app.register(makeContestsRoutes({ contests, users, db: deps.db }), { prefix: '/contests' });
@@ -330,6 +342,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopWelcomeExpiry();
       stopDmDrain();
       if (bot) void bot.stop();
+      realtimeHub.closeAll();
     },
   };
 }

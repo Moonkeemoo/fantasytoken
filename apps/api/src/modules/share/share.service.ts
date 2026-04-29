@@ -14,6 +14,12 @@ export interface ShareCardData {
     avatarUrl: string | null;
     telegramId: number;
   };
+  /** Set when this user was attributed to a referrer at signup — drives the
+   * "via @recruiter" line on the share card. Null for organic users. */
+  recruiter: {
+    displayName: string;
+    username: string | null;
+  } | null;
 }
 
 export interface ShareRepo {

@@ -5,19 +5,25 @@ import { ReferralsPayoutsResponse } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 import { formatCents } from '../../lib/format.js';
 import { telegram } from '../../lib/telegram.js';
+import { useRealtime } from '../../lib/realtime.js';
 
 const LAST_SEEN_KEY = 'ft.referrals.lastSeenPayoutId';
 
 /**
  * Global in-app toast — REFERRAL_SYSTEM.md §6.4.
  *
- * Polls /me/referrals/payouts every 30s (V1 fallback; WebSocket is V2). On a
- * fresh payout (id newer than the last one we've shown) slides a black/red
- * banner down from the top. Click → opens /me referrals section. Does NOT
- * auto-dismiss — it's money, the user closes it themselves.
+ * Two ingestion paths run side-by-side:
+ *  1. WebSocket (push) — sub-second latency. Server publishes a 'commission'
+ *     event the moment payCommissions credits the recipient.
+ *  2. REST polling (fallback) — every 60s. Catches any commission missed by
+ *     the WS path: cold-start window before the connection opens, transparent
+ *     proxy that strips WS, dropped reconnect, etc.
  *
- * Mounted once at the App root so it sees every screen. Single global instance,
- * cheap query, no per-route plumbing.
+ * Both paths funnel through the same setShown so we never double-pop. The
+ * lastSeenId marker (localStorage) keeps a cold reload from re-popping every
+ * historical payout.
+ *
+ * Mounted once at the App root so it sees every screen.
  */
 export function CommissionToast() {
   const navigate = useNavigate();
@@ -32,10 +38,33 @@ export function CommissionToast() {
   const q = useQuery({
     queryKey: ['referrals', 'payouts', 5],
     queryFn: () => apiFetch('/me/referrals/payouts?limit=5', ReferralsPayoutsResponse),
-    refetchInterval: 30_000,
+    // WS is primary — polling backed off to 60s as a safety net. Still
+    // refetches on focus so opening the app surfaces anything missed offline.
+    refetchInterval: 60_000,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
+
+  // WS path — fires sub-second after the commission credit.
+  const realtime = useRealtime();
+  useEffect(() => {
+    const ev = realtime.lastEvent;
+    if (!ev || ev.kind !== 'commission') return;
+    // Synthetic id so the polling-side dedup also recognises this toast.
+    // `ws:` prefix avoids ever colliding with a real referral_payouts UUID.
+    const synthId = `ws:${Date.now()}`;
+    setShown({
+      id: synthId,
+      payoutCents: ev.payoutCents,
+      sourceFirstName: ev.sourceFirstName,
+      sourcePrizeCents: ev.sourcePrizeCents,
+      level: ev.level,
+    });
+    telegram.hapticNotification('success');
+    // Don't write LAST_SEEN here — once polling sees the matching real row it
+    // will compare against this synthId, miss, and we'd briefly re-pop. Keep
+    // the LAST_SEEN as the canonical authoritative marker (real row id).
+  }, [realtime.lastEvent]);
 
   useEffect(() => {
     if (!q.data || q.data.items.length === 0) return;
