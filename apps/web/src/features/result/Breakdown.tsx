@@ -21,7 +21,7 @@ export function Breakdown({ result }: { result: ResultResponse }) {
       <div className="flex justify-between text-[12px] font-bold">
         <span>net</span>
         <span className={result.netCents >= 0 ? 'text-hl-green' : 'text-hl-red'}>
-          {result.netCents >= 0 ? '+' : ''}
+          {result.netCents >= 0 ? '+' : '−'}
           {formatCents(Math.abs(result.netCents))}
         </span>
       </div>

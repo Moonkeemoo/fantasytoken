@@ -136,17 +136,19 @@ export function createContestsFinalizeRepo(
           .limit(1);
         const seasonId = activeSeason?.id;
         const xpMultiplier = Number(contest.xpMultiplier);
-        // Real entries sorted by their finalRank to compute position bonus.
+        // Award XP using overall finalRank against the full room (incl. bots) — the
+        // result UI shows "rank #N of M" with bots counted, and giving "1st place
+        // bonus" to the only real player in a bot-filled room because they're
+        // technically 1st-of-1 reals does not match user expectation.
         const realFinalized = result.entries
           .filter((e) => !e.isBot && e.userId)
           .sort((a, b) => a.finalRank - b.finalRank);
-        const realCount = realFinalized.length;
+        const totalEntries = result.entries.length;
 
-        for (let i = 0; i < realFinalized.length; i++) {
-          const e = realFinalized[i]!;
+        for (const e of realFinalized) {
           const award = awardXp({
-            position: i + 1,
-            totalRealUsers: realCount,
+            position: e.finalRank,
+            totalRealUsers: totalEntries,
             contestMultiplier: xpMultiplier,
             contestType: contest.type === 'bear' ? 'bear' : 'bull',
           });

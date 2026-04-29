@@ -2,8 +2,10 @@
 // xp_multiplier; returns a structured breakdown so UI can fade rows in 1-by-1.
 
 export interface ContestResult {
-  /** 1-based finish position among real users (totalRealUsers). */
+  /** 1-based finish position in the contest, against the full room (incl. bots).
+   * Matches the rank shown in the result UI ("rank #N of M"). */
   position: number;
+  /** Total entries in the room (real + bot). Used for the top-30% fallback bonus. */
   totalRealUsers: number;
   /** Stored on contests table, accounts for tier + bear etc; 1.0 = baseline. */
   contestMultiplier: number;
