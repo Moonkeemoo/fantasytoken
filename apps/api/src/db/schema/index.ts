@@ -15,3 +15,5 @@ export * from './contests.js';
 export * from './entries.js';
 export * from './price_snapshots.js';
 export * from './friendships.js';
+export * from './seasons.js';
+export * from './xp_events.js';

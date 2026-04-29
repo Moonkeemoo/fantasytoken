@@ -49,6 +49,9 @@ function makeRepo(opts: {
     async getImagesBySymbols() {
       return new Map();
     },
+    async getXpAwardForUser() {
+      return null;
+    },
   };
 }
 

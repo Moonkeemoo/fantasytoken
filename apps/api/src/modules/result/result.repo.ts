@@ -1,6 +1,13 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { contests, entries, priceSnapshots, tokens, transactions } from '../../db/schema/index.js';
+import {
+  contests,
+  entries,
+  priceSnapshots,
+  tokens,
+  transactions,
+  xpEvents,
+} from '../../db/schema/index.js';
 import type { ResultEntrySnapshot, ResultRepo } from './result.service.js';
 
 export function createResultRepo(db: Database): ResultRepo {
@@ -145,6 +152,19 @@ export function createResultRepo(db: Database): ResultRepo {
         .from(tokens)
         .where(inArray(tokens.symbol, symbols));
       return new Map(rows.map((r) => [r.symbol, r.imageUrl]));
+    },
+
+    async getXpAwardForUser(contestId, userId) {
+      const [row] = await db
+        .select({ deltaXp: xpEvents.deltaXp, breakdown: xpEvents.breakdown })
+        .from(xpEvents)
+        .where(and(eq(xpEvents.contestId, contestId), eq(xpEvents.userId, userId)))
+        .limit(1);
+      if (!row) return null;
+      const breakdown = Array.isArray(row.breakdown)
+        ? (row.breakdown as Array<{ reason: string; amount: number }>)
+        : [];
+      return { total: row.deltaXp, breakdown };
     },
   };
 }

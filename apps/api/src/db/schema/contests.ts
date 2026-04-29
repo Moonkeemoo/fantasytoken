@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -22,6 +23,9 @@ export const contests = pgTable('contests', {
   startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
   endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
   isFeatured: boolean('is_featured').notNull().default(false),
+  // Rank-system: gating + XP multiplier (RANK_SYSTEM.md §6).
+  minRank: integer('min_rank').notNull().default(1),
+  xpMultiplier: numeric('xp_multiplier', { precision: 3, scale: 2 }).notNull().default('1.00'),
   createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

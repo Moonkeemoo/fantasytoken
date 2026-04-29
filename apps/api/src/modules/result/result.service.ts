@@ -27,6 +27,11 @@ export interface ResultRepo {
   getPriceSnapshots(contestId: string): Promise<Map<string, { start: number; end: number }>>;
   hasRefund(entryId: string): Promise<boolean>;
   getImagesBySymbols(symbols: string[]): Promise<Map<string, string | null>>;
+  /** Look up XP awarded to user for this contest. Null if no event recorded. */
+  getXpAwardForUser(
+    contestId: string,
+    userId: string,
+  ): Promise<{ total: number; breakdown: Array<{ reason: string; amount: number }> } | null>;
 }
 
 export interface ResultServiceDeps {
@@ -90,6 +95,11 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
         };
       });
 
+      // XP award (rank-system) — only if myEntry has a userId.
+      const xpAward = myEntry.userId
+        ? await deps.repo.getXpAwardForUser(contestId, myEntry.userId)
+        : null;
+
       return {
         contestId: contest.id,
         entryId: myEntry.entryId,
@@ -103,6 +113,7 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
         totalEntries: sorted.length,
         realEntries,
         lineupFinal,
+        xpAward,
       };
     },
   };

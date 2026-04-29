@@ -11,6 +11,8 @@ import { ActiveBanner } from './ActiveBanner.js';
 import { BottomNav } from './BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
+import { NextRankTeaser } from '../rank/NextRankTeaser.js';
+import { useRank, useTeaser } from '../rank/useRank.js';
 
 const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 
@@ -23,6 +25,8 @@ export function Lobby() {
   const cash = useContests('cash');
   const free = useContests('free');
   const my = useContests('my');
+  const rank = useRank();
+  const teaser = useTeaser();
 
   const counts = {
     cash: cash.data?.items.length ?? 0,
@@ -57,6 +61,7 @@ export function Lobby() {
         onTopUp={() => setTopUpOpen(true)}
       />
       <ActiveBanner inProgress={myInProgress} onView={goLive} />
+      {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
       <Tabs active={filter} counts={counts} onChange={setFilter} />
       {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
       <ContestList

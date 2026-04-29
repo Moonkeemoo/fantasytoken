@@ -8,3 +8,4 @@ export * from './live.js';
 export * from './result.js';
 export * from './rankings.js';
 export * from './profile.js';
+export * from './rank.js';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ProfileRecentContest, ProfileResponse } from '@fantasytoken/shared';
+import type { ProfileRecentContest, ProfileResponse, RankResponse } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
 import { Button } from '../../components/ui/Button.js';
@@ -10,10 +10,12 @@ import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
 import { useProfile } from './useProfile.js';
+import { useRank } from '../rank/useRank.js';
 
 export function Profile() {
   const navigate = useNavigate();
   const profile = useProfile();
+  const rank = useRank();
   const [topUpOpen, setTopUpOpen] = useState(false);
 
   if (profile.isLoading) return <LoadingSplash caption="loading profile…" />;
@@ -33,6 +35,12 @@ export function Profile() {
       </div>
 
       <ProfileHeader user={data.user} />
+
+      {rank.data && (
+        <div className="px-3 pt-3">
+          <RankSection rank={rank.data} />
+        </div>
+      )}
 
       <div className="px-3 pt-3">
         <BalanceCard balanceCents={data.balanceCents} onTopUp={() => setTopUpOpen(true)} />
@@ -81,16 +89,45 @@ function ProfileHeader({ user }: { user: ProfileResponse['user'] }) {
       <div className="flex flex-col gap-[2px]">
         <div className="text-[18px] font-extrabold leading-tight">{user.firstName}</div>
         {user.username && <div className="font-mono text-[11px] text-muted">@{user.username}</div>}
-        <div className="mt-1 flex items-center gap-2">
-          {/* Tier badge — placeholder until ranking system lands. */}
-          <span
-            className="rounded-[3px] border-[1.5px] border-ink px-[8px] py-[2px] font-mono text-[10px] font-bold tracking-[0.06em]"
-            style={{ backgroundColor: '#facc15' }}
-          >
-            ★ BRONZE
-          </span>
-          <span className="font-mono text-[10px] text-muted">tier · soon</span>
+      </div>
+    </div>
+  );
+}
+
+function RankSection({ rank }: { rank: RankResponse }) {
+  const ratio = rank.atMax ? 1 : rank.xpInRank / Math.max(1, rank.xpForRank);
+  return (
+    <div className="rounded-[6px] border-[1.5px] border-ink bg-paper-dim px-[14px] py-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-[10px] border-[2px] border-ink text-[20px] font-extrabold text-ink"
+          style={{ backgroundColor: rank.color }}
+        >
+          {rank.currentRank}
         </div>
+        <div className="flex-1">
+          <div className="text-[16px] font-extrabold leading-tight">
+            Rank {rank.currentRank} · {rank.display}
+          </div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+            career high · rank {rank.careerHighestRank}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 h-[6px] w-full overflow-hidden rounded-[3px] border-[1.5px] border-ink bg-paper">
+        <div
+          className="h-full"
+          style={{
+            width: `${Math.round(ratio * 100)}%`,
+            backgroundColor: rank.color,
+          }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
+        <span>{rank.xpTotal} XP</span>
+        <span>
+          {rank.atMax ? 'MAX RANK' : `${rank.remainingToNext} XP to Rank ${rank.currentRank + 1}`}
+        </span>
       </div>
     </div>
   );
