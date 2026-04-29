@@ -21,7 +21,7 @@
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@types/node": "^20.16.0",
