@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  integer,
   jsonb,
   numeric,
   pgTable,
@@ -29,6 +30,7 @@ export const entries = pgTable(
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     currentScore: numeric('current_score', { precision: 15, scale: 9 }),
     finalScore: numeric('final_score', { precision: 15, scale: 9 }),
+    finalRank: integer('final_rank'),
     // mode:'bigint' for INV-9 — CurrencyService operates on bigint end-to-end.
     // default uses sql`0` not 0n because drizzle-kit 0.28 cannot serialize BigInt literals.
     prizeCents: bigint('prize_cents', { mode: 'bigint' })

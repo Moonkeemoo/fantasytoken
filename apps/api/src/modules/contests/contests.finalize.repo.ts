@@ -99,6 +99,7 @@ export function createContestsFinalizeRepo(
             .update(entries)
             .set({
               finalScore: String(e.finalScore),
+              finalRank: e.finalRank,
               prizeCents: BigInt(e.prizeCents),
               status: 'finalized',
             })
