@@ -15,10 +15,18 @@ export function Loading() {
     // No-op; explicit hook so React Strict Mode double-mount behavior surfaces during dev.
   }, []);
 
-  if (me.isLoading) return <LoadingSplash />;
+  if (me.isLoading || !me.data) return <LoadingSplash />;
   if (me.isError) return <LoadingSplash caption="connection issue · retrying…" />;
 
-  const tutorialDone =
-    typeof window !== 'undefined' && window.localStorage.getItem(TUTORIAL_DONE_KEY) === '1';
+  // Server is the source of truth — survives wipes and crosses devices, fixes
+  // the bug where a wiped account skipped the tutorial because localStorage
+  // still held the flag from the previous identity. localStorage is kept in
+  // sync on tutorial finish so future cold starts can route instantly.
+  const tutorialDone = me.data.tutorialDone;
+  if (tutorialDone && typeof window !== 'undefined') {
+    window.localStorage.setItem(TUTORIAL_DONE_KEY, '1');
+  } else if (!tutorialDone && typeof window !== 'undefined') {
+    window.localStorage.removeItem(TUTORIAL_DONE_KEY);
+  }
   return <Navigate to={tutorialDone ? '/lobby' : '/tutorial'} replace />;
 }

@@ -1,6 +1,6 @@
 {
-  "id": "7cbbac1c-ba87-4acf-bbe5-51022c3d2092",
-  "prevId": "ee3fc4a5-ce85-49e2-aad1-7beeb9633d40",
+  "id": "2383a62b-fe31-42fe-bf81-da51548c2aac",
+  "prevId": "27da342f-1d1b-42cd-ace3-ef48bb49a7e1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -459,6 +459,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "tutorial_done_at": {
+          "name": "tutorial_done_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

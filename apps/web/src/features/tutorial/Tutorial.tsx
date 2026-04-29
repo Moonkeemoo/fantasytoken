@@ -1,17 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { TutorialDoneResponse } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Button } from '../../components/ui/Button.js';
+import { apiFetch } from '../../lib/api-client.js';
 import { TUTORIAL_DONE_KEY } from '../loading/Loading.js';
 
 const STEPS = 3;
 
 export function Tutorial() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
   const finish = () => {
+    // localStorage first so the next cold-start route is instant; server call
+    // is fire-and-forget — failure here is logged but does not block the UX
+    // (FE will retry naturally on the next /me round-trip if needed).
     if (typeof window !== 'undefined') window.localStorage.setItem(TUTORIAL_DONE_KEY, '1');
+    apiFetch('/me/tutorial-done', TutorialDoneResponse, { method: 'POST' })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['me'] }))
+      .catch((err) => {
+        // INV-7 spirit on the client: surface to console, don't swallow.
+        console.warn('tutorial-done sync failed', err);
+      });
     navigate('/lobby', { replace: true });
   };
 

@@ -3,19 +3,21 @@ import { createUsersService, type UsersRepo } from './users.service.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
 function makeFakeRepo(): UsersRepo & {
-  state: Map<number, { id: string; createdAt: Date }>;
+  state: Map<number, { id: string; createdAt: Date; tutorialDoneAt: Date | null }>;
 } {
-  const state = new Map<number, { id: string; createdAt: Date }>();
+  const state = new Map<number, { id: string; createdAt: Date; tutorialDoneAt: Date | null }>();
   return {
     state,
     async findByTelegramId(tgId) {
       const v = state.get(tgId);
-      return v ? { id: v.id, telegramId: tgId, createdAt: v.createdAt } : null;
+      return v
+        ? { id: v.id, telegramId: tgId, createdAt: v.createdAt, tutorialDoneAt: v.tutorialDoneAt }
+        : null;
     },
     async create({ telegramId }) {
       const id = `u-${telegramId}`;
       const createdAt = new Date();
-      state.set(telegramId, { id, createdAt });
+      state.set(telegramId, { id, createdAt, tutorialDoneAt: null });
       return { id, telegramId, createdAt };
     },
     async touchLastSeen(_id) {
@@ -23,6 +25,15 @@ function makeFakeRepo(): UsersRepo & {
     },
     async updateProfile(_args) {
       // no-op for tests
+    },
+    async markTutorialDone(id) {
+      for (const [, v] of state) {
+        if (v.id === id) {
+          v.tutorialDoneAt = v.tutorialDoneAt ?? new Date();
+          return v.tutorialDoneAt;
+        }
+      }
+      throw new Error('user not found');
     },
   };
 }

@@ -18,6 +18,10 @@ export const users = pgTable('users', {
   currentRank: integer('current_rank').notNull().default(1),
   careerHighestRank: integer('career_highest_rank').notNull().default(1),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  // NULL = tutorial not yet completed → frontend routes to /tutorial. Set once
+  // the user finishes (or skips) — server-side source of truth so wipe/new
+  // device re-shows the tutorial. localStorage stays as a no-flicker cache.
+  tutorialDoneAt: timestamp('tutorial_done_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

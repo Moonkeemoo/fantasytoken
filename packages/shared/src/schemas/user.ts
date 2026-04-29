@@ -13,5 +13,13 @@ export type TelegramUser = z.infer<typeof TelegramUser>;
 export const MeResponse = z.object({
   user: TelegramUser,
   balanceCents: z.number().int().nonnegative(),
+  /** Server-side onboarding flag — false → frontend routes to /tutorial.
+   * Survives wipes and crosses devices, unlike the localStorage cache. */
+  tutorialDone: z.boolean(),
 });
 export type MeResponse = z.infer<typeof MeResponse>;
+
+export const TutorialDoneResponse = z.object({
+  tutorialDone: z.literal(true),
+});
+export type TutorialDoneResponse = z.infer<typeof TutorialDoneResponse>;

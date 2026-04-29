@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { users } from '../../db/schema/index.js';
 import type { UsersRepo } from './users.service.js';
@@ -7,7 +7,12 @@ export function createUsersRepo(db: Database): UsersRepo {
   return {
     async findByTelegramId(telegramId) {
       const [row] = await db
-        .select({ id: users.id, telegramId: users.telegramId, createdAt: users.createdAt })
+        .select({
+          id: users.id,
+          telegramId: users.telegramId,
+          createdAt: users.createdAt,
+          tutorialDoneAt: users.tutorialDoneAt,
+        })
         .from(users)
         .where(eq(users.telegramId, telegramId))
         .limit(1);
@@ -39,6 +44,17 @@ export function createUsersRepo(db: Database): UsersRepo {
       if (photoUrl !== undefined) patch.photoUrl = photoUrl;
       if (Object.keys(patch).length === 0) return;
       await db.update(users).set(patch).where(eq(users.id, id));
+    },
+
+    async markTutorialDone(id) {
+      // COALESCE so an already-done user keeps their original timestamp.
+      const [row] = await db
+        .update(users)
+        .set({ tutorialDoneAt: sql`COALESCE(${users.tutorialDoneAt}, NOW())` })
+        .where(eq(users.id, id))
+        .returning({ tutorialDoneAt: users.tutorialDoneAt });
+      if (!row?.tutorialDoneAt) throw new Error('user not found or update failed');
+      return row.tutorialDoneAt;
     },
   };
 }

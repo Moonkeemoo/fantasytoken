@@ -47,7 +47,34 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
           language_code: tgUser.language_code,
         },
         balanceCents: Number(upsert.balanceCents),
+        tutorialDone: upsert.tutorialDoneAt !== null,
       };
+    });
+
+    /**
+     * POST /me/tutorial-done — marks the caller as having completed onboarding.
+     * Idempotent (calling again keeps the original timestamp). FE calls this
+     * once on tutorial finish/skip; on success it can also write the localStorage
+     * cache for instant routing on the next cold start.
+     */
+    app.post('/tutorial-done', async (req) => {
+      const initData = req.headers['x-telegram-init-data'];
+      if (typeof initData !== 'string' || initData.length === 0) {
+        throw errors.missingInitData();
+      }
+      const valid = validateInitData(initData, app.deps.config.TELEGRAM_BOT_TOKEN);
+      if (!valid) throw errors.invalidInitData();
+      const tgUser = parseUserFromInitData(initData);
+      if (!tgUser) throw errors.invalidInitData();
+
+      // Resolve to internal user id via upsert (creates the row if somehow
+      // missing; cheap on the existing-user path).
+      const upsert = await deps.users.upsertOnAuth({
+        telegramId: tgUser.id,
+        ...(tgUser.first_name !== undefined && { firstName: tgUser.first_name }),
+      });
+      await deps.users.markTutorialDone(upsert.userId);
+      return { tutorialDone: true as const };
     });
   };
 }

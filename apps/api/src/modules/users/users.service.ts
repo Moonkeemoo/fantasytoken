@@ -3,7 +3,12 @@ import type { CurrencyService } from '../currency/currency.service.js';
 export interface UsersRepo {
   findByTelegramId(
     telegramId: number,
-  ): Promise<{ id: string; telegramId: number; createdAt: Date } | null>;
+  ): Promise<{
+    id: string;
+    telegramId: number;
+    createdAt: Date;
+    tutorialDoneAt: Date | null;
+  } | null>;
   create(args: {
     telegramId: number;
     firstName?: string;
@@ -17,6 +22,9 @@ export interface UsersRepo {
     username?: string;
     photoUrl?: string;
   }): Promise<void>;
+  /** Idempotent — only sets tutorial_done_at if currently NULL. Returns the
+   * effective timestamp (existing one if already set). */
+  markTutorialDone(id: string): Promise<Date>;
 }
 
 export interface UpsertOnAuthArgs {
@@ -30,6 +38,8 @@ export interface UpsertOnAuthResult {
   userId: string;
   isNew: boolean;
   balanceCents: bigint;
+  /** null = onboarding not yet completed; FE routes to /tutorial. */
+  tutorialDoneAt: Date | null;
 }
 
 export interface UsersServiceDeps {
@@ -41,6 +51,7 @@ export interface UsersServiceDeps {
 export interface UsersService {
   upsertOnAuth(args: UpsertOnAuthArgs): Promise<UpsertOnAuthResult>;
   findUserIdByTelegramId(telegramId: number): Promise<string | null>;
+  markTutorialDone(userId: string): Promise<Date>;
 }
 
 export function createUsersService(deps: UsersServiceDeps): UsersService {
@@ -60,6 +71,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
           userId: existing.id,
           isNew: false,
           balanceCents: await deps.currency.getBalance(existing.id),
+          tutorialDoneAt: existing.tutorialDoneAt,
         };
       }
       const created = await deps.repo.create(args);
@@ -72,11 +84,15 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
         });
         balanceCents = r.balanceAfter;
       }
-      return { userId: created.id, isNew: true, balanceCents };
+      // Brand-new user: tutorial not yet done — FE routes to /tutorial.
+      return { userId: created.id, isNew: true, balanceCents, tutorialDoneAt: null };
     },
     async findUserIdByTelegramId(telegramId) {
       const r = await deps.repo.findByTelegramId(telegramId);
       return r?.id ?? null;
+    },
+    async markTutorialDone(userId) {
+      return deps.repo.markTutorialDone(userId);
     },
   };
 }
