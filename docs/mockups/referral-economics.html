@@ -1,0 +1,1729 @@
+<!doctype html>
+<!-- Interactive economics simulator for REFERRAL_SYSTEM.md
+     Source artifact: ftl-referral-economics-simulator (Cowork)
+     Created: 2026-04-29
+     Open in browser to run live business model simulation.
+     Adjust acquisition, welcome economy, engagement, contest mix, per-currency rates.
+     See 12-month projection, monthly P&L, soft USD inflation tracker, per-contest deep-dive.
+-->
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <title>FTL — Business Model Simulator</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
+      integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f7f8fa;
+        --surface-2: #eef0f4;
+        --border: #e3e6ec;
+        --text: #14161a;
+        --muted: #5b6272;
+        --accent: #0b6cff;
+        --accent-soft: #e7f0ff;
+        --good: #15a05a;
+        --good-soft: #e3f6ec;
+        --warn: #d97a00;
+        --warn-soft: #fdf1dc;
+        --bad: #d23f3f;
+        --bad-soft: #fbe3e3;
+        --ftl: #6e36ff;
+        --ftl-soft: #ece2ff;
+        --ton: #0098ea;
+        --ton-soft: #e0f2fa;
+        --stars: #ffd700;
+        --stars-soft: #fff8d4;
+        --usd: #15a05a;
+        --usd-soft: #e3f6ec;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          system-ui,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 26px;
+        letter-spacing: -0.01em;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 32px 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+      h4 {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 12px 0 6px;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      .tld {
+        background: var(--ftl-soft);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 12px 0 24px;
+        font-size: 13px;
+        line-height: 1.6;
+        border-left: 3px solid var(--ftl);
+      }
+      .tld strong {
+        color: var(--ftl);
+      }
+      .kpi-bar {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, 1fr);
+        margin-bottom: 20px;
+      }
+      @media (min-width: 720px) {
+        .kpi-bar {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (min-width: 1000px) {
+        .kpi-bar {
+          grid-template-columns: repeat(6, 1fr);
+        }
+      }
+      .kpi {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .kpi .l {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+      }
+      .kpi .v {
+        font-size: 22px;
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        margin-top: 4px;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+      }
+      .kpi .s {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .kpi.primary {
+        background: var(--ftl-soft);
+        border-color: var(--ftl);
+      }
+      .kpi.primary .v {
+        color: var(--ftl);
+      }
+      .kpi.good .v {
+        color: var(--good);
+      }
+      .kpi.bad .v {
+        color: var(--bad);
+      }
+      .kpi.warn .v {
+        color: var(--warn);
+      }
+
+      .controls-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 880px) {
+        .controls-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (min-width: 1100px) {
+        .controls-grid {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+      }
+      .control-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .control-card h3 {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .control-card h3 .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .control-card.acq h3 .dot {
+        background: var(--accent);
+      }
+      .control-card.welcome h3 .dot {
+        background: var(--ftl);
+      }
+      .control-card.engagement h3 .dot {
+        background: var(--good);
+      }
+      .control-card.mix h3 .dot {
+        background: var(--warn);
+      }
+      .control-card.contests h3 .dot {
+        background: var(--bad);
+      }
+      .control-card.referrals h3 .dot {
+        background: #d4441c;
+      }
+
+      .input-group {
+        margin-bottom: 10px;
+      }
+      .input-group label {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+      .input-group label b {
+        color: var(--text);
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+      }
+      .input-group .hint {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 3px;
+        line-height: 1.3;
+      }
+      .input-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .input-row input[type='number'] {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        background: var(--bg);
+      }
+      .input-row .unit {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--muted);
+        min-width: 28px;
+      }
+      input[type='range'] {
+        width: 100%;
+        cursor: pointer;
+      }
+      select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        font-size: 12px;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .cur-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .cur-tab {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text);
+        text-align: center;
+      }
+      .cur-tab:hover {
+        background: var(--surface-2);
+      }
+      .cur-tab.active.usd {
+        background: var(--usd-soft);
+        border-color: var(--usd);
+        color: var(--usd);
+      }
+      .cur-tab.active.stars {
+        background: var(--stars-soft);
+        border-color: #b8860b;
+        color: #b8860b;
+      }
+      .cur-tab.active.ton {
+        background: var(--ton-soft);
+        border-color: var(--ton);
+        color: var(--ton);
+      }
+      .mix-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .mix-row .name {
+        width: 70px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .mix-row input[type='range'] {
+        flex: 1;
+      }
+      .mix-row .val {
+        width: 38px;
+        text-align: right;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .mix-info {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .mix-info b {
+        color: var(--text);
+      }
+      .mix-info.warn {
+        color: var(--bad);
+        font-weight: 600;
+      }
+
+      .charts-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 880px) {
+        .charts-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .chart-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .chart-card h3 {
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .chart-card h3 .sub {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 500;
+        font-family: ui-monospace, monospace;
+      }
+      .chart-canvas {
+        position: relative;
+        height: 240px;
+      }
+
+      .monthly-table-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .monthly-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .monthly-table th,
+      .monthly-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: right;
+      }
+      .monthly-table th:first-child,
+      .monthly-table td:first-child {
+        text-align: left;
+        font-weight: 600;
+      }
+      .monthly-table th {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+        background: var(--surface-2);
+      }
+      .monthly-table td.num {
+        font-family: ui-monospace, monospace;
+      }
+      .monthly-table tr.total td {
+        background: var(--bg);
+        font-weight: 700;
+        border-top: 2px solid var(--text);
+        padding-top: 10px;
+      }
+
+      .deep-dive-section {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 2px dashed var(--border);
+      }
+      .sim-grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 1000px) {
+        .sim-grid {
+          grid-template-columns: 380px 1fr;
+        }
+      }
+      .sim-controls {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .sim-results {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .out-headline {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .headline-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      @media (min-width: 720px) {
+        .headline-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+      .headline-item {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+      }
+      .headline-item .l {
+        font-size: 9px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+      .headline-item .v {
+        font-size: 16px;
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        margin-top: 1px;
+        line-height: 1.1;
+      }
+      .headline-item .s {
+        font-size: 9px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .headline-item.good .v {
+        color: var(--good);
+      }
+      .headline-item.bad .v {
+        color: var(--bad);
+      }
+
+      .verdict {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .verdict.good {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+      .verdict.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+      .verdict.bad {
+        background: var(--bad-soft);
+        color: var(--bad);
+      }
+
+      .position-table-card,
+      .small-chart-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .pos-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      .pos-table th,
+      .pos-table td {
+        padding: 5px 7px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+      .pos-table th {
+        font-size: 9px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+        background: var(--surface-2);
+      }
+      .pos-table td.num {
+        text-align: right;
+        font-family: ui-monospace, monospace;
+        font-weight: 600;
+      }
+      .pos-table tr.total {
+        background: var(--bg);
+        font-weight: 700;
+        border-top: 2px solid var(--text);
+      }
+      .pos-table tr.total td {
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+      .pos-table .pos-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 20px;
+        border-radius: 3px;
+        padding: 0 4px;
+        background: var(--surface-2);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .pos-table .l1-cell {
+        color: var(--bad);
+      }
+      .pos-table .l2-cell {
+        color: var(--warn);
+      }
+
+      .formula-spec {
+        background: #1a1814;
+        color: #e8e2d4;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        line-height: 1.55;
+        margin: 8px 0 16px;
+      }
+      .formula-spec b {
+        color: #fef08a;
+        font-weight: 700;
+      }
+      .formula-spec .comment {
+        color: #8a8478;
+      }
+      .section-intro {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0 0 12px;
+      }
+      .footnote {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 8px;
+        line-height: 1.5;
+      }
+      .footnote code {
+        background: var(--surface-2);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+      .warn-box {
+        background: var(--warn-soft);
+        border-left: 3px solid var(--warn);
+        padding: 10px 14px;
+        border-radius: 0 6px 6px 0;
+        font-size: 12px;
+        color: #6b3f00;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>FTL — Business Model Simulator</h1>
+      <p class="lead">
+        Тестуй всю бізнес-модель: acquisition, welcome economy, engagement, contest mix,
+        per-currency rates, реферальні commissions. 12-місячна projection, monthly P&L, soft USD
+        inflation tracker.
+      </p>
+
+      <div class="tld">
+        <strong>Як читати.</strong>
+        Зверху — KPI dashboard. Нижче — 6 секцій controls. Грай зі слайдерами — все live. Графіки =
+        12-місячний прогноз. Таблиця = monthly breakdown. Per-contest deep-dive внизу.
+      </div>
+
+      <h2 style="margin-top: 0; border: none; padding: 0">📊 Headline KPIs</h2>
+      <div class="kpi-bar" id="kpi-bar"></div>
+
+      <h2>🎛 Business inputs</h2>
+      <p class="section-intro">Налаштуй параметри. Все live.</p>
+
+      <div class="controls-grid">
+        <div class="control-card acq">
+          <h3><span class="dot"></span>Acquisition</h3>
+          <div class="input-group">
+            <label>Time horizon (months) <b id="lbl-horizon">12</b></label
+            ><input type="range" id="horizon" min="3" max="24" step="1" value="12" />
+          </div>
+          <div class="input-group">
+            <label>New users per day <b id="lbl-newusers">10</b></label
+            ><input type="range" id="newusers" min="1" max="500" step="1" value="10" />
+          </div>
+          <div class="input-group">
+            <label>% з ref-link <b id="lbl-refrate">50%</b></label
+            ><input type="range" id="refrate" min="0" max="100" step="5" value="50" />
+          </div>
+          <div class="input-group">
+            <label>Monthly churn rate <b id="lbl-churn">15%</b></label
+            ><input type="range" id="churn" min="0" max="50" step="1" value="15" />
+          </div>
+          <div class="input-group">
+            <label>Marketing CAC <b id="lbl-cac">2 USD</b></label
+            ><input type="range" id="cac" min="0" max="20" step="0.5" value="2" />
+          </div>
+        </div>
+
+        <div class="control-card welcome">
+          <h3><span class="dot"></span>Welcome economy (soft USD only)</h3>
+          <div class="input-group">
+            <label>Welcome bonus <b id="lbl-welcome">$25</b></label
+            ><input type="range" id="welcome" min="0" max="200" step="5" value="25" />
+          </div>
+          <div class="input-group">
+            <label>Referee bonus <b id="lbl-referee">$25</b></label
+            ><input type="range" id="referee" min="0" max="100" step="5" value="25" />
+          </div>
+          <div class="input-group">
+            <label>Recruiter bonus <b id="lbl-recruiter">$25</b></label
+            ><input type="range" id="recruiter" min="0" max="100" step="5" value="25" />
+          </div>
+          <div class="input-group">
+            <label>Required contests щоб unlock <b id="lbl-unlocknum">1</b></label
+            ><input type="range" id="unlocknum" min="1" max="10" step="1" value="1" />
+          </div>
+        </div>
+
+        <div class="control-card engagement">
+          <h3><span class="dot"></span>Engagement</h3>
+          <div class="input-group">
+            <label>Avg contests / active user / day <b id="lbl-cpd">2</b></label
+            ><input type="range" id="cpd" min="0.1" max="10" step="0.1" value="2" />
+          </div>
+          <div class="input-group">
+            <label>Avg lifetime months <b id="lbl-lifetime">3</b></label
+            ><input type="range" id="lifetime" min="1" max="24" step="1" value="3" />
+          </div>
+        </div>
+
+        <div class="control-card mix">
+          <h3><span class="dot"></span>Currency mix</h3>
+          <div class="mix-row">
+            <span class="name" style="color: var(--usd)">USD soft</span
+            ><input type="range" id="mix-usd" min="0" max="100" step="5" value="60" /><span
+              class="val"
+              id="mix-usd-val"
+              >60%</span
+            >
+          </div>
+          <div class="mix-row">
+            <span class="name" style="color: #b8860b">Stars</span
+            ><input type="range" id="mix-stars" min="0" max="100" step="5" value="20" /><span
+              class="val"
+              id="mix-stars-val"
+              >20%</span
+            >
+          </div>
+          <div class="mix-row">
+            <span class="name" style="color: var(--ton)">TON</span
+            ><input type="range" id="mix-ton" min="0" max="100" step="5" value="20" /><span
+              class="val"
+              id="mix-ton-val"
+              >20%</span
+            >
+          </div>
+          <div class="mix-info" id="mix-currency-info"></div>
+          <h4>Contest size mix</h4>
+          <div class="mix-row">
+            <span class="name">10 players</span
+            ><input type="range" id="size-10" min="0" max="100" step="5" value="40" /><span
+              class="val"
+              id="size-10-val"
+              >40%</span
+            >
+          </div>
+          <div class="mix-row">
+            <span class="name">20 players</span
+            ><input type="range" id="size-20" min="0" max="100" step="5" value="35" /><span
+              class="val"
+              id="size-20-val"
+              >35%</span
+            >
+          </div>
+          <div class="mix-row">
+            <span class="name">50 players</span
+            ><input type="range" id="size-50" min="0" max="100" step="5" value="20" /><span
+              class="val"
+              id="size-50-val"
+              >20%</span
+            >
+          </div>
+          <div class="mix-row">
+            <span class="name">100 players</span
+            ><input type="range" id="size-100" min="0" max="100" step="5" value="5" /><span
+              class="val"
+              id="size-100-val"
+              >5%</span
+            >
+          </div>
+          <div class="mix-info" id="mix-size-info"></div>
+        </div>
+
+        <div class="control-card contests">
+          <h3><span class="dot"></span>Per-currency rates</h3>
+          <div class="cur-tabs" id="cur-tabs">
+            <button class="cur-tab usd active" data-cur="USD">USD soft</button>
+            <button class="cur-tab stars" data-cur="STARS">Stars</button>
+            <button class="cur-tab ton" data-cur="TON">TON</button>
+          </div>
+          <div class="input-group">
+            <label>Entry fee <b id="lbl-cur-entry">10</b></label
+            ><input type="range" id="cur-entry" min="0.1" max="50" step="0.1" value="10" />
+          </div>
+          <div class="input-group">
+            <label>Rake % <b id="lbl-cur-rake">10%</b></label
+            ><input type="range" id="cur-rake" min="0" max="30" step="0.5" value="10" />
+          </div>
+        </div>
+
+        <div class="control-card referrals">
+          <h3><span class="dot"></span>Referral commissions</h3>
+          <div class="cur-tabs" id="cur-tabs-ref">
+            <button class="cur-tab usd active" data-cur="USD">USD soft</button>
+            <button class="cur-tab stars" data-cur="STARS">Stars</button>
+            <button class="cur-tab ton" data-cur="TON">TON</button>
+          </div>
+          <div class="input-group">
+            <label>L1 commission % of prize <b id="lbl-cur-l1">5%</b></label
+            ><input type="range" id="cur-l1" min="0" max="20" step="0.25" value="5" />
+          </div>
+          <div class="input-group">
+            <label>L2 commission % of prize <b id="lbl-cur-l2">1%</b></label
+            ><input type="range" id="cur-l2" min="0" max="10" step="0.25" value="1" />
+          </div>
+          <h4>Steady-state penetration</h4>
+          <div class="input-group">
+            <label>% winners з L1 referrer <b id="lbl-l1pen">100%</b></label
+            ><input type="range" id="l1pen" min="0" max="100" step="5" value="100" />
+          </div>
+          <div class="input-group">
+            <label>% winners з L2 referrer <b id="lbl-l2pen">70%</b></label
+            ><input type="range" id="l2pen" min="0" max="100" step="5" value="70" />
+          </div>
+        </div>
+      </div>
+
+      <h2>📈 12-month projection</h2>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Active users<span class="sub" id="users-sub"></span></h3>
+          <div class="chart-canvas"><canvas id="chart-users"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Monthly revenue<span class="sub" id="rev-sub"></span></h3>
+          <div class="chart-canvas"><canvas id="chart-revenue"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Cumulative profit<span class="sub" id="cumprofit-sub"></span></h3>
+          <div class="chart-canvas"><canvas id="chart-cumprofit"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Soft USD circulating<span class="sub" id="inflation-sub"></span></h3>
+          <div class="chart-canvas"><canvas id="chart-inflation"></canvas></div>
+        </div>
+      </div>
+
+      <h2>💰 Monthly P&L</h2>
+      <div class="monthly-table-card">
+        <table class="monthly-table" id="monthly-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Active users</th>
+              <th>Contests</th>
+              <th>Real $ in</th>
+              <th>USD mint</th>
+              <th>USD drain</th>
+              <th>Real comm</th>
+              <th>Real CAC</th>
+              <th>Net real $</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-tbody"></tbody>
+        </table>
+        <p class="footnote">
+          "Real $" — TON + Stars converted to USD (1 TON ≈ $5, 100 Stars ≈ $1.5).
+        </p>
+      </div>
+
+      <div class="deep-dive-section">
+        <h2 style="border-color: var(--ftl)">🔍 Per-contest deep-dive</h2>
+        <p class="section-intro">Drill-down на один контест.</p>
+
+        <div class="formula-spec">
+          <span class="comment">// Production prize formula</span>
+          <span class="comment">// pool = totalEntries × entry_fee × (1 - rake_pct/100)</span>
+          <span class="comment">// payingCount = real ≤ 3 ? real : max(3, ⌊real × 0.3⌋)</span>
+          <span class="comment">// share[i] = 0.65^i / Σ 0.65^j (geometric, normalized)</span>
+          <span class="comment">// prize[i] = ⌊pool × share[i]⌋ (remainder → 1st)</span>
+        </div>
+
+        <div class="sim-grid">
+          <div class="sim-controls">
+            <h3 style="margin-bottom: 12px">Single contest inputs</h3>
+            <div class="input-group">
+              <label>Currency</label
+              ><select id="dd-currency">
+                <option value="USD">USD soft</option>
+                <option value="STARS">Stars</option>
+                <option value="TON" selected>TON</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Entry fee</label>
+              <div class="input-row">
+                <input type="number" id="dd-entry" value="2" step="0.1" min="0.1" /><span
+                  class="unit"
+                  id="dd-entry-unit"
+                  >TON</span
+                >
+              </div>
+            </div>
+            <div class="input-group">
+              <label>Real users <b id="dd-real-lbl">20</b></label
+              ><input type="range" id="dd-real" min="3" max="200" step="1" value="20" />
+            </div>
+            <div class="input-group">
+              <label>Rake % <b id="dd-rake-lbl">15%</b></label
+              ><input type="range" id="dd-rake" min="0" max="30" step="0.5" value="15" />
+            </div>
+            <div class="input-group">
+              <label>L1 commission <b id="dd-l1-lbl">2.5%</b></label
+              ><input type="range" id="dd-l1" min="0" max="20" step="0.25" value="2.5" />
+            </div>
+            <div class="input-group">
+              <label>L2 commission <b id="dd-l2-lbl">0.5%</b></label
+              ><input type="range" id="dd-l2" min="0" max="10" step="0.25" value="0.5" />
+            </div>
+            <div class="input-group">
+              <label>L1 penetration <b id="dd-l1pen-lbl">100%</b></label
+              ><input type="range" id="dd-l1pen" min="0" max="100" step="5" value="100" />
+            </div>
+            <div class="input-group">
+              <label>L2 penetration <b id="dd-l2pen-lbl">70%</b></label
+              ><input type="range" id="dd-l2pen" min="0" max="100" step="5" value="70" />
+            </div>
+          </div>
+          <div class="sim-results">
+            <div class="out-headline">
+              <h3>Per-contest economics</h3>
+              <div class="headline-grid">
+                <div class="headline-item">
+                  <div class="l">Pool</div>
+                  <div class="v" id="dd-out-pool">34.000</div>
+                  <div class="s" id="dd-out-pool-sub">paid out</div>
+                </div>
+                <div class="headline-item">
+                  <div class="l">Real cash IN</div>
+                  <div class="v" id="dd-out-cashin">40.000</div>
+                  <div class="s" id="dd-out-cashin-sub">from real users</div>
+                </div>
+                <div class="headline-item">
+                  <div class="l">Commissions</div>
+                  <div class="v bad" id="dd-out-comm">0.969</div>
+                  <div class="s" id="dd-out-comm-sub">L1+L2</div>
+                </div>
+                <div class="headline-item">
+                  <div class="l">Net house</div>
+                  <div class="v good" id="dd-out-net">5.031</div>
+                  <div class="s" id="dd-out-net-sub">12.6% margin</div>
+                </div>
+              </div>
+              <div class="verdict good" id="dd-verdict">✅ Profitable</div>
+            </div>
+            <div class="position-table-card">
+              <h3
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: baseline;
+                  margin-bottom: 4px;
+                "
+              >
+                <span>Per-position breakdown</span
+                ><span
+                  style="font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace"
+                  id="dd-pos-sub"
+                ></span>
+              </h3>
+              <table class="pos-table" id="dd-pos-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>% pool</th>
+                    <th style="text-align: right">Prize</th>
+                    <th style="text-align: right">L1</th>
+                    <th style="text-align: right">L2</th>
+                    <th style="text-align: right">Σ comm</th>
+                  </tr>
+                </thead>
+                <tbody id="dd-pos-tbody"></tbody>
+              </table>
+            </div>
+            <div class="small-chart-card">
+              <h3>Sensitivity — net profit vs L1 rate</h3>
+              <div class="chart-canvas" style="height: 200px">
+                <canvas id="dd-chart-sensitivity"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2>🎯 Recommendation summary</h2>
+      <div class="warn-box">
+        <strong>Production defaults:</strong><br />
+        <strong>USD soft:</strong> entry $10, rake 10%, L1=5% / L2=1%, welcome $25, ref bonus
+        $25/$25<br />
+        <strong>Stars:</strong> entry 100 stars (~$1.5), rake 12%, L1=3% / L2=0.5%, no welcome у
+        Stars<br />
+        <strong>TON:</strong> entry 2 TON (~$10), rake 15%, L1=2.5% / L2=0.5%, no welcome у TON<br />
+        <strong>Engagement:</strong> 2 контести/active user/день, 3 місяці lifetime, 15% monthly
+        churn<br />
+        <strong>Acquisition:</strong> 10 new users/day, 50% via ref-link, $2 marketing CAC for
+        non-ref users
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (id) => document.getElementById(id);
+        const fmt = (n, d = 2) => {
+          if (!isFinite(n)) return '—';
+          return Number(n.toFixed(d)).toLocaleString('en-US', {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d,
+          });
+        };
+        const fmtK = (n) => {
+          if (Math.abs(n) >= 1e6) return fmt(n / 1e6, 1) + 'M';
+          if (Math.abs(n) >= 1e3) return fmt(n / 1e3, 1) + 'k';
+          return fmt(n, 0);
+        };
+        const TON_TO_USD = 5;
+        const STARS_TO_USD = 0.015;
+        function toUSD(amount, currency) {
+          if (currency === 'USD') return amount;
+          if (currency === 'TON') return amount * TON_TO_USD;
+          if (currency === 'STARS') return amount * STARS_TO_USD;
+          return amount;
+        }
+        const curSettings = {
+          USD: { entry: 10, rake: 10, l1: 5, l2: 1 },
+          STARS: { entry: 100, rake: 12, l1: 3, l2: 0.5 },
+          TON: { entry: 2, rake: 15, l1: 2.5, l2: 0.5 },
+        };
+        let curContestActive = 'USD';
+        let curRefActive = 'USD';
+
+        function distributePrizes(pool, realCount) {
+          if (realCount <= 0 || pool <= 0) return [];
+          const payingCount = realCount <= 3 ? realCount : Math.max(3, Math.floor(realCount * 0.3));
+          const weights = [];
+          let sumW = 0;
+          for (let i = 0; i < payingCount; i++) {
+            const w = Math.pow(0.65, i);
+            weights.push(w);
+            sumW += w;
+          }
+          const prizes = weights.map((w) => Math.floor(((pool * w) / sumW) * 1000) / 1000);
+          const distributed = prizes.reduce((a, b) => a + b, 0);
+          const remainder = pool - distributed;
+          if (remainder > 0 && prizes.length > 0) prizes[0] += remainder;
+          return prizes;
+        }
+
+        function perContestEcon({ entry, real, rake, l1, l2, l1Pen, l2Pen }) {
+          const cashIn = real * entry;
+          const totalEntries = cashIn;
+          const rakeAmount = totalEntries * (rake / 100);
+          const pool = totalEntries - rakeAmount;
+          const prizes = distributePrizes(pool, real);
+          const l1Total = pool * (l1 / 100) * (l1Pen / 100);
+          const l2Total = pool * (l2 / 100) * (l2Pen / 100);
+          const totalComm = l1Total + l2Total;
+          const netHouse = rakeAmount - totalComm;
+          return { cashIn, pool, prizes, rakeAmount, l1Total, l2Total, totalComm, netHouse };
+        }
+
+        function getInputs() {
+          return {
+            horizon: parseInt($('horizon').value),
+            newUsersPerDay: parseInt($('newusers').value),
+            refRatePct: parseFloat($('refrate').value),
+            churnPct: parseFloat($('churn').value),
+            mktCAC: parseFloat($('cac').value),
+            welcome: parseFloat($('welcome').value),
+            referee: parseFloat($('referee').value),
+            recruiter: parseFloat($('recruiter').value),
+            unlockNum: parseInt($('unlocknum').value),
+            cpd: parseFloat($('cpd').value),
+            lifetime: parseFloat($('lifetime').value),
+            mixUSD: parseFloat($('mix-usd').value) / 100,
+            mixSTARS: parseFloat($('mix-stars').value) / 100,
+            mixTON: parseFloat($('mix-ton').value) / 100,
+            size10: parseFloat($('size-10').value) / 100,
+            size20: parseFloat($('size-20').value) / 100,
+            size50: parseFloat($('size-50').value) / 100,
+            size100: parseFloat($('size-100').value) / 100,
+            l1Pen: parseFloat($('l1pen').value),
+            l2Pen: parseFloat($('l2pen').value),
+            cur: curSettings,
+          };
+        }
+
+        function getDeepDiveInputs() {
+          return {
+            currency: $('dd-currency').value,
+            entry: parseFloat($('dd-entry').value),
+            real: parseInt($('dd-real').value),
+            rake: parseFloat($('dd-rake').value),
+            l1: parseFloat($('dd-l1').value),
+            l2: parseFloat($('dd-l2').value),
+            l1Pen: parseFloat($('dd-l1pen').value),
+            l2Pen: parseFloat($('dd-l2pen').value),
+          };
+        }
+
+        function avgContestPerCur(inp, currency) {
+          const cs = inp.cur[currency];
+          const sizes = [
+            [10, inp.size10],
+            [20, inp.size20],
+            [50, inp.size50],
+            [100, inp.size100],
+          ];
+          let totalWeight = 0,
+            weightedNet = 0,
+            weightedCashIn = 0,
+            weightedComm = 0,
+            weightedRake = 0,
+            weightedPool = 0;
+          for (const [size, weight] of sizes) {
+            if (weight <= 0) continue;
+            const econ = perContestEcon({
+              entry: cs.entry,
+              real: size,
+              rake: cs.rake,
+              l1: cs.l1,
+              l2: cs.l2,
+              l1Pen: inp.l1Pen,
+              l2Pen: inp.l2Pen,
+            });
+            weightedNet += econ.netHouse * weight;
+            weightedCashIn += econ.cashIn * weight;
+            weightedComm += econ.totalComm * weight;
+            weightedRake += econ.rakeAmount * weight;
+            weightedPool += econ.pool * weight;
+            totalWeight += weight;
+          }
+          if (totalWeight === 0) return null;
+          return {
+            avgNet: weightedNet / totalWeight,
+            avgCashIn: weightedCashIn / totalWeight,
+            avgComm: weightedComm / totalWeight,
+            avgRake: weightedRake / totalWeight,
+            avgPool: weightedPool / totalWeight,
+          };
+        }
+
+        function avgContestSize(inp) {
+          return inp.size10 * 10 + inp.size20 * 20 + inp.size50 * 50 + inp.size100 * 100;
+        }
+
+        function simulate(inp) {
+          const months = inp.horizon;
+          const days = months * 30;
+          const perCur = {
+            USD: avgContestPerCur(inp, 'USD'),
+            STARS: avgContestPerCur(inp, 'STARS'),
+            TON: avgContestPerCur(inp, 'TON'),
+          };
+          const avgSize = avgContestSize(inp);
+          const dailyChurnRate = 1 - Math.pow(1 - inp.churnPct / 100, 1 / 30);
+          let activeUsers = 0,
+            cumNewUsers = 0,
+            cumMintUSD = 0,
+            cumDrainUSD = 0,
+            cumRealRevenue = 0,
+            cumRealCAC = 0,
+            cumRealComm = 0;
+          const monthlyData = [];
+          let m = {
+            newUsers: 0,
+            mintUSD: 0,
+            drainUSD: 0,
+            realRev: 0,
+            realCAC: 0,
+            realComm: 0,
+            contests: 0,
+          };
+          for (let day = 1; day <= days; day++) {
+            const newToday = inp.newUsersPerDay;
+            cumNewUsers += newToday;
+            m.newUsers += newToday;
+            const welcomeMint = newToday * inp.welcome;
+            cumMintUSD += welcomeMint;
+            m.mintUSD += welcomeMint;
+            const nonRefUsers = newToday * (1 - inp.refRatePct / 100);
+            const refUsers = newToday * (inp.refRatePct / 100);
+            const cacToday = nonRefUsers * inp.mktCAC;
+            cumRealCAC += cacToday;
+            m.realCAC += cacToday;
+            activeUsers = activeUsers * (1 - dailyChurnRate) + newToday;
+            const contestsPerDay = activeUsers * inp.cpd;
+            const contestsByCount = contestsPerDay / avgSize;
+            m.contests += contestsByCount;
+            ['USD', 'STARS', 'TON'].forEach((c) => {
+              const mixKey = 'mix' + c;
+              const mix = inp[mixKey];
+              if (!perCur[c] || mix <= 0) return;
+              const contestsThisCur = contestsByCount * mix;
+              if (c === 'USD') {
+                const drainPerContest = perCur[c].avgNet;
+                const drainTotal = contestsThisCur * drainPerContest;
+                cumDrainUSD += drainTotal;
+                m.drainUSD += drainTotal;
+              } else {
+                const cur = c;
+                const netPerContestSource = perCur[c].avgNet;
+                const commPerContestSource = perCur[c].avgComm;
+                const realRev = toUSD(netPerContestSource * contestsThisCur, cur);
+                const realComm = toUSD(commPerContestSource * contestsThisCur, cur);
+                cumRealRevenue += realRev;
+                cumRealComm += realComm;
+                m.realRev += realRev;
+                m.realComm += realComm;
+              }
+            });
+            const activatedRefUsers = refUsers * 0.8;
+            const refMint = activatedRefUsers * (inp.referee + inp.recruiter);
+            cumMintUSD += refMint;
+            m.mintUSD += refMint;
+            if (day % 30 === 0) {
+              const monthIdx = day / 30;
+              monthlyData.push({
+                month: monthIdx,
+                activeUsers: Math.round(activeUsers),
+                newUsers: Math.round(m.newUsers),
+                contests: Math.round(m.contests),
+                mintUSD: m.mintUSD,
+                drainUSD: m.drainUSD,
+                realRev: m.realRev,
+                realCAC: m.realCAC,
+                realComm: m.realComm,
+                netReal: m.realRev - m.realCAC,
+                cumActiveUsers: Math.round(activeUsers),
+                cumRealRev: cumRealRevenue,
+                cumRealCAC: cumRealCAC,
+                cumNetReal: cumRealRevenue - cumRealCAC,
+                cumMintUSD,
+                cumDrainUSD,
+                circulatingUSD: cumMintUSD - cumDrainUSD,
+              });
+              m = {
+                newUsers: 0,
+                mintUSD: 0,
+                drainUSD: 0,
+                realRev: 0,
+                realCAC: 0,
+                realComm: 0,
+                contests: 0,
+              };
+            }
+          }
+          const lifetimeDays = inp.lifetime * 30;
+          let avgRevPerContest = 0;
+          ['USD', 'STARS', 'TON'].forEach((c) => {
+            if (perCur[c]) avgRevPerContest += toUSD(perCur[c].avgNet, c) * inp['mix' + c];
+          });
+          const ltvPerUser = lifetimeDays * (inp.cpd / avgSize) * avgRevPerContest;
+          const realCACPerUser = inp.mktCAC * (1 - inp.refRatePct / 100);
+          return {
+            monthlyData,
+            perCur,
+            avgSize,
+            ltvPerUser,
+            realCACPerUser,
+            finalActiveUsers: activeUsers,
+            cumRealRevenue,
+            cumRealCAC,
+            cumNetReal: cumRealRevenue - cumRealCAC,
+            cumMintUSD,
+            cumDrainUSD,
+            circulatingUSD: cumMintUSD - cumDrainUSD,
+          };
+        }
+
+        let chartUsers, chartRevenue, chartCumProfit, chartInflation, chartSensitivity;
+
+        function renderKPIs(inp, sim) {
+          const last = sim.monthlyData[sim.monthlyData.length - 1] || {};
+          const mrr = last.realRev || 0;
+          const ltvCacRatio = sim.realCACPerUser > 0 ? sim.ltvPerUser / sim.realCACPerUser : 999;
+          const inflStatus = sim.circulatingUSD > 0 ? 'inflation' : 'deflation';
+          const inflClass =
+            sim.circulatingUSD > sim.cumDrainUSD * 0.5
+              ? 'bad'
+              : sim.circulatingUSD > 0
+                ? 'warn'
+                : 'good';
+          $('kpi-bar').innerHTML = `
+      <div class="kpi primary"><div class="l">Active users (m${inp.horizon})</div><div class="v">${fmtK(sim.finalActiveUsers)}</div><div class="s">+${fmtK(inp.newUsersPerDay)} new/day</div></div>
+      <div class="kpi good"><div class="l">MRR (final month)</div><div class="v">$${fmtK(mrr)}</div><div class="s">real money</div></div>
+      <div class="kpi good"><div class="l">Cumulative net real</div><div class="v">$${fmtK(sim.cumNetReal)}</div><div class="s">over ${inp.horizon} months</div></div>
+      <div class="kpi ${ltvCacRatio < 1 ? 'bad' : ltvCacRatio < 3 ? 'warn' : 'good'}"><div class="l">LTV / CAC ratio</div><div class="v">${fmt(ltvCacRatio, 1)}x</div><div class="s">$${fmt(sim.ltvPerUser, 1)} / $${fmt(sim.realCACPerUser, 1)}</div></div>
+      <div class="kpi ${inflClass}"><div class="l">Soft USD circulating</div><div class="v">$${fmtK(sim.circulatingUSD)}</div><div class="s">${inflStatus}: mint $${fmtK(sim.cumMintUSD)} − drain $${fmtK(sim.cumDrainUSD)}</div></div>
+      <div class="kpi"><div class="l">Total contests</div><div class="v">${fmtK(sim.monthlyData.reduce((a, m) => a + m.contests, 0))}</div><div class="s">over ${inp.horizon} months</div></div>
+    `;
+        }
+
+        function renderCharts(sim) {
+          const labels = sim.monthlyData.map((m) => 'M' + m.month);
+          if (chartUsers) chartUsers.destroy();
+          chartUsers = new Chart($('chart-users'), {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'Active users',
+                  data: sim.monthlyData.map((m) => m.cumActiveUsers),
+                  borderColor: '#0b6cff',
+                  borderWidth: 2.5,
+                  tension: 0.3,
+                  pointRadius: 2,
+                  fill: true,
+                  backgroundColor: 'rgba(11,108,255,0.08)',
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { callback: (v) => fmtK(v), font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+              },
+            },
+          });
+          if (chartRevenue) chartRevenue.destroy();
+          chartRevenue = new Chart($('chart-revenue'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'Real revenue',
+                  data: sim.monthlyData.map((m) => m.realRev),
+                  backgroundColor: '#15a05a',
+                  borderRadius: 3,
+                },
+                {
+                  label: 'CAC spend',
+                  data: sim.monthlyData.map((m) => -m.realCAC),
+                  backgroundColor: '#d23f3f',
+                  borderRadius: 3,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                tooltip: {
+                  callbacks: {
+                    label: (c) => c.dataset.label + ': $' + fmt(Math.abs(c.parsed.y), 0),
+                  },
+                },
+              },
+              scales: {
+                y: { ticks: { callback: (v) => '$' + fmtK(Math.abs(v)), font: { size: 10 } } },
+                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+              },
+            },
+          });
+          if (chartCumProfit) chartCumProfit.destroy();
+          chartCumProfit = new Chart($('chart-cumprofit'), {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'Cumulative net',
+                  data: sim.monthlyData.map((m) => m.cumNetReal),
+                  borderColor: '#15a05a',
+                  borderWidth: 2.5,
+                  tension: 0.3,
+                  pointRadius: 2,
+                  fill: true,
+                  backgroundColor: 'rgba(21,160,90,0.08)',
+                },
+                {
+                  label: 'Cumulative revenue',
+                  data: sim.monthlyData.map((m) => m.cumRealRev),
+                  borderColor: '#0b6cff',
+                  borderWidth: 1.5,
+                  borderDash: [4, 3],
+                  tension: 0.3,
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                tooltip: {
+                  callbacks: { label: (c) => c.dataset.label + ': $' + fmt(c.parsed.y, 0) },
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: { callback: (v) => '$' + fmtK(v), font: { size: 10 } },
+                },
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+              },
+            },
+          });
+          if (chartInflation) chartInflation.destroy();
+          chartInflation = new Chart($('chart-inflation'), {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'Cumulative mint',
+                  data: sim.monthlyData.map((m) => m.cumMintUSD),
+                  borderColor: '#d23f3f',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  pointRadius: 0,
+                },
+                {
+                  label: 'Cumulative drain',
+                  data: sim.monthlyData.map((m) => m.cumDrainUSD),
+                  borderColor: '#15a05a',
+                  borderWidth: 2,
+                  tension: 0.3,
+                  pointRadius: 0,
+                },
+                {
+                  label: 'Net circulating',
+                  data: sim.monthlyData.map((m) => m.circulatingUSD),
+                  borderColor: '#6e36ff',
+                  borderWidth: 2.5,
+                  tension: 0.3,
+                  pointRadius: 2,
+                  fill: true,
+                  backgroundColor: 'rgba(110,54,255,0.08)',
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                tooltip: {
+                  callbacks: { label: (c) => c.dataset.label + ': $' + fmt(c.parsed.y, 0) },
+                },
+              },
+              scales: {
+                y: { ticks: { callback: (v) => '$' + fmtK(v), font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+              },
+            },
+          });
+          $('users-sub').textContent =
+            fmtK(sim.finalActiveUsers) + ' active by month ' + sim.monthlyData.length;
+          $('rev-sub').textContent = '$' + fmtK(sim.cumRealRevenue) + ' total';
+          $('cumprofit-sub').textContent = '$' + fmtK(sim.cumNetReal) + ' net';
+          $('inflation-sub').textContent =
+            sim.circulatingUSD > 0
+              ? 'inflation $' + fmtK(sim.circulatingUSD)
+              : 'deflation $' + fmtK(-sim.circulatingUSD);
+        }
+
+        function renderMonthlyTable(sim) {
+          const tbody = $('monthly-tbody');
+          tbody.innerHTML = '';
+          let totalNew = 0,
+            totalContests = 0,
+            totalRealRev = 0,
+            totalMint = 0,
+            totalDrain = 0,
+            totalComm = 0,
+            totalCAC = 0;
+          for (const m of sim.monthlyData) {
+            totalNew += m.newUsers;
+            totalContests += m.contests;
+            totalRealRev += m.realRev;
+            totalMint += m.mintUSD;
+            totalDrain += m.drainUSD;
+            totalComm += m.realComm;
+            totalCAC += m.realCAC;
+            tbody.innerHTML += `<tr><td>M${m.month}</td><td class="num">${fmtK(m.cumActiveUsers)}</td><td class="num">${fmtK(m.contests)}</td><td class="num" style="color: var(--good);">$${fmtK(m.realRev)}</td><td class="num" style="color: var(--bad);">$${fmtK(m.mintUSD)}</td><td class="num" style="color: var(--good);">$${fmtK(m.drainUSD)}</td><td class="num" style="color: var(--bad);">$${fmtK(m.realComm)}</td><td class="num" style="color: var(--bad);">$${fmtK(m.realCAC)}</td><td class="num" style="color: ${m.netReal >= 0 ? 'var(--good)' : 'var(--bad)'};"><b>$${fmtK(m.netReal)}</b></td></tr>`;
+          }
+          tbody.innerHTML += `<tr class="total"><td>Total</td><td class="num">${fmtK(sim.finalActiveUsers)}</td><td class="num">${fmtK(totalContests)}</td><td class="num" style="color: var(--good);">$${fmtK(totalRealRev)}</td><td class="num" style="color: var(--bad);">$${fmtK(totalMint)}</td><td class="num" style="color: var(--good);">$${fmtK(totalDrain)}</td><td class="num" style="color: var(--bad);">$${fmtK(totalComm)}</td><td class="num" style="color: var(--bad);">$${fmtK(totalCAC)}</td><td class="num" style="color: ${totalRealRev - totalCAC >= 0 ? 'var(--good)' : 'var(--bad)'};"><b>$${fmtK(totalRealRev - totalCAC)}</b></td></tr>`;
+        }
+
+        function renderMixInfo(inp) {
+          const sumCur = (inp.mixUSD + inp.mixSTARS + inp.mixTON) * 100;
+          const elCur = $('mix-currency-info');
+          if (Math.abs(sumCur - 100) > 0.5) {
+            elCur.className = 'mix-info warn';
+            elCur.textContent = `⚠ Currency sum = ${fmt(sumCur, 0)}% (треба 100%)`;
+          } else {
+            elCur.className = 'mix-info';
+            elCur.innerHTML = `Sum = <b>100%</b>. Avg contest size: <b>${fmt(avgContestSize(inp), 1)}</b> players`;
+          }
+          const sumSize = (inp.size10 + inp.size20 + inp.size50 + inp.size100) * 100;
+          const elSize = $('mix-size-info');
+          if (Math.abs(sumSize - 100) > 0.5) {
+            elSize.className = 'mix-info warn';
+            elSize.textContent = `⚠ Size sum = ${fmt(sumSize, 0)}% (треба 100%)`;
+          } else {
+            elSize.className = 'mix-info';
+            elSize.innerHTML = `Sum = <b>100%</b>`;
+          }
+        }
+
+        function renderDeepDive() {
+          const dd = getDeepDiveInputs();
+          const cur = dd.currency;
+          const dec = cur === 'TON' ? 3 : 2;
+          $('dd-entry-unit').textContent = cur;
+          $('dd-real-lbl').textContent = dd.real;
+          $('dd-rake-lbl').textContent = dd.rake + '%';
+          $('dd-l1-lbl').textContent = dd.l1 + '%';
+          $('dd-l2-lbl').textContent = dd.l2 + '%';
+          $('dd-l1pen-lbl').textContent = dd.l1Pen + '%';
+          $('dd-l2pen-lbl').textContent = dd.l2Pen + '%';
+          const econ = perContestEcon({
+            entry: dd.entry,
+            real: dd.real,
+            rake: dd.rake,
+            l1: dd.l1,
+            l2: dd.l2,
+            l1Pen: dd.l1Pen,
+            l2Pen: dd.l2Pen,
+          });
+          const winners = econ.prizes.length;
+          const margin = econ.cashIn > 0 ? (econ.netHouse / econ.cashIn) * 100 : 0;
+          $('dd-out-pool').textContent = fmt(econ.pool, dec);
+          $('dd-out-pool-sub').textContent = `${cur} · ${winners} winners`;
+          $('dd-out-cashin').textContent = fmt(econ.cashIn, dec);
+          $('dd-out-cashin-sub').textContent = `${dd.real} × ${fmt(dd.entry, dec)} ${cur}`;
+          $('dd-out-comm').textContent = fmt(econ.totalComm, Math.max(dec, 3));
+          $('dd-out-comm-sub').textContent =
+            `L1: ${fmt(econ.l1Total, Math.max(dec, 3))} · L2: ${fmt(econ.l2Total, Math.max(dec, 3))}`;
+          $('dd-out-net').textContent = fmt(econ.netHouse, dec);
+          $('dd-out-net-sub').textContent = `${fmt(margin, 1)}% margin`;
+          const verdict = $('dd-verdict');
+          if (econ.netHouse < 0) {
+            verdict.className = 'verdict bad';
+            verdict.textContent = '🚫 Loss ' + fmt(-econ.netHouse, dec) + ' ' + cur;
+          } else if (margin < 5) {
+            verdict.className = 'verdict warn';
+            verdict.textContent = '⚠ Thin margin ' + fmt(margin, 1) + '%';
+          } else {
+            verdict.className = 'verdict good';
+            verdict.textContent = '✅ Profitable — net ' + fmt(econ.netHouse, dec) + ' ' + cur;
+          }
+          $('dd-pos-sub').textContent = `${winners} winners · geometric r=0.65 · ${cur}`;
+          const tbody = $('dd-pos-tbody');
+          tbody.innerHTML = '';
+          let sumPrize = 0,
+            sumL1 = 0,
+            sumL2 = 0;
+          for (let i = 0; i < winners; i++) {
+            const prize = econ.prizes[i];
+            const l1 = prize * (dd.l1 / 100) * (dd.l1Pen / 100);
+            const l2 = prize * (dd.l2 / 100) * (dd.l2Pen / 100);
+            sumPrize += prize;
+            sumL1 += l1;
+            sumL2 += l2;
+            const pctOfPool = econ.pool > 0 ? ((prize / econ.pool) * 100).toFixed(1) + '%' : '—';
+            if (i < 12 || winners <= 14) {
+              tbody.innerHTML += `<tr><td><span class="pos-num">#${i + 1}</span></td><td>${pctOfPool}</td><td class="num">${fmt(prize, dec)}</td><td class="num l1-cell">${fmt(l1, Math.max(dec, 3))}</td><td class="num l2-cell">${fmt(l2, Math.max(dec, 3))}</td><td class="num">${fmt(l1 + l2, Math.max(dec, 3))}</td></tr>`;
+            }
+          }
+          if (winners > 14)
+            tbody.innerHTML += `<tr style="font-style: italic; color: var(--muted);"><td colspan="6" style="text-align: center;">… ${winners - 12} more positions …</td></tr>`;
+          tbody.innerHTML += `<tr class="total"><td colspan="2">SUM</td><td class="num">${fmt(sumPrize, dec)}</td><td class="num l1-cell">${fmt(sumL1, Math.max(dec, 3))}</td><td class="num l2-cell">${fmt(sumL2, Math.max(dec, 3))}</td><td class="num">${fmt(sumL1 + sumL2, Math.max(dec, 3))}</td></tr>`;
+          const sweepLabels = [],
+            sweepData = [];
+          for (let l1 = 0; l1 <= 10; l1 += 0.5) {
+            sweepLabels.push(l1.toFixed(1) + '%');
+            const e = perContestEcon({ ...dd, l1 });
+            sweepData.push(e.netHouse);
+          }
+          if (chartSensitivity) chartSensitivity.destroy();
+          chartSensitivity = new Chart($('dd-chart-sensitivity'), {
+            type: 'line',
+            data: {
+              labels: sweepLabels,
+              datasets: [
+                {
+                  label: 'Net house ' + cur,
+                  data: sweepData,
+                  borderColor: '#15a05a',
+                  borderWidth: 2,
+                  tension: 0.2,
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: { label: (c) => 'Net: ' + fmt(c.parsed.y, dec) + ' ' + cur },
+                },
+              },
+              scales: {
+                y: { ticks: { callback: (v) => fmt(v, dec) + ' ' + cur, font: { size: 9 } } },
+                x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 9 } },
+                  title: { display: true, text: 'L1 commission rate', font: { size: 10 } },
+                },
+              },
+            },
+          });
+        }
+
+        function render() {
+          const inp = getInputs();
+          $('lbl-horizon').textContent = inp.horizon;
+          $('lbl-newusers').textContent = inp.newUsersPerDay;
+          $('lbl-refrate').textContent = inp.refRatePct + '%';
+          $('lbl-churn').textContent = inp.churnPct + '%';
+          $('lbl-cac').textContent = '$' + inp.mktCAC;
+          $('lbl-welcome').textContent = '$' + inp.welcome;
+          $('lbl-referee').textContent = '$' + inp.referee;
+          $('lbl-recruiter').textContent = '$' + inp.recruiter;
+          $('lbl-unlocknum').textContent = inp.unlockNum;
+          $('lbl-cpd').textContent = inp.cpd;
+          $('lbl-lifetime').textContent = inp.lifetime;
+          $('lbl-l1pen').textContent = inp.l1Pen + '%';
+          $('lbl-l2pen').textContent = inp.l2Pen + '%';
+          $('mix-usd-val').textContent = inp.mixUSD * 100 + '%';
+          $('mix-stars-val').textContent = inp.mixSTARS * 100 + '%';
+          $('mix-ton-val').textContent = inp.mixTON * 100 + '%';
+          $('size-10-val').textContent = inp.size10 * 100 + '%';
+          $('size-20-val').textContent = inp.size20 * 100 + '%';
+          $('size-50-val').textContent = inp.size50 * 100 + '%';
+          $('size-100-val').textContent = inp.size100 * 100 + '%';
+          const cs = curSettings[curContestActive];
+          $('lbl-cur-entry').textContent = cs.entry;
+          $('lbl-cur-rake').textContent = cs.rake + '%';
+          $('cur-entry').value = cs.entry;
+          $('cur-rake').value = cs.rake;
+          const csRef = curSettings[curRefActive];
+          $('lbl-cur-l1').textContent = csRef.l1 + '%';
+          $('lbl-cur-l2').textContent = csRef.l2 + '%';
+          $('cur-l1').value = csRef.l1;
+          $('cur-l2').value = csRef.l2;
+          renderMixInfo(inp);
+          const sim = simulate(inp);
+          renderKPIs(inp, sim);
+          renderCharts(sim);
+          renderMonthlyTable(sim);
+          renderDeepDive();
+        }
+
+        [
+          'horizon',
+          'newusers',
+          'refrate',
+          'churn',
+          'cac',
+          'welcome',
+          'referee',
+          'recruiter',
+          'unlocknum',
+          'cpd',
+          'lifetime',
+          'mix-usd',
+          'mix-stars',
+          'mix-ton',
+          'size-10',
+          'size-20',
+          'size-50',
+          'size-100',
+          'l1pen',
+          'l2pen',
+        ].forEach((id) => $(id).addEventListener('input', render));
+
+        document.querySelectorAll('.control-card.contests .cur-tab').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.control-card.contests .cur-tab').forEach((b) => {
+              b.classList.remove('active');
+              b.classList.remove('usd', 'stars', 'ton');
+            });
+            btn.classList.add('active');
+            btn.classList.add(btn.dataset.cur.toLowerCase());
+            curContestActive = btn.dataset.cur;
+            document
+              .querySelectorAll('.control-card.contests .cur-tab')
+              .forEach((b) => b.classList.add(b.dataset.cur.toLowerCase()));
+            render();
+          });
+        });
+        $('cur-entry').addEventListener('input', () => {
+          curSettings[curContestActive].entry = parseFloat($('cur-entry').value);
+          render();
+        });
+        $('cur-rake').addEventListener('input', () => {
+          curSettings[curContestActive].rake = parseFloat($('cur-rake').value);
+          render();
+        });
+
+        document.querySelectorAll('.control-card.referrals .cur-tab').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document
+              .querySelectorAll('.control-card.referrals .cur-tab')
+              .forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+            curRefActive = btn.dataset.cur;
+            render();
+          });
+        });
+        $('cur-l1').addEventListener('input', () => {
+          curSettings[curRefActive].l1 = parseFloat($('cur-l1').value);
+          render();
+        });
+        $('cur-l2').addEventListener('input', () => {
+          curSettings[curRefActive].l2 = parseFloat($('cur-l2').value);
+          render();
+        });
+
+        document.querySelectorAll('.cur-tab').forEach((b) => {
+          if (b.dataset.cur === 'USD') b.classList.add('usd');
+          if (b.dataset.cur === 'STARS') b.classList.add('stars');
+          if (b.dataset.cur === 'TON') b.classList.add('ton');
+        });
+
+        [
+          'dd-currency',
+          'dd-entry',
+          'dd-real',
+          'dd-rake',
+          'dd-l1',
+          'dd-l2',
+          'dd-l1pen',
+          'dd-l2pen',
+        ].forEach((id) => $(id).addEventListener('input', renderDeepDive));
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

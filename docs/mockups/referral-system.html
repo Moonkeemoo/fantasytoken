@@ -8,582 +8,1424 @@
      Open in browser to see interactive tabs and 5 UI surfaces.
 -->
 <html lang="uk">
-<head>
-<meta charset="utf-8">
-<title>Fantasy Token League — Referral System Design</title>
-<style>
-:root {
-  color-scheme: light;
-  --bg: #ffffff;
-  --surface: #f7f8fa;
-  --border: #e3e6ec;
-  --text: #14161a;
-  --muted: #5b6272;
-  --accent: #0b6cff;
-  --accent-soft: #e7f0ff;
-  --good: #15a05a;
-  --good-soft: #e3f6ec;
-  --warn: #d97a00;
-  --warn-soft: #fdf1dc;
-  --bad: #d23f3f;
-  --ftl: #6e36ff;
-  --ftl-soft: #ece2ff;
+  <head>
+    <meta charset="utf-8" />
+    <title>Fantasy Token League — Referral System Design</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f7f8fa;
+        --border: #e3e6ec;
+        --text: #14161a;
+        --muted: #5b6272;
+        --accent: #0b6cff;
+        --accent-soft: #e7f0ff;
+        --good: #15a05a;
+        --good-soft: #e3f6ec;
+        --warn: #d97a00;
+        --warn-soft: #fdf1dc;
+        --bad: #d23f3f;
+        --ftl: #6e36ff;
+        --ftl-soft: #ece2ff;
 
-  --paper: #f6f1e8;
-  --paper-dim: #eee5d2;
-  --ink: #1a1814;
-  --ink-soft: #4a4540;
-  --paper-muted: #8a8478;
-  --rule: #d0c5b0;
-  --paper-accent: #d4441c;
-  --note: #fef08a;
-  --code-bg: #f0e6d0;
-  --hl-green: #16a34a;
-  --hl-red: #dc2626;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55;
-}
-.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-h1 { font-size: 24px; letter-spacing: -0.01em; margin: 0 0 4px; }
-h2 { font-size: 18px; margin: 28px 0 12px; }
-h3 { font-size: 14px; font-weight: 700; margin: 0 0 6px; }
-.lead { color: var(--muted); margin: 0 0 20px; }
-.tld {
-  background: var(--ftl-soft); color: var(--text); border-radius: 10px; padding: 14px 18px;
-  margin: 12px 0 24px; font-size: 13px; line-height: 1.6;
-  border-left: 3px solid var(--ftl);
-}
-.tld strong { color: var(--ftl); }
+        --paper: #f6f1e8;
+        --paper-dim: #eee5d2;
+        --ink: #1a1814;
+        --ink-soft: #4a4540;
+        --paper-muted: #8a8478;
+        --rule: #d0c5b0;
+        --paper-accent: #d4441c;
+        --note: #fef08a;
+        --code-bg: #f0e6d0;
+        --hl-green: #16a34a;
+        --hl-red: #dc2626;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          system-ui,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 24px;
+        letter-spacing: -0.01em;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 28px 0 12px;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      .tld {
+        background: var(--ftl-soft);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 12px 0 24px;
+        font-size: 13px;
+        line-height: 1.6;
+        border-left: 3px solid var(--ftl);
+      }
+      .tld strong {
+        color: var(--ftl);
+      }
 
-.tab-radio { position: absolute; opacity: 0; pointer-events: none; }
-.tabs {
-  display: flex; gap: 4px; margin: 0 0 24px; border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-.tab {
-  padding: 8px 14px; cursor: pointer; color: var(--muted);
-  font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent;
-  margin-bottom: -1px; user-select: none; display: inline-block; line-height: 1.5;
-}
-.tab:hover { color: var(--text); }
-.panel { display: none; }
-#t-arch:checked    ~ .tabs label[for="t-arch"],
-#t-econ:checked    ~ .tabs label[for="t-econ"],
-#t-ui:checked      ~ .tabs label[for="t-ui"],
-#t-impl:checked    ~ .tabs label[for="t-impl"],
-#t-decisions:checked ~ .tabs label[for="t-decisions"] {
-  color: var(--text); border-bottom-color: var(--accent);
-}
-#t-arch:checked    ~ #panel-arch,
-#t-econ:checked    ~ #panel-econ,
-#t-ui:checked      ~ #panel-ui,
-#t-impl:checked    ~ #panel-impl,
-#t-decisions:checked ~ #panel-decisions { display: block; }
+      .tab-radio {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin: 0 0 24px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .tab {
+        padding: 8px 14px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        user-select: none;
+        display: inline-block;
+        line-height: 1.5;
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+      .panel {
+        display: none;
+      }
+      #t-arch:checked ~ .tabs label[for='t-arch'],
+      #t-econ:checked ~ .tabs label[for='t-econ'],
+      #t-ui:checked ~ .tabs label[for='t-ui'],
+      #t-impl:checked ~ .tabs label[for='t-impl'],
+      #t-decisions:checked ~ .tabs label[for='t-decisions'] {
+        color: var(--text);
+        border-bottom-color: var(--accent);
+      }
+      #t-arch:checked ~ #panel-arch,
+      #t-econ:checked ~ #panel-econ,
+      #t-ui:checked ~ #panel-ui,
+      #t-impl:checked ~ #panel-impl,
+      #t-decisions:checked ~ #panel-decisions {
+        display: block;
+      }
 
-.diagram {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 24px; margin-bottom: 16px; overflow-x: auto;
-}
-.diagram svg { max-width: 100%; height: auto; }
-.split-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (min-width: 720px) { .split-grid { grid-template-columns: 1fr 1fr; } }
-.concept-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 16px;
-}
-.concept-card h3 { margin-bottom: 8px; }
-.concept-card.refs h3 { color: var(--ftl); }
-.concept-card.friends h3 { color: var(--good); }
-.concept-card ul { padding-left: 18px; font-size: 13px; }
-.concept-card li { margin-bottom: 4px; }
+      .diagram {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 16px;
+        overflow-x: auto;
+      }
+      .diagram svg {
+        max-width: 100%;
+        height: auto;
+      }
+      .split-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      @media (min-width: 720px) {
+        .split-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .concept-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .concept-card h3 {
+        margin-bottom: 8px;
+      }
+      .concept-card.refs h3 {
+        color: var(--ftl);
+      }
+      .concept-card.friends h3 {
+        color: var(--good);
+      }
+      .concept-card ul {
+        padding-left: 18px;
+        font-size: 13px;
+      }
+      .concept-card li {
+        margin-bottom: 4px;
+      }
 
-.economy-grid {
-  display: grid; grid-template-columns: 1fr; gap: 16px;
-}
-@media (min-width: 720px) { .economy-grid { grid-template-columns: 1fr 1fr; } }
-.eco-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
-}
-.eco-card h3 { margin-bottom: 12px; }
-.formula {
-  background: var(--bg); border-left: 3px solid var(--accent); padding: 10px 14px;
-  font-family: ui-monospace, monospace; font-size: 13px; border-radius: 0 4px 4px 0;
-  margin: 8px 0 12px;
-}
-.kv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.kv-table td, .kv-table th { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
-.kv-table th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
-.kv-table td.num { text-align: right; font-family: ui-monospace, monospace; font-weight: 600; }
-.example-flow {
-  background: var(--good-soft); border-left: 3px solid var(--good); padding: 12px 16px;
-  border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 13px;
-}
-.example-flow strong { color: var(--good); }
-.example-flow code { background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
-.warning {
-  background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 12px 16px;
-  border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 13px;
-}
+      .economy-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      @media (min-width: 720px) {
+        .economy-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .eco-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .eco-card h3 {
+        margin-bottom: 12px;
+      }
+      .formula {
+        background: var(--bg);
+        border-left: 3px solid var(--accent);
+        padding: 10px 14px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        border-radius: 0 4px 4px 0;
+        margin: 8px 0 12px;
+      }
+      .kv-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .kv-table td,
+      .kv-table th {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+      .kv-table th {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+      .kv-table td.num {
+        text-align: right;
+        font-family: ui-monospace, monospace;
+        font-weight: 600;
+      }
+      .example-flow {
+        background: var(--good-soft);
+        border-left: 3px solid var(--good);
+        padding: 12px 16px;
+        border-radius: 0 6px 6px 0;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+      .example-flow strong {
+        color: var(--good);
+      }
+      .example-flow code {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .warning {
+        background: var(--warn-soft);
+        border-left: 3px solid var(--warn);
+        padding: 12px 16px;
+        border-radius: 0 6px 6px 0;
+        margin: 12px 0;
+        font-size: 13px;
+      }
 
-.mockups-grid {
-  display: grid; grid-template-columns: 1fr; gap: 24px;
-}
-@media (min-width: 880px) { .mockups-grid { grid-template-columns: 380px 1fr; } }
-.mockup-stack { display: flex; flex-direction: column; gap: 18px; align-items: center; }
-.paper-frame {
-  width: 380px; max-width: 100%; background: var(--paper); color: var(--ink);
-  border: 1.5px solid var(--ink); border-radius: 16px; overflow: hidden;
-  font-family: 'Inter', system-ui, sans-serif;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-.mock-title {
-  font-family: ui-monospace, monospace; font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--muted); padding: 0 16px; font-weight: 600;
-}
-.notes { display: flex; flex-direction: column; gap: 12px; }
-.note {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  padding: 12px 14px; font-size: 13px;
-}
-.note h3 { font-size: 13px; margin-bottom: 6px; }
-.note-tag {
-  display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 999px;
-  font-weight: 600; margin-left: 6px;
-}
-.tag-vir { background: var(--ftl-soft); color: var(--ftl); }
-.tag-onb { background: var(--good-soft); color: var(--good); }
-.tag-ret { background: var(--accent-soft); color: var(--accent); }
-.tag-now { background: #ffe5d6; color: #b54300; }
+      .mockups-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      @media (min-width: 880px) {
+        .mockups-grid {
+          grid-template-columns: 380px 1fr;
+        }
+      }
+      .mockup-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        align-items: center;
+      }
+      .paper-frame {
+        width: 380px;
+        max-width: 100%;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--ink);
+        border-radius: 16px;
+        overflow: hidden;
+        font-family: 'Inter', system-ui, sans-serif;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      .mock-title {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        padding: 0 16px;
+        font-weight: 600;
+      }
+      .notes {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .note {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+      }
+      .note h3 {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .note-tag {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-weight: 600;
+        margin-left: 6px;
+      }
+      .tag-vir {
+        background: var(--ftl-soft);
+        color: var(--ftl);
+      }
+      .tag-onb {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+      .tag-ret {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .tag-now {
+        background: #ffe5d6;
+        color: #b54300;
+      }
 
-.refs-block {
-  padding: 14px 16px; border-bottom: 1.5px solid var(--ink);
-}
-.refs-headline {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.refs-headline .v { font-size: 24px; font-weight: 700; line-height: 1; letter-spacing: -0.01em; }
-.refs-headline .l { font-family: ui-monospace, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--paper-muted); }
-.refs-earnings {
-  background: var(--code-bg); border: 1.5px solid var(--rule);
-  padding: 10px 12px; border-radius: 4px; margin-bottom: 12px;
-}
-.refs-earnings-row { display: flex; justify-content: space-between; align-items: center; }
-.refs-earnings-row + .refs-earnings-row { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); }
-.refs-earnings .l { font-family: ui-monospace, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
-.refs-earnings .v { font-weight: 700; color: var(--hl-green); font-family: ui-monospace, monospace; }
-.refs-earnings .lvl-tag {
-  display: inline-block; font-family: ui-monospace, monospace; font-size: 9px;
-  padding: 1px 6px; background: var(--ink); color: var(--paper);
-  border-radius: 3px; margin-right: 6px; font-weight: 700; letter-spacing: 0.04em;
-}
-.tree {
-  display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
-}
-.tree-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.tree-row .lvl {
-  width: 28px; flex-shrink: 0;
-  font-family: ui-monospace, monospace; font-size: 9px; font-weight: 700;
-  color: var(--paper-muted); letter-spacing: 0.06em;
-}
-.av-mini {
-  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink);
-  display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 10px; font-weight: 700; margin-left: -6px;
-}
-.av-mini:first-child { margin-left: 0; }
-.av-1 { background: #5a8a4a; }
-.av-2 { background: #4a6a8a; }
-.av-3 { background: #8a5a4a; }
-.av-4 { background: #6a4a8a; }
-.av-5 { background: #8a8a4a; }
-.av-6 { background: #4a8a8a; }
-.av-7 { background: #8a4a8a; }
-.av-more {
-  background: var(--paper); color: var(--ink); font-family: ui-monospace, monospace;
-  border-style: dashed;
-}
-.tree-row .info {
-  font-family: ui-monospace, monospace; font-size: 10px;
-  color: var(--ink-soft); letter-spacing: 0.04em; margin-left: auto;
-}
-.tree-row .info b { color: var(--hl-green); }
-.refs-cta { display: grid; gap: 6px; margin-top: 4px; }
-.btn-accent {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 11px 14px; background: var(--paper-accent); color: #fff;
-  font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
-  width: 100%; border: none; border-radius: 4px;
-}
-.btn-secondary {
-  padding: 9px 12px; border: 1.5px solid var(--ink); background: var(--paper);
-  font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border-radius: 4px;
-  display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--ink);
-}
-.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .refs-block {
+        padding: 14px 16px;
+        border-bottom: 1.5px solid var(--ink);
+      }
+      .refs-headline {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .refs-headline .v {
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.01em;
+      }
+      .refs-headline .l {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--paper-muted);
+      }
+      .refs-earnings {
+        background: var(--code-bg);
+        border: 1.5px solid var(--rule);
+        padding: 10px 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+      }
+      .refs-earnings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .refs-earnings-row + .refs-earnings-row {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px dashed var(--rule);
+      }
+      .refs-earnings .l {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+      }
+      .refs-earnings .v {
+        font-weight: 700;
+        color: var(--hl-green);
+        font-family: ui-monospace, monospace;
+      }
+      .refs-earnings .lvl-tag {
+        display: inline-block;
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        padding: 1px 6px;
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 3px;
+        margin-right: 6px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .tree {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .tree-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .tree-row .lvl {
+        width: 28px;
+        flex-shrink: 0;
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--paper-muted);
+        letter-spacing: 0.06em;
+      }
+      .av-mini {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 1.5px solid var(--ink);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: -6px;
+      }
+      .av-mini:first-child {
+        margin-left: 0;
+      }
+      .av-1 {
+        background: #5a8a4a;
+      }
+      .av-2 {
+        background: #4a6a8a;
+      }
+      .av-3 {
+        background: #8a5a4a;
+      }
+      .av-4 {
+        background: #6a4a8a;
+      }
+      .av-5 {
+        background: #8a8a4a;
+      }
+      .av-6 {
+        background: #4a8a8a;
+      }
+      .av-7 {
+        background: #8a4a8a;
+      }
+      .av-more {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: ui-monospace, monospace;
+        border-style: dashed;
+      }
+      .tree-row .info {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--ink-soft);
+        letter-spacing: 0.04em;
+        margin-left: auto;
+      }
+      .tree-row .info b {
+        color: var(--hl-green);
+      }
+      .refs-cta {
+        display: grid;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .btn-accent {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 11px 14px;
+        background: var(--paper-accent);
+        color: #fff;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        width: 100%;
+        border: none;
+        border-radius: 4px;
+      }
+      .btn-secondary {
+        padding: 9px 12px;
+        border: 1.5px solid var(--ink);
+        background: var(--paper);
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: var(--ink);
+      }
+      .btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
 
-.friend-list { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
-.friend-list-h { font-family: ui-monospace, monospace; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--paper-muted); margin-bottom: 4px; }
-.friend-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
-.friend-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.friend-row .meta { font-family: ui-monospace, monospace; font-size: 9px; color: var(--paper-muted); margin-right: 6px; }
-.friend-row .earn { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--hl-green); }
-.friend-row .earn.zero { color: var(--paper-muted); font-weight: 500; }
+      .friend-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--rule);
+      }
+      .friend-list-h {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--paper-muted);
+        margin-bottom: 4px;
+      }
+      .friend-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 12px;
+      }
+      .friend-row .name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .friend-row .meta {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        color: var(--paper-muted);
+        margin-right: 6px;
+      }
+      .friend-row .earn {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--hl-green);
+      }
+      .friend-row .earn.zero {
+        color: var(--paper-muted);
+        font-weight: 500;
+      }
 
-.lobby-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; border-bottom: 1.5px solid var(--ink);
-}
-.lobby-h-left { display: flex; align-items: center; gap: 8px; }
-.av-circ {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: linear-gradient(135deg, #c97a3a, #8a4a1a);
-  border: 1.5px solid var(--ink); display: flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 700; font-size: 12px;
-}
-.lobby-greeting { font-size: 12px; font-weight: 700; }
-.lobby-balance { font-family: ui-monospace, monospace; font-size: 10px; color: var(--paper-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
-.invite-banner {
-  background: var(--note); border-bottom: 1.5px solid var(--ink);
-  padding: 12px 14px;
-}
-.invite-banner-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.invite-banner-tag { font-family: ui-monospace, monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); font-weight: 700; }
-.invite-banner-headline { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
-.invite-banner-headline b { color: var(--paper-accent); }
-.invite-banner-sub { font-size: 11px; color: var(--ink-soft); margin-bottom: 8px; }
-.invite-banner-sub b { color: var(--hl-green); }
+      .lobby-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border-bottom: 1.5px solid var(--ink);
+      }
+      .lobby-h-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .av-circ {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #c97a3a, #8a4a1a);
+        border: 1.5px solid var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .lobby-greeting {
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .lobby-balance {
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 1px;
+      }
+      .invite-banner {
+        background: var(--note);
+        border-bottom: 1.5px solid var(--ink);
+        padding: 12px 14px;
+      }
+      .invite-banner-h {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+      }
+      .invite-banner-tag {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+      .invite-banner-headline {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 4px;
+      }
+      .invite-banner-headline b {
+        color: var(--paper-accent);
+      }
+      .invite-banner-sub {
+        font-size: 11px;
+        color: var(--ink-soft);
+        margin-bottom: 8px;
+      }
+      .invite-banner-sub b {
+        color: var(--hl-green);
+      }
 
-.tg-chat {
-  background: #d8e2ec;
-  padding: 16px 12px; min-height: 200px;
-}
-.tg-bubble {
-  background: #fff; padding: 10px 12px; border-radius: 10px 10px 10px 2px;
-  max-width: 85%; box-shadow: 0 1px 1px rgba(0,0,0,0.08);
-  font-family: -apple-system, system-ui, sans-serif; color: #14161a;
-  font-size: 13px; line-height: 1.4; margin-bottom: 6px;
-}
-.tg-bubble-emoji { font-size: 16px; margin-right: 4px; }
-.tg-bubble-h { font-weight: 600; margin-bottom: 4px; }
-.tg-bubble-amount {
-  display: inline-block; background: #e3f6ec; color: #15a05a;
-  font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-top: 4px; font-size: 13px;
-}
-.tg-bubble-row {
-  display: flex; gap: 6px; margin-top: 8px;
-}
-.tg-bubble-btn {
-  flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 600;
-  background: #2481cc; color: #fff; border-radius: 6px; cursor: pointer;
-}
-.tg-bubble-btn.secondary { background: #f0f4f8; color: #2481cc; }
-.tg-bubble-time {
-  font-size: 10px; color: #999; text-align: right; margin-top: 2px;
-}
+      .tg-chat {
+        background: #d8e2ec;
+        padding: 16px 12px;
+        min-height: 200px;
+      }
+      .tg-bubble {
+        background: #fff;
+        padding: 10px 12px;
+        border-radius: 10px 10px 10px 2px;
+        max-width: 85%;
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+        font-family: -apple-system, system-ui, sans-serif;
+        color: #14161a;
+        font-size: 13px;
+        line-height: 1.4;
+        margin-bottom: 6px;
+      }
+      .tg-bubble-emoji {
+        font-size: 16px;
+        margin-right: 4px;
+      }
+      .tg-bubble-h {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .tg-bubble-amount {
+        display: inline-block;
+        background: #e3f6ec;
+        color: #15a05a;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-top: 4px;
+        font-size: 13px;
+      }
+      .tg-bubble-row {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .tg-bubble-btn {
+        flex: 1;
+        padding: 8px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        background: #2481cc;
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .tg-bubble-btn.secondary {
+        background: #f0f4f8;
+        color: #2481cc;
+      }
+      .tg-bubble-time {
+        font-size: 10px;
+        color: #999;
+        text-align: right;
+        margin-top: 2px;
+      }
 
-.result-screen {
-  background: var(--paper); padding: 16px;
-  position: relative; min-height: 240px;
-}
-.result-toast {
-  background: var(--ink); color: var(--paper); padding: 10px 14px;
-  border-radius: 6px; display: flex; align-items: center; gap: 10px;
-  margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  border: 1.5px solid var(--paper-accent);
-  animation: slideDown 0.5s ease;
-}
-@keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.result-toast .emoji { font-size: 20px; }
-.result-toast .text { flex: 1; font-size: 13px; line-height: 1.3; }
-.result-toast .text b { color: var(--note); }
-.result-toast .text .small { font-size: 11px; opacity: 0.7; display: block; }
-.result-toast .arrow { font-size: 18px; opacity: 0.6; }
-.result-context {
-  font-size: 12px; color: var(--paper-muted);
-  font-family: ui-monospace, monospace; text-transform: uppercase;
-  letter-spacing: 0.06em; padding: 8px 0;
-}
-.result-context-row {
-  background: var(--paper-dim); padding: 12px 14px; border-radius: 6px;
-  border: 1.5px solid var(--rule); margin-bottom: 8px;
-}
-.result-context-row .l { font-family: ui-monospace, monospace; font-size: 9px; color: var(--paper-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.result-context-row .v { font-size: 14px; font-weight: 700; margin-top: 2px; }
+      .result-screen {
+        background: var(--paper);
+        padding: 16px;
+        position: relative;
+        min-height: 240px;
+      }
+      .result-toast {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 10px 14px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        border: 1.5px solid var(--paper-accent);
+        animation: slideDown 0.5s ease;
+      }
+      @keyframes slideDown {
+        from {
+          transform: translateY(-20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .result-toast .emoji {
+        font-size: 20px;
+      }
+      .result-toast .text {
+        flex: 1;
+        font-size: 13px;
+        line-height: 1.3;
+      }
+      .result-toast .text b {
+        color: var(--note);
+      }
+      .result-toast .text .small {
+        font-size: 11px;
+        opacity: 0.7;
+        display: block;
+      }
+      .result-toast .arrow {
+        font-size: 18px;
+        opacity: 0.6;
+      }
+      .result-context {
+        font-size: 12px;
+        color: var(--paper-muted);
+        font-family: ui-monospace, monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 8px 0;
+      }
+      .result-context-row {
+        background: var(--paper-dim);
+        padding: 12px 14px;
+        border-radius: 6px;
+        border: 1.5px solid var(--rule);
+        margin-bottom: 8px;
+      }
+      .result-context-row .l {
+        font-family: ui-monospace, monospace;
+        font-size: 9px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .result-context-row .v {
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 2px;
+      }
 
-.welcome {
-  background: var(--paper); padding: 32px 20px; text-align: center;
-}
-.welcome-emoji { font-size: 48px; margin-bottom: 12px; }
-.welcome-h { font-size: 22px; font-weight: 700; margin-bottom: 6px; line-height: 1.2; }
-.welcome-sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; }
-.welcome-sub b { color: var(--paper-accent); }
-.welcome-bonus-card {
-  background: var(--note); border: 1.5px solid var(--ink); border-radius: 8px;
-  padding: 14px 16px; margin: 20px 0;
-}
-.welcome-bonus-card-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 0;
-}
-.welcome-bonus-card-row + .welcome-bonus-card-row { border-top: 1px dashed rgba(0,0,0,0.2); margin-top: 4px; padding-top: 6px; }
-.welcome-bonus-card-row .l { font-size: 12px; color: var(--ink-soft); }
-.welcome-bonus-card-row .v { font-weight: 700; font-family: ui-monospace, monospace; color: var(--hl-green); font-size: 14px; }
-.welcome-cta {
-  background: var(--ink); color: var(--paper); padding: 14px 18px;
-  font-family: ui-monospace, monospace; font-size: 13px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase; border-radius: 4px;
-  display: inline-block; margin-top: 12px; cursor: pointer;
-}
+      .welcome {
+        background: var(--paper);
+        padding: 32px 20px;
+        text-align: center;
+      }
+      .welcome-emoji {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+      .welcome-h {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        line-height: 1.2;
+      }
+      .welcome-sub {
+        font-size: 14px;
+        color: var(--ink-soft);
+        margin-bottom: 20px;
+      }
+      .welcome-sub b {
+        color: var(--paper-accent);
+      }
+      .welcome-bonus-card {
+        background: var(--note);
+        border: 1.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 20px 0;
+      }
+      .welcome-bonus-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+      }
+      .welcome-bonus-card-row + .welcome-bonus-card-row {
+        border-top: 1px dashed rgba(0, 0, 0, 0.2);
+        margin-top: 4px;
+        padding-top: 6px;
+      }
+      .welcome-bonus-card-row .l {
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+      .welcome-bonus-card-row .v {
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        color: var(--hl-green);
+        font-size: 14px;
+      }
+      .welcome-cta {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 14px 18px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 12px;
+        cursor: pointer;
+      }
 
-.impl-block {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  padding: 14px 16px; margin-bottom: 12px;
-}
-.impl-block h3 { font-size: 13px; margin-bottom: 8px; }
-.code {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px 12px; font-family: ui-monospace, monospace; font-size: 12px;
-  overflow-x: auto; line-height: 1.45;
-  white-space: pre;
-}
+      .impl-block {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .impl-block h3 {
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        line-height: 1.45;
+        white-space: pre;
+      }
 
-.decision-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  padding: 14px 16px; margin-bottom: 12px;
-}
-.decision-card h3 { margin-bottom: 4px; }
-.decision-card .chosen {
-  background: var(--good-soft); color: var(--good); display: inline-block;
-  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
-  margin-bottom: 8px;
-}
-.decision-card p { font-size: 13px; margin-bottom: 6px; }
-.decision-card .alt { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.decision-card .alt strong { color: var(--text); }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>Referral System — design</h1>
-  <p class="lead">Multi-tier виральна механіка. Запросив друга → ти L1 його реферер. Друг запросив когось → той L2 для тебе. Дохід — % від prizes твоїх рефералів. Замикає viral acquisition + monetization з retention loop.</p>
+      .decision-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .decision-card h3 {
+        margin-bottom: 4px;
+      }
+      .decision-card .chosen {
+        background: var(--good-soft);
+        color: var(--good);
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+      }
+      .decision-card p {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .decision-card .alt {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .decision-card .alt strong {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Referral System — design</h1>
+      <p class="lead">
+        Multi-tier виральна механіка. Запросив друга → ти L1 його реферер. Друг запросив когось →
+        той L2 для тебе. Дохід — % від prizes твоїх рефералів. Замикає viral acquisition +
+        monetization з retention loop.
+      </p>
 
-  <div class="tld">
-    <strong>NOTE:</strong> Цей mockup показує структуру UI. Конкретні числа ($50, 5%/1%) — illustrative. Canonical per-currency rates у <code>docs/REFERRAL_SYSTEM.md</code> §5: USD soft 5%/1%, Stars 3%/0.5%, TON 2.5%/0.5%. Welcome bonus cut з $100 → $25.
-  </div>
+      <div class="tld">
+        <strong>NOTE:</strong> Цей mockup показує структуру UI. Конкретні числа ($50, 5%/1%) —
+        illustrative. Canonical per-currency rates у <code>docs/REFERRAL_SYSTEM.md</code> §5: USD
+        soft 5%/1%, Stars 3%/0.5%, TON 2.5%/0.5%. Welcome bonus cut з $100 → $25.
+      </div>
 
-  <input class="tab-radio" type="radio" name="tabs" id="t-arch" checked>
-  <input class="tab-radio" type="radio" name="tabs" id="t-econ">
-  <input class="tab-radio" type="radio" name="tabs" id="t-ui">
-  <input class="tab-radio" type="radio" name="tabs" id="t-impl">
-  <input class="tab-radio" type="radio" name="tabs" id="t-decisions">
+      <input class="tab-radio" type="radio" name="tabs" id="t-arch" checked />
+      <input class="tab-radio" type="radio" name="tabs" id="t-econ" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-ui" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-impl" />
+      <input class="tab-radio" type="radio" name="tabs" id="t-decisions" />
 
-  <div class="tabs">
-    <label class="tab" for="t-arch">Architecture</label>
-    <label class="tab" for="t-econ">Economy</label>
-    <label class="tab" for="t-ui">UI surfaces</label>
-    <label class="tab" for="t-impl">Implementation</label>
-    <label class="tab" for="t-decisions">Decisions</label>
-  </div>
+      <div class="tabs">
+        <label class="tab" for="t-arch">Architecture</label>
+        <label class="tab" for="t-econ">Economy</label>
+        <label class="tab" for="t-ui">UI surfaces</label>
+        <label class="tab" for="t-impl">Implementation</label>
+        <label class="tab" for="t-decisions">Decisions</label>
+      </div>
 
-  <div class="panel" id="panel-arch">
-    <h2 style="margin-top: 0;">Tier tree</h2>
-    <div class="diagram">
-      <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" style="max-width: 700px;">
-        <circle cx="350" cy="50" r="28" fill="#d4441c" stroke="#1a1814" stroke-width="2"/>
-        <text x="350" y="55" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="13" font-weight="700">YOU</text>
-        <line x1="350" y1="78" x2="180" y2="148" stroke="#1a1814" stroke-width="1.5"/>
-        <line x1="350" y1="78" x2="350" y2="148" stroke="#1a1814" stroke-width="1.5"/>
-        <line x1="350" y1="78" x2="520" y2="148" stroke="#1a1814" stroke-width="1.5"/>
-        <circle cx="180" cy="170" r="22" fill="#5a8a4a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="180" y="174" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="11" font-weight="700">A</text>
-        <text x="180" y="208" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="11" font-weight="700">L1</text>
-        <circle cx="350" cy="170" r="22" fill="#4a6a8a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="350" y="174" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="11" font-weight="700">M</text>
-        <text x="350" y="208" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="11" font-weight="700">L1</text>
-        <circle cx="520" cy="170" r="22" fill="#8a5a4a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="520" y="174" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="11" font-weight="700">K</text>
-        <text x="520" y="208" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="11" font-weight="700">L1</text>
-        <line x1="350" y1="192" x2="290" y2="248" stroke="#1a1814" stroke-width="1.5" stroke-dasharray="3,2"/>
-        <line x1="350" y1="192" x2="410" y2="248" stroke="#1a1814" stroke-width="1.5" stroke-dasharray="3,2"/>
-        <line x1="520" y1="192" x2="580" y2="248" stroke="#1a1814" stroke-width="1.5" stroke-dasharray="3,2"/>
-        <circle cx="290" cy="270" r="18" fill="#6a4a8a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="290" y="274" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="10" font-weight="700">B</text>
-        <text x="290" y="304" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="10" font-weight="700">L2</text>
-        <circle cx="410" cy="270" r="18" fill="#8a8a4a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="410" y="274" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="10" font-weight="700">V</text>
-        <text x="410" y="304" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="10" font-weight="700">L2</text>
-        <circle cx="580" cy="270" r="18" fill="#4a8a8a" stroke="#1a1814" stroke-width="1.5"/>
-        <text x="580" y="274" text-anchor="middle" fill="#fff" font-family="ui-monospace, monospace" font-size="10" font-weight="700">P</text>
-        <text x="580" y="304" text-anchor="middle" fill="#1a1814" font-family="ui-monospace, monospace" font-size="10" font-weight="700">L2</text>
-        <line x1="40" y1="320" x2="660" y2="320" stroke="#5b6272" stroke-width="0.5" stroke-dasharray="2,2"/>
-        <text x="40" y="318" fill="#5b6272" font-family="ui-monospace, monospace" font-size="9">L3+ NOT TRACKED</text>
-      </svg>
+      <div class="panel" id="panel-arch">
+        <h2 style="margin-top: 0">Tier tree</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" style="max-width: 700px">
+            <circle cx="350" cy="50" r="28" fill="#d4441c" stroke="#1a1814" stroke-width="2" />
+            <text
+              x="350"
+              y="55"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="13"
+              font-weight="700"
+            >
+              YOU
+            </text>
+            <line x1="350" y1="78" x2="180" y2="148" stroke="#1a1814" stroke-width="1.5" />
+            <line x1="350" y1="78" x2="350" y2="148" stroke="#1a1814" stroke-width="1.5" />
+            <line x1="350" y1="78" x2="520" y2="148" stroke="#1a1814" stroke-width="1.5" />
+            <circle cx="180" cy="170" r="22" fill="#5a8a4a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="180"
+              y="174"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              A
+            </text>
+            <text
+              x="180"
+              y="208"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              L1
+            </text>
+            <circle cx="350" cy="170" r="22" fill="#4a6a8a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="350"
+              y="174"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              M
+            </text>
+            <text
+              x="350"
+              y="208"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              L1
+            </text>
+            <circle cx="520" cy="170" r="22" fill="#8a5a4a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="520"
+              y="174"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              K
+            </text>
+            <text
+              x="520"
+              y="208"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="11"
+              font-weight="700"
+            >
+              L1
+            </text>
+            <line
+              x1="350"
+              y1="192"
+              x2="290"
+              y2="248"
+              stroke="#1a1814"
+              stroke-width="1.5"
+              stroke-dasharray="3,2"
+            />
+            <line
+              x1="350"
+              y1="192"
+              x2="410"
+              y2="248"
+              stroke="#1a1814"
+              stroke-width="1.5"
+              stroke-dasharray="3,2"
+            />
+            <line
+              x1="520"
+              y1="192"
+              x2="580"
+              y2="248"
+              stroke="#1a1814"
+              stroke-width="1.5"
+              stroke-dasharray="3,2"
+            />
+            <circle cx="290" cy="270" r="18" fill="#6a4a8a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="290"
+              y="274"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              B
+            </text>
+            <text
+              x="290"
+              y="304"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              L2
+            </text>
+            <circle cx="410" cy="270" r="18" fill="#8a8a4a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="410"
+              y="274"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              V
+            </text>
+            <text
+              x="410"
+              y="304"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              L2
+            </text>
+            <circle cx="580" cy="270" r="18" fill="#4a8a8a" stroke="#1a1814" stroke-width="1.5" />
+            <text
+              x="580"
+              y="274"
+              text-anchor="middle"
+              fill="#fff"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              P
+            </text>
+            <text
+              x="580"
+              y="304"
+              text-anchor="middle"
+              fill="#1a1814"
+              font-family="ui-monospace, monospace"
+              font-size="10"
+              font-weight="700"
+            >
+              L2
+            </text>
+            <line
+              x1="40"
+              y1="320"
+              x2="660"
+              y2="320"
+              stroke="#5b6272"
+              stroke-width="0.5"
+              stroke-dasharray="2,2"
+            />
+            <text x="40" y="318" fill="#5b6272" font-family="ui-monospace, monospace" font-size="9">
+              L3+ NOT TRACKED
+            </text>
+          </svg>
+        </div>
+
+        <h2>Referrals vs Friendships</h2>
+        <div class="split-grid">
+          <div class="concept-card refs">
+            <h3>Referrals (NEW)</h3>
+            <ul>
+              <li><b>Asymmetric</b></li>
+              <li><b>Immutable</b> after first set</li>
+              <li>One per user (0 or 1 referrer)</li>
+              <li>Storage: <code>users.referrer_user_id</code></li>
+              <li>Purpose: attribution + commission</li>
+            </ul>
+          </div>
+          <div class="concept-card friends">
+            <h3>Friendships (existing)</h3>
+            <ul>
+              <li><b>Symmetric</b></li>
+              <li>Many-to-many</li>
+              <li>Storage: <code>friendships</code> table</li>
+              <li>Purpose: friends leaderboard</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>Lifecycle</h2>
+        <div class="impl-block">
+          <h3>1. Share link</h3>
+          <p style="font-size: 13px">
+            Лінк <code>https://t.me/yourbot/app?startapp=ref_&lt;tg_id&gt;</code>
+          </p>
+        </div>
+        <div class="impl-block">
+          <h3>2. Friend opens</h3>
+          <p style="font-size: 13px">
+            TG SDK дає <code>startParam=ref_X</code>, frontend POST <code>/friends/referral</code>
+          </p>
+        </div>
+        <div class="impl-block">
+          <h3>3. Backend attribution</h3>
+          <p style="font-size: 13px">
+            Set <code>referrer_user_id</code> якщо новий юзер (60s window + 0 entries). Immutable
+            після цього.
+          </p>
+        </div>
+        <div class="impl-block">
+          <h3>4. First contest → unlock bonuses</h3>
+          <p style="font-size: 13px">
+            Referee + Recruiter bonuses unlock через <code>CurrencyService.transact()</code>
+          </p>
+        </div>
+        <div class="impl-block">
+          <h3>5. Friend wins → commission</h3>
+          <p style="font-size: 13px">
+            У <code>contests.finalize</code>: walk up chain max 2 hops, pay commissions per currency
+          </p>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-econ">
+        <p class="lead">
+          See REFERRAL_SYSTEM.md §5 для canonical per-currency rates. Економіка моделюється у
+          <code>docs/mockups/referral-economics.html</code>.
+        </p>
+      </div>
+
+      <div class="panel" id="panel-ui">
+        <div class="mockups-grid">
+          <div class="mockup-stack">
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [1/5] PROFILE — Referrals section
+              </div>
+              <div class="paper-frame">
+                <div class="refs-block">
+                  <div class="refs-headline">
+                    <div>
+                      <div class="v">12</div>
+                      <div class="l">friends invited</div>
+                    </div>
+                    <div style="text-align: right">
+                      <div class="v" style="color: var(--hl-green)">$487</div>
+                      <div class="l">earned all-time</div>
+                    </div>
+                  </div>
+                  <div class="refs-earnings">
+                    <div class="refs-earnings-row">
+                      <div>
+                        <span class="lvl-tag">L1</span
+                        ><span style="font-size: 11px; color: var(--ink-soft)">8 active</span>
+                      </div>
+                      <div class="v">$398</div>
+                    </div>
+                    <div class="refs-earnings-row">
+                      <div>
+                        <span class="lvl-tag">L2</span
+                        ><span style="font-size: 11px; color: var(--ink-soft)">4 active</span>
+                      </div>
+                      <div class="v">$89</div>
+                    </div>
+                  </div>
+                  <div class="tree">
+                    <div class="tree-row">
+                      <span class="lvl">L1</span
+                      ><span style="display: flex"
+                        ><span class="av-mini av-1">A</span><span class="av-mini av-2">M</span
+                        ><span class="av-mini av-3">K</span><span class="av-mini av-4">D</span
+                        ><span class="av-mini av-5">N</span><span class="av-mini av-6">R</span
+                        ><span class="av-mini av-7">S</span
+                        ><span class="av-mini av-more">+1</span></span
+                      ><span class="info">8 ACTIVE</span>
+                    </div>
+                    <div class="tree-row">
+                      <span class="lvl">L2</span
+                      ><span style="display: flex"
+                        ><span class="av-mini av-2">B</span><span class="av-mini av-5">V</span
+                        ><span class="av-mini av-1">P</span
+                        ><span class="av-mini av-more">+1</span></span
+                      ><span class="info">4 ACTIVE</span>
+                    </div>
+                  </div>
+                  <div class="refs-cta">
+                    <button class="btn-accent">📨 Invite friends · earn 5% from wins</button>
+                    <div class="btn-row">
+                      <button class="btn-secondary">⌬ Copy link</button
+                      ><button class="btn-secondary">▢ Show QR</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">[2/5] LOBBY — Invite teaser</div>
+              <div class="paper-frame">
+                <div class="lobby-header">
+                  <div class="lobby-h-left">
+                    <div class="av-circ">T</div>
+                    <div>
+                      <div class="lobby-greeting">Hi, Taras</div>
+                      <div class="lobby-balance">$1,247.50 BAL</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="invite-banner">
+                  <div class="invite-banner-h">
+                    <span class="invite-banner-tag">Invite friends</span
+                    ><span class="invite-banner-tag" style="color: var(--paper-accent)"
+                      >+$25 EACH</span
+                    >
+                  </div>
+                  <div class="invite-banner-headline">
+                    Invite 1 friend → <b>+$25</b><br />and <b>5% from their wins forever</b>
+                  </div>
+                  <div class="invite-banner-sub">
+                    When they join via your link and play, you both get <b>+$25</b>.
+                  </div>
+                  <button class="btn-accent" style="background: var(--ink); color: var(--paper)">
+                    📨 Send invite link
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [3/5] BOT DM — friend's win commission
+              </div>
+              <div class="paper-frame">
+                <div class="tg-chat">
+                  <div class="tg-bubble">
+                    <div>
+                      <span class="tg-bubble-emoji">🎉</span
+                      ><strong>Andriy just won $87 in Bear Trap</strong>
+                    </div>
+                    <div style="margin-top: 4px; font-size: 12px; color: #5b6272">
+                      L1 commission: 5% of his prize
+                    </div>
+                    <div class="tg-bubble-amount">+$4.35 to your balance</div>
+                    <div class="tg-bubble-row">
+                      <div class="tg-bubble-btn">Open app</div>
+                      <div class="tg-bubble-btn secondary">Invite more</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [4/5] In-app toast on friend's win
+              </div>
+              <div class="paper-frame">
+                <div class="result-screen">
+                  <div class="result-toast">
+                    <span class="emoji">💸</span>
+                    <span class="text"
+                      ><b>+$4.35</b> from <b>Andriy's</b> win<span class="small"
+                        >L1 commission · 5% of $87 prize</span
+                      ></span
+                    >
+                    <span class="arrow">›</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="mock-title" style="margin-bottom: 6px">
+                [5/5] WELCOME — referee's first launch
+              </div>
+              <div class="paper-frame">
+                <div class="welcome">
+                  <div class="welcome-emoji">👋</div>
+                  <div class="welcome-h">Welcome, Bohdan!</div>
+                  <div class="welcome-sub"><b>Andriy</b> invited you to Fantasy Token League.</div>
+                  <div class="welcome-bonus-card">
+                    <div class="welcome-bonus-card-row">
+                      <span class="l">Welcome bonus</span><span class="v">$25</span>
+                    </div>
+                    <div class="welcome-bonus-card-row">
+                      <span class="l">Referral bonus (after 1st game)</span
+                      ><span class="v">+$25</span>
+                    </div>
+                    <div
+                      class="welcome-bonus-card-row"
+                      style="
+                        font-weight: 700;
+                        padding-top: 8px;
+                        border-top-color: var(--ink);
+                        border-top-width: 1.5px;
+                      "
+                    >
+                      <span class="l" style="color: var(--ink); font-weight: 700"
+                        >Total ready to play</span
+                      ><span class="v" style="font-size: 16px">$50</span>
+                    </div>
+                  </div>
+                  <div class="welcome-cta">Find a contest →</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="notes">
+            <div class="note">
+              <h3>
+                Profile — Referrals section<span class="note-tag tag-vir">primary surface</span>
+              </h3>
+              <p>
+                3 шари: headline cifri, earnings breakdown L1/L2, tree з аватарами, top earners
+                list. 3 CTA: Invite (primary), Copy link, Show QR.
+              </p>
+            </div>
+            <div class="note">
+              <h3>Lobby — Invite teaser<span class="note-tag tag-onb">onboarding</span></h3>
+              <p>
+                Conditional: тільки якщо 0 active referrals. Жовтий note bg. Headline з словом
+                "forever" — emotional anchor passive income.
+              </p>
+            </div>
+            <div class="note">
+              <h3>Bot DM<span class="note-tag tag-ret">retention killer</span></h3>
+              <p>
+                Найсильніший viral loop. Frequency cap: 1 msg/hour per recipient (group multiple
+                wins).
+              </p>
+            </div>
+            <div class="note">
+              <h3>In-app toast<span class="note-tag tag-ret">retention</span></h3>
+              <p>Slide-down 500ms. Чорний bg + accent border. Click → /me. Не auto-dismiss.</p>
+            </div>
+            <div class="note">
+              <h3>Welcome screen<span class="note-tag tag-onb">onboarding</span></h3>
+              <p>
+                Перший екран нового referee. Соц. proof "Andriy invited you" + bonus card з total
+                ready to play.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-impl">
+        <p class="lead">
+          See REFERRAL_SYSTEM.md §7-13 для повного implementation spec (DB schema, pure functions,
+          backend wiring, API endpoints, bot DM, INVARIANTS, day-by-day plan).
+        </p>
+      </div>
+
+      <div class="panel" id="panel-decisions">
+        <p class="lead">See REFERRAL_SYSTEM.md §14 для open questions і decisions deferred.</p>
+      </div>
     </div>
-
-    <h2>Referrals vs Friendships</h2>
-    <div class="split-grid">
-      <div class="concept-card refs">
-        <h3>Referrals (NEW)</h3>
-        <ul>
-          <li><b>Asymmetric</b></li>
-          <li><b>Immutable</b> after first set</li>
-          <li>One per user (0 or 1 referrer)</li>
-          <li>Storage: <code>users.referrer_user_id</code></li>
-          <li>Purpose: attribution + commission</li>
-        </ul>
-      </div>
-      <div class="concept-card friends">
-        <h3>Friendships (existing)</h3>
-        <ul>
-          <li><b>Symmetric</b></li>
-          <li>Many-to-many</li>
-          <li>Storage: <code>friendships</code> table</li>
-          <li>Purpose: friends leaderboard</li>
-        </ul>
-      </div>
-    </div>
-
-    <h2>Lifecycle</h2>
-    <div class="impl-block"><h3>1. Share link</h3><p style="font-size: 13px;">Лінк <code>https://t.me/yourbot/app?startapp=ref_&lt;tg_id&gt;</code></p></div>
-    <div class="impl-block"><h3>2. Friend opens</h3><p style="font-size: 13px;">TG SDK дає <code>startParam=ref_X</code>, frontend POST <code>/friends/referral</code></p></div>
-    <div class="impl-block"><h3>3. Backend attribution</h3><p style="font-size: 13px;">Set <code>referrer_user_id</code> якщо новий юзер (60s window + 0 entries). Immutable після цього.</p></div>
-    <div class="impl-block"><h3>4. First contest → unlock bonuses</h3><p style="font-size: 13px;">Referee + Recruiter bonuses unlock через <code>CurrencyService.transact()</code></p></div>
-    <div class="impl-block"><h3>5. Friend wins → commission</h3><p style="font-size: 13px;">У <code>contests.finalize</code>: walk up chain max 2 hops, pay commissions per currency</p></div>
-  </div>
-
-  <div class="panel" id="panel-econ">
-    <p class="lead">See REFERRAL_SYSTEM.md §5 для canonical per-currency rates. Економіка моделюється у <code>docs/mockups/referral-economics.html</code>.</p>
-  </div>
-
-  <div class="panel" id="panel-ui">
-    <div class="mockups-grid">
-      <div class="mockup-stack">
-        <div>
-          <div class="mock-title" style="margin-bottom: 6px;">[1/5] PROFILE — Referrals section</div>
-          <div class="paper-frame">
-            <div class="refs-block">
-              <div class="refs-headline">
-                <div><div class="v">12</div><div class="l">friends invited</div></div>
-                <div style="text-align: right;"><div class="v" style="color: var(--hl-green);">$487</div><div class="l">earned all-time</div></div>
-              </div>
-              <div class="refs-earnings">
-                <div class="refs-earnings-row"><div><span class="lvl-tag">L1</span><span style="font-size: 11px; color: var(--ink-soft);">8 active</span></div><div class="v">$398</div></div>
-                <div class="refs-earnings-row"><div><span class="lvl-tag">L2</span><span style="font-size: 11px; color: var(--ink-soft);">4 active</span></div><div class="v">$89</div></div>
-              </div>
-              <div class="tree">
-                <div class="tree-row"><span class="lvl">L1</span><span style="display: flex;"><span class="av-mini av-1">A</span><span class="av-mini av-2">M</span><span class="av-mini av-3">K</span><span class="av-mini av-4">D</span><span class="av-mini av-5">N</span><span class="av-mini av-6">R</span><span class="av-mini av-7">S</span><span class="av-mini av-more">+1</span></span><span class="info">8 ACTIVE</span></div>
-                <div class="tree-row"><span class="lvl">L2</span><span style="display: flex;"><span class="av-mini av-2">B</span><span class="av-mini av-5">V</span><span class="av-mini av-1">P</span><span class="av-mini av-more">+1</span></span><span class="info">4 ACTIVE</span></div>
-              </div>
-              <div class="refs-cta">
-                <button class="btn-accent">📨 Invite friends · earn 5% from wins</button>
-                <div class="btn-row"><button class="btn-secondary">⌬ Copy link</button><button class="btn-secondary">▢ Show QR</button></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="mock-title" style="margin-bottom: 6px;">[2/5] LOBBY — Invite teaser</div>
-          <div class="paper-frame">
-            <div class="lobby-header">
-              <div class="lobby-h-left"><div class="av-circ">T</div><div><div class="lobby-greeting">Hi, Taras</div><div class="lobby-balance">$1,247.50 BAL</div></div></div>
-            </div>
-            <div class="invite-banner">
-              <div class="invite-banner-h"><span class="invite-banner-tag">Invite friends</span><span class="invite-banner-tag" style="color: var(--paper-accent);">+$25 EACH</span></div>
-              <div class="invite-banner-headline">Invite 1 friend → <b>+$25</b><br>and <b>5% from their wins forever</b></div>
-              <div class="invite-banner-sub">When they join via your link and play, you both get <b>+$25</b>.</div>
-              <button class="btn-accent" style="background: var(--ink); color: var(--paper);">📨 Send invite link</button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="mock-title" style="margin-bottom: 6px;">[3/5] BOT DM — friend's win commission</div>
-          <div class="paper-frame">
-            <div class="tg-chat">
-              <div class="tg-bubble">
-                <div><span class="tg-bubble-emoji">🎉</span><strong>Andriy just won $87 in Bear Trap</strong></div>
-                <div style="margin-top: 4px; font-size: 12px; color: #5b6272;">L1 commission: 5% of his prize</div>
-                <div class="tg-bubble-amount">+$4.35 to your balance</div>
-                <div class="tg-bubble-row"><div class="tg-bubble-btn">Open app</div><div class="tg-bubble-btn secondary">Invite more</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="mock-title" style="margin-bottom: 6px;">[4/5] In-app toast on friend's win</div>
-          <div class="paper-frame">
-            <div class="result-screen">
-              <div class="result-toast">
-                <span class="emoji">💸</span>
-                <span class="text"><b>+$4.35</b> from <b>Andriy's</b> win<span class="small">L1 commission · 5% of $87 prize</span></span>
-                <span class="arrow">›</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="mock-title" style="margin-bottom: 6px;">[5/5] WELCOME — referee's first launch</div>
-          <div class="paper-frame">
-            <div class="welcome">
-              <div class="welcome-emoji">👋</div>
-              <div class="welcome-h">Welcome, Bohdan!</div>
-              <div class="welcome-sub"><b>Andriy</b> invited you to Fantasy Token League.</div>
-              <div class="welcome-bonus-card">
-                <div class="welcome-bonus-card-row"><span class="l">Welcome bonus</span><span class="v">$25</span></div>
-                <div class="welcome-bonus-card-row"><span class="l">Referral bonus (after 1st game)</span><span class="v">+$25</span></div>
-                <div class="welcome-bonus-card-row" style="font-weight: 700; padding-top: 8px; border-top-color: var(--ink); border-top-width: 1.5px;"><span class="l" style="color: var(--ink); font-weight: 700;">Total ready to play</span><span class="v" style="font-size: 16px;">$50</span></div>
-              </div>
-              <div class="welcome-cta">Find a contest →</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="notes">
-        <div class="note">
-          <h3>Profile — Referrals section<span class="note-tag tag-vir">primary surface</span></h3>
-          <p>3 шари: headline cifri, earnings breakdown L1/L2, tree з аватарами, top earners list. 3 CTA: Invite (primary), Copy link, Show QR.</p>
-        </div>
-        <div class="note">
-          <h3>Lobby — Invite teaser<span class="note-tag tag-onb">onboarding</span></h3>
-          <p>Conditional: тільки якщо 0 active referrals. Жовтий note bg. Headline з словом "forever" — emotional anchor passive income.</p>
-        </div>
-        <div class="note">
-          <h3>Bot DM<span class="note-tag tag-ret">retention killer</span></h3>
-          <p>Найсильніший viral loop. Frequency cap: 1 msg/hour per recipient (group multiple wins).</p>
-        </div>
-        <div class="note">
-          <h3>In-app toast<span class="note-tag tag-ret">retention</span></h3>
-          <p>Slide-down 500ms. Чорний bg + accent border. Click → /me. Не auto-dismiss.</p>
-        </div>
-        <div class="note">
-          <h3>Welcome screen<span class="note-tag tag-onb">onboarding</span></h3>
-          <p>Перший екран нового referee. Соц. proof "Andriy invited you" + bonus card з total ready to play.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel" id="panel-impl">
-    <p class="lead">See REFERRAL_SYSTEM.md §7-13 для повного implementation spec (DB schema, pure functions, backend wiring, API endpoints, bot DM, INVARIANTS, day-by-day plan).</p>
-  </div>
-
-  <div class="panel" id="panel-decisions">
-    <p class="lead">See REFERRAL_SYSTEM.md §14 для open questions і decisions deferred.</p>
-  </div>
-
-</div>
-</body>
+  </body>
 </html>
