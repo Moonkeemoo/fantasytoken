@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 import { Lobby } from './features/lobby/Lobby.js';
 import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
 import { useMe } from './features/me/useMe.js';
@@ -8,6 +8,8 @@ import { Live } from './features/live/Live.js';
 import { LiveList } from './features/live-list/LiveList.js';
 import { Rankings } from './features/rankings/Rankings.js';
 import { Result } from './features/result/Result.js';
+import { Loading } from './features/loading/Loading.js';
+import { Tutorial } from './features/tutorial/Tutorial.js';
 
 function ScreenPlaceholder({ title }: { title: string }) {
   const me = useMe();
@@ -40,7 +42,8 @@ function ScreenPlaceholder({ title }: { title: string }) {
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/lobby" replace />} />
+      <Route path="/" element={<Loading />} />
+      <Route path="/tutorial" element={<Tutorial />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/contests/:id/build" element={<TeamBuilder />} />
       <Route path="/contests/:id/live" element={<Live />} />

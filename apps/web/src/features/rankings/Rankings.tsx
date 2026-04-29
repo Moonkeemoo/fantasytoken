@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/Button.js';
 import { Label } from '../../components/ui/Label.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
+import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
 
 const BOT_HANDLE = 'fantasytokenbot';
@@ -37,7 +38,7 @@ export function Rankings() {
     staleTime: 30_000,
   });
 
-  if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (me.isLoading) return <LoadingSplash />;
   if (me.isError || !me.data)
     return <div className="p-6 text-hl-red">error: {String(me.error)}</div>;
 

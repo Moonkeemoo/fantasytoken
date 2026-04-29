@@ -10,6 +10,7 @@ import { ContestList } from './ContestList.js';
 import { ActiveBanner } from './ActiveBanner.js';
 import { BottomNav } from './BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
+import { LoadingSplash } from '../loading/LoadingSplash.js';
 
 const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 
@@ -39,7 +40,7 @@ export function Lobby() {
   // Banner shows ANY user-entered contest that isn't yet finalized — quick jump to Live.
   const myInProgress = (my.data?.items ?? []).filter((c) => IN_PROGRESS_STATUSES.has(c.status));
 
-  if (me.isLoading) return <div className="p-6 text-muted">loading…</div>;
+  if (me.isLoading) return <LoadingSplash />;
   if (me.isError || !me.data)
     return <div className="p-6 text-hl-red">error: {String(me.error)}</div>;
 
