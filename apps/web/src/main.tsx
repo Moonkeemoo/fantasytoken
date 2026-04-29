@@ -13,6 +13,11 @@ import { queryClient } from './lib/query-client.js';
 WebApp.ready();
 WebApp.expand();
 
+// Lock viewport zoom. iOS Safari (which TG Mini Apps run on) ignores
+// `user-scalable=no`, so we also block the gesture events explicitly.
+window.addEventListener('gesturestart', (e) => e.preventDefault());
+window.addEventListener('dblclick', (e) => e.preventDefault());
+
 // Default to same-origin manifest so we don't have to set an env var per
 // environment (Vercel preview / production / local). Override via
 // VITE_TONCONNECT_MANIFEST_URL only if hosting the manifest elsewhere.

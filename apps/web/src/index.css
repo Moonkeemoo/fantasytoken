@@ -8,6 +8,11 @@ body {
   background: #f6f1e8; /* paper */
   color: #1a1814; /* ink */
   font-family: 'Inter', system-ui, sans-serif;
+  /* Pin zoom: pan-only touch action blocks pinch + double-tap zoom on iOS Safari,
+   * which is the engine TG Mini Apps use. text-size-adjust blocks the rotate-zoom hack. */
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
