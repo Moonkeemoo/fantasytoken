@@ -35,6 +35,9 @@ import { createResultRepo } from './modules/result/result.repo.js';
 import { createResultService } from './modules/result/result.service.js';
 import { makeResultRoutes } from './modules/result/result.routes.js';
 import { createReplenishService } from './modules/contests/contests.replenish.js';
+import { createShareRepo } from './modules/share/share.repo.js';
+import { createShareService } from './modules/share/share.service.js';
+import { makeShareRoutes } from './modules/share/share.routes.js';
 import { createFriendsRepo } from './modules/friends/friends.repo.js';
 import { createFriendsService } from './modules/friends/friends.service.js';
 import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
@@ -143,6 +146,9 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const rankingsRepo = createRankingsRepo(deps.db);
   const rankings = createRankingsService({ repo: rankingsRepo });
 
+  const shareRepo = createShareRepo(deps.db);
+  const share = createShareService(shareRepo);
+
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
   await app.register(makeTokensRoutes({ tokens }), { prefix: '/tokens' });
@@ -151,6 +157,9 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
   await app.register(makeFriendsRoutes({ friends, users }), { prefix: '/friends' });
+  await app.register(makeShareRoutes({ share, apiBaseUrl: deps.config.PUBLIC_API_URL }), {
+    prefix: '/share',
+  });
   await app.register(makeRankingsRoutes({ rankings, friends, users }), { prefix: '/rankings' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 

@@ -28,6 +28,10 @@ const ConfigSchema = z.object({
 
   COINGECKO_BASE_URL: z.string().url().default('https://api.coingecko.com/api/v3'),
   COINGECKO_API_KEY: z.string().optional(),
+
+  // Public base URL the api is reachable on — used to build absolute og:image links.
+  // Must match what's in the Vercel/Railway domain config; falls back to localhost in dev.
+  PUBLIC_API_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

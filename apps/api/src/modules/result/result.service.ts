@@ -92,6 +92,7 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
 
       return {
         contestId: contest.id,
+        entryId: myEntry.entryId,
         contestName: contest.name,
         outcome,
         prizeCents: myEntry.prizeCents,
