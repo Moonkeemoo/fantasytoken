@@ -8,7 +8,10 @@ const ConfigSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TON_NETWORK: z.enum(['mainnet', 'testnet']).default('mainnet'),
 
-  WELCOME_BONUS_USD_CENTS: z.coerce.number().int().nonnegative().default(10_000),
+  // Default $25 (was $100) — REFERRAL_SYSTEM.md §3.1. Lower per-signup mint
+  // keeps soft USD inflation bounded; the rest of the welcome economy comes
+  // from referee + recruiter unlocks ($25 each, soft USD only).
+  WELCOME_BONUS_USD_CENTS: z.coerce.number().int().nonnegative().default(2_500),
   RAKE_PCT: z.coerce.number().int().min(0).max(50).default(10),
   BOT_MIN_FILLER: z.coerce.number().int().nonnegative().default(20),
   BOT_RATIO: z.coerce.number().int().nonnegative().default(3),

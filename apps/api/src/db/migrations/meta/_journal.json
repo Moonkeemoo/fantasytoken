@@ -78,6 +78,13 @@
       "when": 1777481234900,
       "tag": "0010_add_tutorial_done_at",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777481235000,
+      "tag": "0011_referrals",
+      "breakpoints": true
     }
   ]
 }

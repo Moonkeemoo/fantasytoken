@@ -17,3 +17,5 @@ export * from './price_snapshots.js';
 export * from './friendships.js';
 export * from './seasons.js';
 export * from './xp_events.js';
+export * from './referral_payouts.js';
+export * from './referral_signup_bonuses.js';
