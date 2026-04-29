@@ -76,11 +76,11 @@ export function createContestsFinalizeRepo(
         prices.set(s.symbol, cur);
       }
 
-      // 4. Pure compute. Pool is derived from real entries × fee × (1-rake);
-      // prize_pool_cents column acts as guaranteed minimum (overlay).
-      const realCount = inputEntries.filter((e) => !e.isBot).length;
+      // 4. Pure compute. Pool = (real + bot) × fee × (1 - rake) — bots pay entry too.
+      // prize_pool_cents column still acts as guaranteed-minimum floor.
+      const totalCount = inputEntries.length;
       const actualPoolCents = computeActualPrizeCents({
-        realCount,
+        totalCount,
         entryFeeCents: Number(contest.entryFeeCents),
         rakePct,
         guaranteedPoolCents: Number(contest.prizePoolCents),

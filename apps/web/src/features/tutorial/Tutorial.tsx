@@ -99,9 +99,8 @@ function PickLeague() {
         <Card
           key={r.name}
           {...(r.highlight ? { shadow: true } : {})}
-          className={`flex items-center justify-between !px-[14px] !py-[14px] ${
-            r.highlight ? '!bg-accent' : ''
-          }`}
+          className="flex items-center justify-between !px-[14px] !py-[14px]"
+          style={r.highlight ? { backgroundColor: '#facc15' } : undefined}
         >
           <div>
             <div className="text-[14px] font-bold leading-tight">{r.name}</div>
@@ -191,10 +190,12 @@ function Podium({
       <div className="font-mono text-[11px] font-bold">{prize}</div>
       <div className="mt-1 text-[20px] leading-none">{crown ? '🏆' : ' '}</div>
       <div
-        className={`mt-1 flex w-[80px] items-center justify-center border-[2px] border-ink ${
-          highlight ? 'bg-accent' : 'bg-paper'
-        }`}
-        style={{ height: `${height}px`, boxShadow: '4px 4px 0 #1a1814' }}
+        className="mt-1 flex w-[80px] items-center justify-center border-[2px] border-ink"
+        style={{
+          height: `${height}px`,
+          boxShadow: '4px 4px 0 #1a1814',
+          backgroundColor: highlight ? '#facc15' : '#f6f1e8',
+        }}
       >
         <span className="text-[36px] font-extrabold leading-none">{rank}</span>
       </div>

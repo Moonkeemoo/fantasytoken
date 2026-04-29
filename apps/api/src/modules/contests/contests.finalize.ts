@@ -59,18 +59,22 @@ export function finalizeContest(args: FinalizeArgs): FinalizeResult {
     prizeCents: 0,
   }));
 
-  const realScored = scored.filter((s) => !s.entry.isBot);
-  const realCount = realScored.length;
-  const curve = computePrizeCurve(realCount, prizePoolCents);
+  // Bots pay entry too, so the curve is computed on TOTAL ranking (real + bot).
+  // Bot ranks still get prizeCents recorded on their entry — but no payout transaction
+  // is queued because there's no user to credit (the cents stay with the platform on
+  // top of rake). Real users in payable ranks get a transaction in `payouts`.
+  const totalCount = scored.length;
+  const curve = computePrizeCurve(totalCount, prizePoolCents);
 
   const payouts: PayoutPlan[] = [];
-  realScored.forEach((s, i) => {
-    const realRank = i + 1;
-    const cents = curve.get(realRank) ?? 0;
-    if (cents > 0 && s.entry.userId) {
+  scored.forEach((s, i) => {
+    const totalRank = i + 1;
+    const cents = curve.get(totalRank) ?? 0;
+    if (cents <= 0) return;
+    const display = displayEntries.find((d) => d.entryId === s.entry.entryId);
+    if (display) display.prizeCents = cents;
+    if (s.entry.userId) {
       payouts.push({ entryId: s.entry.entryId, userId: s.entry.userId, cents });
-      const display = displayEntries.find((d) => d.entryId === s.entry.entryId);
-      if (display) display.prizeCents = cents;
     }
   });
 

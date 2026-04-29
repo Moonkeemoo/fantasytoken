@@ -9,7 +9,7 @@ const MAX_CENTS_AS_NUMBER = BigInt(Number.MAX_SAFE_INTEGER);
 function rowFromDbRow(
   row: typeof contests.$inferSelect,
   spotsFilled: number,
-  realSpotsFilled: number,
+  _realSpotsFilled: number,
   rakePct: number,
   userHasEntered: boolean,
 ): ContestRowFromRepo {
@@ -20,8 +20,12 @@ function rowFromDbRow(
       `contest ${row.id} has cents value exceeding Number.MAX_SAFE_INTEGER — wire shape would lose precision`,
     );
   }
+  // Projected pool: pre-lock we don't yet know how many bots will fill, so we
+  // assume the room reaches maxCapacity. Once locked/finalized we use the actual
+  // total entry count (which equals maxCapacity in normal flows).
+  const poolCount = row.status === 'scheduled' ? row.maxCapacity : spotsFilled;
   const dynamicPool = computeActualPrizeCents({
-    realCount: realSpotsFilled,
+    totalCount: poolCount,
     entryFeeCents: Number(row.entryFeeCents),
     rakePct,
     guaranteedPoolCents: Number(row.prizePoolCents),

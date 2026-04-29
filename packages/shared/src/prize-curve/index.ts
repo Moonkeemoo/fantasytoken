@@ -1,67 +1,56 @@
 /**
- * Dynamic prize pool: realCount × entryFeeCents × (1 - rakePct/100), with optional
- * house-funded overlay floor (guaranteedPoolCents). Bots don't contribute.
+ * Dynamic prize pool. Every entry (real + bot) contributes its entry_fee, then
+ * the platform takes rake. Optional house-funded overlay floor (guaranteedPoolCents).
  */
 export function computeActualPrizeCents(args: {
-  realCount: number;
+  /** Total entries that paid in (real + bot). */
+  totalCount: number;
   entryFeeCents: number;
   rakePct: number;
   guaranteedPoolCents?: number;
 }): number {
-  const collected = Math.max(0, args.realCount) * Math.max(0, args.entryFeeCents);
+  const collected = Math.max(0, args.totalCount) * Math.max(0, args.entryFeeCents);
   const afterRake = Math.floor((collected * (100 - args.rakePct)) / 100);
   return Math.max(afterRake, args.guaranteedPoolCents ?? 0);
 }
 
-/**
- * Hardcoded prize curve (top 30% of real entries pay).
- * Returns map of rank (1-indexed) → cents.
- * Total payout == prizePoolCents (rounding remainder → 1st place).
+/** Geometric decay applied uniformly across all paying ranks (Papaya / Solitaire Cash style):
+ *
+ *   share[i] = r^i / Σ r^j   for i = 0..payingCount-1
+ *
+ * One smooth curve — no special-case top-3 vs rest, no leftover. Decay r=0.65
+ * keeps top-3 in the 70-80% band across realistic room sizes (3..100). Pays the
+ * top 30% of entries (with a floor of 3 ranks for tiny rooms; full room when N ≤ 3).
  */
-export function computePrizeCurve(realCount: number, prizePoolCents: number): Map<number, number> {
+const DECAY = 0.65;
+const PAY_FRACTION = 0.3;
+
+export function computePrizeCurve(totalCount: number, prizePoolCents: number): Map<number, number> {
   const result = new Map<number, number>();
-  if (realCount <= 0 || prizePoolCents <= 0) return result;
+  if (totalCount <= 0 || prizePoolCents <= 0) return result;
 
-  const payingCount = Math.max(1, Math.floor(realCount * 0.3));
+  const payingCount =
+    totalCount <= 3 ? totalCount : Math.max(3, Math.floor(totalCount * PAY_FRACTION));
 
-  // Bucket fractions (must sum to 1).
-  // 1st: 30%, 2nd: 18%, 3rd: 12%, 4th: 7%, 5th: 5%, 6-10 each 3%, 11-20 each 1%, 21+ even split of 3%.
-  const buckets: Array<{ from: number; to: number; pctEach: number }> = [
-    { from: 1, to: 1, pctEach: 0.3 },
-    { from: 2, to: 2, pctEach: 0.18 },
-    { from: 3, to: 3, pctEach: 0.12 },
-    { from: 4, to: 4, pctEach: 0.07 },
-    { from: 5, to: 5, pctEach: 0.05 },
-    { from: 6, to: 10, pctEach: 0.03 },
-    { from: 11, to: 20, pctEach: 0.01 },
-  ];
-  if (payingCount > 20) {
-    const tailRanks = payingCount - 20;
-    const eachTail = 0.03 / tailRanks;
-    buckets.push({ from: 21, to: payingCount, pctEach: eachTail });
+  // Build geometric weights w_i = r^i and their normalisation factor.
+  const weights: number[] = [];
+  let totalWeight = 0;
+  let w = 1;
+  for (let i = 0; i < payingCount; i++) {
+    weights.push(w);
+    totalWeight += w;
+    w *= DECAY;
   }
-
-  // Take only buckets within payingCount.
-  const usedBuckets = buckets
-    .filter((b) => b.from <= payingCount)
-    .map((b) => ({ from: b.from, to: Math.min(b.to, payingCount), pctEach: b.pctEach }));
-
-  // Renormalize so used fractions sum to 1.
-  const totalPct = usedBuckets.reduce((s, b) => s + b.pctEach * (b.to - b.from + 1), 0);
-  const norm = totalPct === 0 ? 1 : 1 / totalPct;
 
   let assigned = 0;
-  for (const b of usedBuckets) {
-    const cents = Math.floor(prizePoolCents * b.pctEach * norm);
-    for (let r = b.from; r <= b.to; r++) {
-      result.set(r, cents);
-      assigned += cents;
-    }
+  for (let i = 0; i < payingCount; i++) {
+    const cents = Math.floor((prizePoolCents * weights[i]!) / totalWeight);
+    result.set(i + 1, cents);
+    assigned += cents;
   }
-  // Rounding remainder → rank 1.
+
+  // Rounding drift (sum of floors < pool by a few cents) goes to rank 1.
   const remainder = prizePoolCents - assigned;
-  if (remainder > 0 && result.has(1)) {
-    result.set(1, (result.get(1) ?? 0) + remainder);
-  }
+  if (remainder > 0) result.set(1, (result.get(1) ?? 0) + remainder);
   return result;
 }

@@ -103,10 +103,10 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       // Find user's row.
       const userRow = userId ? (display.find((d) => d.isMe) ?? null) : null;
 
-      // Projected prize: among real entries only, find user's real-rank, apply curve.
-      // Pool is dynamic — derived from real entries × fee × (1-rake), with prize_pool_cents as floor.
+      // Projected prize: pool now derived from ALL entries (bots pay too); curve uses
+      // total ranking (bots can win, but only real users get a payout transaction).
       const actualPoolCents = computeActualPrizeCents({
-        realCount: realEntries,
+        totalCount: totalEntries,
         entryFeeCents: contest.entryFeeCents,
         rakePct: deps.rakePct,
         guaranteedPoolCents: contest.prizePoolCents,
@@ -115,16 +115,8 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       let userRank: number | null = null;
       if (userId && userRow) {
         userRank = userRow.rank;
-        const realScored = scored.filter((s) => !s.entry.isBot);
-        realScored.sort((a, b) => {
-          if (b.score !== a.score) return dir * (b.score - a.score);
-          return a.entry.submittedAt.getTime() - b.entry.submittedAt.getTime();
-        });
-        const realRank = realScored.findIndex((s) => s.entry.userId === userId) + 1;
-        if (realRank > 0) {
-          const curve = computePrizeCurve(realEntries, actualPoolCents);
-          projectedPrizeCents = curve.get(realRank) ?? 0;
-        }
+        const curve = computePrizeCurve(totalEntries, actualPoolCents);
+        projectedPrizeCents = curve.get(userRow.rank) ?? 0;
       }
 
       // Lineup with per-pick perf for the user.
