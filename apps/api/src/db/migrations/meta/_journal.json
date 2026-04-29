@@ -92,6 +92,13 @@
       "when": 1777481235100,
       "tag": "0012_bot_dm_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777481235200,
+      "tag": "0013_rename_welcome_to_practice",
+      "breakpoints": true
     }
   ]
 }

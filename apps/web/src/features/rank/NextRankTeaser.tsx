@@ -13,14 +13,11 @@ export function NextRankTeaser({ teaser, rank }: NextRankTeaserProps) {
   if (rank.atMax || teaser.nextUnlock === null) {
     return (
       <div
-        className="m-3 rounded-[6px] border-[1.5px] border-ink px-[14px] py-3"
+        className="mx-3 mt-2 rounded-[6px] border-[1.5px] border-ink px-[12px] py-[8px]"
         style={{ backgroundColor: '#facc15' }}
       >
-        <div className="font-mono text-[10px] uppercase tracking-[0.08em]">
-          mythic crown · {rank.xpSeason} XP this season
-        </div>
-        <div className="mt-1 text-[14px] font-bold leading-tight">
-          Defend your spot — top season XP wins.
+        <div className="text-[12px] font-bold leading-tight">
+          Mythic crown · {rank.xpSeason} XP this season
         </div>
       </div>
     );
@@ -28,24 +25,24 @@ export function NextRankTeaser({ teaser, rank }: NextRankTeaserProps) {
 
   const ratio = Math.min(1, rank.xpInRank / Math.max(1, rank.xpForRank));
   return (
+    // Compact single-row variant: title + XP-to-go on one line, then a thin
+    // progress bar. ~⅔ the height of the previous block; carousel below
+    // becomes the visual headline.
     <div
-      className="m-3 rounded-[6px] border-[1.5px] border-ink px-[14px] py-3"
+      className="mx-3 mt-2 rounded-[6px] border-[1.5px] border-ink px-[12px] py-[8px]"
       style={{ backgroundColor: '#facc15' }}
     >
-      <div className="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.08em] text-ink/70">
-        <span>next unlock</span>
-        <span>{teaser.xpToNext} XP to go</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="truncate text-[12px] font-bold leading-tight">
+          Reach <span className="text-accent">R{teaser.nextRank}</span> →{' '}
+          <span className="text-accent">{teaser.nextUnlock.name}</span>
+        </div>
+        <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.06em] text-ink/70">
+          {teaser.xpToNext} XP
+        </span>
       </div>
-      <div className="mt-[2px] text-[13px] font-bold leading-snug">
-        Reach <span className="text-accent">Rank {teaser.nextRank}</span> to unlock{' '}
-        <span className="text-accent">{teaser.nextUnlock.name}</span>
-      </div>
-      <div className="mt-2 h-[6px] w-full overflow-hidden rounded-[3px] border-[1.5px] border-ink bg-paper">
+      <div className="mt-[6px] h-[4px] w-full overflow-hidden rounded-[2px] border border-ink bg-paper">
         <div className="h-full bg-ink" style={{ width: `${Math.round(ratio * 100)}%` }} />
-      </div>
-      <div className="mt-1 flex justify-between font-mono text-[9px] text-ink/70">
-        <span>{rank.xpInRank} XP</span>
-        <span>{rank.xpForRank} XP</span>
       </div>
     </div>
   );

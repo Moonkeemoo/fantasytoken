@@ -8,6 +8,9 @@ export interface UsersRepo {
     telegramId: number;
     createdAt: Date;
     tutorialDoneAt: Date | null;
+    /** Set by markWelcomeCredited; null = welcome bonus has never been credited
+     * (either pre-rollout grandfathered user or a mid-signup crash). */
+    welcomeCreditedAt: Date | null;
   } | null>;
   create(args: {
     telegramId: number;
@@ -110,10 +113,37 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
           ...(args.username !== undefined && { username: args.username }),
           ...(args.photoUrl !== undefined && { photoUrl: args.photoUrl }),
         });
+        // Recovery path: a previous signup may have created the user row but
+        // crashed mid-flow before currency.transact ran (FE retries auth →
+        // we land here as `existing` and the user is permanently $0). If
+        // welcome_credited_at is NULL AND there's no WELCOME_BONUS transaction
+        // on record, retro-credit now. The transaction-existence check is
+        // belt-and-braces for the case where someone manually patched
+        // welcome_credited_at without a transaction (or vice versa).
+        let balanceCents = await deps.currency.getBalance(existing.id);
+        if (existing.welcomeCreditedAt === null && deps.welcomeBonusCents > 0n) {
+          try {
+            const r = await deps.currency.transact({
+              userId: existing.id,
+              deltaCents: deps.welcomeBonusCents,
+              type: 'WELCOME_BONUS',
+            });
+            balanceCents = r.balanceAfter;
+            await deps.repo.markWelcomeCredited(existing.id);
+            deps.log?.info(
+              { userId: existing.id, deltaCents: deps.welcomeBonusCents.toString() },
+              'welcome bonus retro-credited (recovery)',
+            );
+          } catch (err) {
+            // Don't block auth if the recovery credit fails (cron will retry
+            // ideas — for now we just log and continue with stale balance).
+            deps.log?.warn({ err, userId: existing.id }, 'welcome retro-credit failed');
+          }
+        }
         return {
           userId: existing.id,
           isNew: false,
-          balanceCents: await deps.currency.getBalance(existing.id),
+          balanceCents,
           tutorialDoneAt: existing.tutorialDoneAt,
         };
       }

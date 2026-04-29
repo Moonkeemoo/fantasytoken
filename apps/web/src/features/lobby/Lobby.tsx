@@ -13,8 +13,9 @@ import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { NextRankTeaser } from '../rank/NextRankTeaser.js';
 import { useRank, useTeaser } from '../rank/useRank.js';
-import { InviteTeaser } from '../referrals/InviteTeaser.js';
-import { telegram } from '../../lib/telegram.js';
+import { useReferralsSummary } from '../referrals/useReferrals.js';
+import { PromoCarousel } from './PromoCarousel.js';
+import { InviteSlide } from './InviteSlide.js';
 
 const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
 
@@ -29,6 +30,7 @@ export function Lobby() {
   const my = useContests('my');
   const rank = useRank();
   const teaser = useTeaser();
+  const referralsSummary = useReferralsSummary();
 
   const counts = {
     cash: cash.data?.items.length ?? 0,
@@ -80,11 +82,20 @@ export function Lobby() {
       <ActiveBanner inProgress={myInProgress} onView={goLive} />
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
       {(() => {
-        const tgId = telegram.user()?.id;
-        return tgId ? <InviteTeaser telegramId={tgId} /> : null;
+        // Promo carousel = Featured contest + Invite slide. Invite slide only
+        // appears for users with no active referrees (mirrors the old teaser
+        // visibility rule). When neither Featured nor Invite are eligible,
+        // the carousel renders nothing — no empty padding.
+        const slides = [];
+        if (featured) {
+          slides.push(<FeaturedHero contest={featured} onEnter={goTeamBuilder} />);
+        }
+        if (referralsSummary.data && referralsSummary.data.l1ActiveCount === 0) {
+          slides.push(<InviteSlide />);
+        }
+        return slides.length > 0 ? <PromoCarousel slides={slides} /> : null;
       })()}
       <Tabs active={filter} counts={counts} onChange={setFilter} />
-      {featured && <FeaturedHero contest={featured} onEnter={goTeamBuilder} />}
       <ContestList
         items={others}
         balanceCents={me.data.balanceCents}

@@ -6,9 +6,10 @@ import { Button } from '../../components/ui/Button.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { formatCents } from '../../lib/format.js';
 import { telegram } from '../../lib/telegram.js';
-import { buildInviteUrl, openInviteShareSheet } from '../../lib/referral.js';
+import { buildInviteUrl } from '../../lib/referral.js';
 import { useReferralsSummary, useReferralsTree } from './useReferrals.js';
 import { InviteQR } from './InviteQR.js';
+import { useInviteSheet } from './useInviteSheet.js';
 
 /**
  * Profile referrals block — REFERRAL_SYSTEM.md §6.1.
@@ -37,9 +38,10 @@ export function ReferralsSection({ telegramId }: { telegramId: number }) {
   }
 
   const s = summary.data;
+  const showInviteSheet = useInviteSheet((st) => st.show);
   const onInvite = () => {
     telegram.hapticImpact('light');
-    openInviteShareSheet(telegramId);
+    showInviteSheet();
   };
   const onCopy = async () => {
     try {

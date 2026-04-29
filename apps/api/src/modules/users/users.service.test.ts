@@ -3,21 +3,33 @@ import { createUsersService, type UsersRepo } from './users.service.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
 function makeFakeRepo(): UsersRepo & {
-  state: Map<number, { id: string; createdAt: Date; tutorialDoneAt: Date | null }>;
+  state: Map<
+    number,
+    { id: string; createdAt: Date; tutorialDoneAt: Date | null; welcomeCreditedAt: Date | null }
+  >;
 } {
-  const state = new Map<number, { id: string; createdAt: Date; tutorialDoneAt: Date | null }>();
+  const state = new Map<
+    number,
+    { id: string; createdAt: Date; tutorialDoneAt: Date | null; welcomeCreditedAt: Date | null }
+  >();
   return {
     state,
     async findByTelegramId(tgId) {
       const v = state.get(tgId);
       return v
-        ? { id: v.id, telegramId: tgId, createdAt: v.createdAt, tutorialDoneAt: v.tutorialDoneAt }
+        ? {
+            id: v.id,
+            telegramId: tgId,
+            createdAt: v.createdAt,
+            tutorialDoneAt: v.tutorialDoneAt,
+            welcomeCreditedAt: v.welcomeCreditedAt,
+          }
         : null;
     },
     async create({ telegramId }) {
       const id = `u-${telegramId}`;
       const createdAt = new Date();
-      state.set(telegramId, { id, createdAt, tutorialDoneAt: null });
+      state.set(telegramId, { id, createdAt, tutorialDoneAt: null, welcomeCreditedAt: null });
       return { id, telegramId, createdAt };
     },
     async touchLastSeen(_id) {
@@ -35,8 +47,10 @@ function makeFakeRepo(): UsersRepo & {
       }
       throw new Error('user not found');
     },
-    async markWelcomeCredited(_id) {
-      // no-op for tests; the row's existence in state is enough.
+    async markWelcomeCredited(id) {
+      for (const [, v] of state) {
+        if (v.id === id) v.welcomeCreditedAt = v.welcomeCreditedAt ?? new Date();
+      }
     },
     async setReferrerIfEligible(_args) {
       // Default fake: never attribute. Specific tests can stub a different fake

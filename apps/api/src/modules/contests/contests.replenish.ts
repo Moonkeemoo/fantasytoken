@@ -11,11 +11,14 @@ import type { Logger } from '../../logger.js';
 // always available so a Rank-1 user can play immediately and earn XP into Rank 2+.
 export const REPLENISH_TEMPLATES = [
   {
-    name: 'Welcome Match',
+    // Free safety-net contest. House-funded $5 pool so a player who burned
+    // through their soft balance can keep playing. 10 seats, max win $2.50,
+    // small distribution down to ~$0.50 for 3rd place via the prize curve.
+    name: 'Practice',
     type: 'bull' as const,
     entryFeeCents: 0n,
-    prizePoolCents: 0n,
-    maxCapacity: 20,
+    prizePoolCents: 500n,
+    maxCapacity: 10,
     isFeatured: false,
     minRank: 1,
     xpMultiplier: '1.00',

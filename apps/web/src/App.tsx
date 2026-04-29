@@ -12,11 +12,13 @@ import { Profile } from './features/profile/Profile.js';
 import { RefereeWelcome } from './features/referrals/RefereeWelcome.js';
 import { CommissionToast } from './features/referrals/CommissionToast.js';
 import { ReferralFriend } from './features/referrals/ReferralFriend.js';
+import { GlobalInviteSheet } from './features/referrals/GlobalInviteSheet.js';
 
 export function App() {
   return (
     <>
       <CommissionToast />
+      <GlobalInviteSheet />
       <Routes>
         <Route path="/" element={<Loading />} />
         <Route path="/welcome" element={<RefereeWelcome />} />

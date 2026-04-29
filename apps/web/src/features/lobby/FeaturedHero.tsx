@@ -18,7 +18,7 @@ export function FeaturedHero({ contest, onEnter }: FeaturedHeroProps) {
     <Card
       variant="dim"
       shadow
-      className={`m-3 px-[14px] py-3 ${isBear ? 'border-l-[3px] border-l-hl-red' : ''}`}
+      className={`m-0 px-[14px] py-3 ${isBear ? 'border-l-[3px] border-l-hl-red' : ''}`}
     >
       <Label>★ FEATURED CONTEST</Label>
       <div className="mt-1 flex items-center gap-2 text-[15px] font-bold leading-tight">

@@ -12,6 +12,7 @@ export function createUsersRepo(db: Database): UsersRepo {
           telegramId: users.telegramId,
           createdAt: users.createdAt,
           tutorialDoneAt: users.tutorialDoneAt,
+          welcomeCreditedAt: users.welcomeCreditedAt,
         })
         .from(users)
         .where(eq(users.telegramId, telegramId))
