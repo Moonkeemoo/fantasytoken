@@ -10,6 +10,8 @@ export interface ScoreboardProps {
   rank: number | null;
   totalEntries: number;
   projectedPrizeCents: number;
+  /** Prize for 1st place — shown pre-start where ranks haven't crystallized yet. */
+  topPrizeCents: number;
   startsAt: string;
   endsAt: string;
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
@@ -22,6 +24,7 @@ export function Scoreboard({
   rank,
   totalEntries,
   projectedPrizeCents,
+  topPrizeCents,
   startsAt,
   endsAt,
   status,
@@ -52,8 +55,8 @@ export function Scoreboard({
           />
           <Stat
             label="potential prize"
-            primary={formatCents(projectedPrizeCents)}
-            sub="if end now"
+            primary={formatCents(topPrizeCents)}
+            sub="winner takes top"
           />
         </div>
       </Card>

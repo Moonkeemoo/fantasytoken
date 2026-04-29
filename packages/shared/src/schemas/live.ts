@@ -35,6 +35,9 @@ export const LiveResponse = z.object({
   totalEntries: z.number().int().nonnegative(),
   realEntries: z.number().int().nonnegative(),
   projectedPrizeCents: z.number().int().nonnegative(),
+  /** Prize for 1st place at the current pool. Used pre-start where ranks are
+   * arbitrary tie-break order — show what's at the top of the mountain. */
+  topPrizeCents: z.number().int().nonnegative(),
   lineup: z.array(LineupRow),
   leaderboardTop: z.array(LeaderboardEntry),
   leaderboardAll: z.array(LeaderboardEntry),

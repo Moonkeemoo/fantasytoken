@@ -111,11 +111,12 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         rakePct: deps.rakePct,
         guaranteedPoolCents: contest.prizePoolCents,
       });
+      const curve = computePrizeCurve(totalEntries, actualPoolCents);
+      const topPrizeCents = curve.get(1) ?? 0;
       let projectedPrizeCents = 0;
       let userRank: number | null = null;
       if (userId && userRow) {
         userRank = userRow.rank;
-        const curve = computePrizeCurve(totalEntries, actualPoolCents);
         projectedPrizeCents = curve.get(userRow.rank) ?? 0;
       }
 
@@ -157,6 +158,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         totalEntries,
         realEntries,
         projectedPrizeCents,
+        topPrizeCents,
         lineup,
         leaderboardTop: display.slice(0, 3),
         leaderboardAll: display.slice(0, 100),

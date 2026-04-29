@@ -44,6 +44,7 @@ export function Live() {
         rank={data.rank}
         totalEntries={data.totalEntries}
         projectedPrizeCents={data.projectedPrizeCents}
+        topPrizeCents={data.topPrizeCents}
         startsAt={data.startsAt}
         endsAt={data.endsAt}
         status={data.status}
