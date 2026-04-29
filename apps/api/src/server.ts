@@ -41,6 +41,8 @@ import { makeShareRoutes } from './modules/share/share.routes.js';
 import { createFriendsRepo } from './modules/friends/friends.repo.js';
 import { createFriendsService } from './modules/friends/friends.service.js';
 import { makeFriendsRoutes } from './modules/friends/friends.routes.js';
+import { createReferralsRepo } from './modules/referrals/referrals.repo.js';
+import { createReferralsService } from './modules/referrals/referrals.service.js';
 import { createRankingsRepo } from './modules/rankings/rankings.repo.js';
 import { createRankingsService } from './modules/rankings/rankings.service.js';
 import { makeRankingsRoutes } from './modules/rankings/rankings.routes.js';
@@ -103,6 +105,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     repo: usersRepo,
     currency,
     welcomeBonusCents: BigInt(deps.config.WELCOME_BONUS_USD_CENTS),
+    log: deps.logger,
   });
 
   const cgClient = createCoinGeckoClient(
@@ -121,11 +124,20 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const entriesRepo = createEntriesRepo(deps.db);
   const entries = createEntriesService({ repo: entriesRepo, currency });
 
+  // Referrals must be live before finalizeRepo — finalize calls it as a sidecar.
+  const referralsRepo = createReferralsRepo(deps.db);
+  const referrals = createReferralsService({
+    repo: referralsRepo,
+    currency,
+    log: deps.logger,
+  });
+
   const finalizeRepo = createContestsFinalizeRepo(
     deps.db,
     currency,
     deps.config.RAKE_PCT,
     deps.logger,
+    referrals,
   );
   const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
@@ -176,7 +188,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeEntriesRoutes({ entries, users }), { prefix: '/contests' });
   await app.register(makeLiveRoutes({ leaderboard, users }), { prefix: '/contests' });
   await app.register(makeResultRoutes({ result, users }), { prefix: '/contests' });
-  await app.register(makeFriendsRoutes({ friends, users }), { prefix: '/friends' });
+  await app.register(makeFriendsRoutes({ friends, users, referrals }), { prefix: '/friends' });
   await app.register(
     makeShareRoutes({
       share,
@@ -236,6 +248,24 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
+  // Welcome bonus expiry: claw back $25 from users who never played within
+  // 7 days. Daily cadence is plenty — the underlying SQL filter is cheap
+  // (indexed on welcome_credited_at via the planner's seq scan over a small
+  // user table; revisit if it shows up in profiling). Skipped in test env so
+  // unit tests never trigger real currency mutations.
+  const stopWelcomeExpiry = scheduleEvery({
+    intervalMs: 24 * HOUR,
+    fn: async () => {
+      const r = await users.expireUnusedWelcome();
+      if (r.expiredCount > 0) {
+        deps.logger.info({ expiredCount: r.expiredCount }, 'users.expireUnusedWelcome');
+      }
+    },
+    name: 'users.welcome.expiry',
+    log: deps.logger,
+    runOnStart: deps.config.NODE_ENV !== 'test',
+  });
+
   // Seasons are calendar-month aligned. No cron — rollover happens lazily inside
   // seasonsSvc.ensureActive() on the read path (currently /seasons/current and
   // contests.finalize). Boot-time call above ensures Season N for current month
@@ -248,6 +278,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopTick();
       stopActiveSync();
       stopReplenish();
+      stopWelcomeExpiry();
     },
   };
 }

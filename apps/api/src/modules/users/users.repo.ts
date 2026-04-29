@@ -56,5 +56,61 @@ export function createUsersRepo(db: Database): UsersRepo {
       if (!row?.tutorialDoneAt) throw new Error('user not found or update failed');
       return row.tutorialDoneAt;
     },
+
+    async markWelcomeCredited(id) {
+      // Only stamp if not already set — preserves the original credit timestamp
+      // so the 7-day expiry window doesn't reset on retry/re-auth.
+      await db
+        .update(users)
+        .set({ welcomeCreditedAt: sql`COALESCE(${users.welcomeCreditedAt}, NOW())` })
+        .where(eq(users.id, id));
+    },
+
+    async findUsersWithExpiredWelcome({ expiryDays }) {
+      // Filter:
+      //   welcome_credited_at IS NOT NULL  → grandfathered users skipped
+      //   welcome_expired_at  IS NULL      → not already clawed back
+      //   credited > expiryDays ago        → past the grace window
+      //   no finalized entries             → never used the bonus
+      const result = await db.execute<{ id: string }>(sql`
+        SELECT u.id
+        FROM ${users} u
+        WHERE u.welcome_credited_at IS NOT NULL
+          AND u.welcome_expired_at  IS NULL
+          AND u.welcome_credited_at < NOW() - (${expiryDays}::int * INTERVAL '1 day')
+          AND NOT EXISTS (
+            SELECT 1 FROM entries e
+            WHERE e.user_id = u.id AND e.status = 'finalized'
+          )
+      `);
+      return result as unknown as Array<{ id: string }>;
+    },
+
+    async markWelcomeExpired(id) {
+      await db
+        .update(users)
+        .set({ welcomeExpiredAt: sql`NOW()` })
+        .where(eq(users.id, id));
+    },
+
+    async setReferrerIfEligible({ userId, inviterUserId }) {
+      // INV-13 immutability + 60s window from signup + 0 finalized entries.
+      // All three guards live in the WHERE so no race can sneak past — a
+      // concurrent submitEntry race that finalizes between SELECT and UPDATE
+      // would still be caught by the NOT EXISTS subquery.
+      const result = await db.execute<{ id: string }>(sql`
+        UPDATE ${users} SET referrer_user_id = ${inviterUserId}
+        WHERE ${users.id} = ${userId}
+          AND ${users.referrerUserId} IS NULL
+          AND ${users.createdAt} > NOW() - INTERVAL '60 seconds'
+          AND NOT EXISTS (
+            SELECT 1 FROM entries e
+            WHERE e.user_id = ${users.id} AND e.status = 'finalized'
+          )
+        RETURNING ${users.id}
+      `);
+      const rows = result as unknown as Array<{ id: string }>;
+      return rows.length > 0;
+    },
   };
 }

@@ -9,5 +9,17 @@ export const Balance = z.object({
 });
 export type Balance = z.infer<typeof Balance>;
 
-export const TransactionType = z.enum(['WELCOME_BONUS', 'ENTRY_FEE', 'PRIZE_PAYOUT', 'REFUND']);
+export const TransactionType = z.enum([
+  'WELCOME_BONUS',
+  'ENTRY_FEE',
+  'PRIZE_PAYOUT',
+  'REFUND',
+  // Referral system (REFERRAL_SYSTEM.md): commission paid to referrer when their
+  // referee wins a contest; mutual signup bonuses unlocked on referee's 1st game;
+  // claw-back of unused welcome bonus past 7-day expiry window.
+  'REFERRAL_COMMISSION',
+  'REFEREE_SIGNUP_BONUS',
+  'RECRUITER_SIGNUP_BONUS',
+  'WELCOME_EXPIRED',
+]);
 export type TransactionType = z.infer<typeof TransactionType>;

@@ -13,6 +13,7 @@ import {
 } from '../../db/schema/index.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 import type { Logger } from '../../logger.js';
+import type { ReferralsService } from '../referrals/referrals.service.js';
 import { finalizeContest, type FinalizeInputEntry } from './contests.finalize.js';
 
 export interface ContestsFinalizeRepo {
@@ -25,6 +26,7 @@ export function createContestsFinalizeRepo(
   currency: CurrencyService,
   rakePct: number,
   log: Logger,
+  referrals: ReferralsService,
 ): ContestsFinalizeRepo {
   return {
     async findContestsToFinalize2() {
@@ -212,6 +214,32 @@ export function createContestsFinalizeRepo(
         });
         paidCount += 1;
         totalCents += p.cents;
+      }
+
+      // 8. Referrals — sidecar to prize distribution. INV-7: each call has its
+      // own try/catch inside the service; failures here never bubble. Two passes:
+      //   a) For every real entry: maybeUnlockSignupBonuses (REFEREE+RECRUITER)
+      //      now that the user has at least one finalized contest under them.
+      //   b) For every prize-winning real entry: payCommissions to the L1/L2
+      //      chain walking up `users.referrer_user_id`.
+      // V1 is USD-only so the currency code is hard-coded; the schema and
+      // pure functions accept STARS/TON for when those rails land.
+      const realFinalized = result.entries.filter((e) => !e.isBot && e.userId);
+      for (const e of realFinalized) {
+        await referrals.maybeUnlockSignupBonuses({
+          userId: e.userId!,
+          triggeredByEntryId: e.entryId,
+        });
+      }
+      for (const e of realFinalized) {
+        if (e.prizeCents <= 0) continue;
+        await referrals.payCommissions({
+          sourceUserId: e.userId!,
+          sourceEntryId: e.entryId,
+          sourceContestId: contestId,
+          sourcePrizeCents: BigInt(e.prizeCents),
+          currency: 'USD',
+        });
       }
 
       return { paidCount, totalCents };

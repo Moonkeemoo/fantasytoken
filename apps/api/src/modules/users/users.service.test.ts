@@ -35,6 +35,20 @@ function makeFakeRepo(): UsersRepo & {
       }
       throw new Error('user not found');
     },
+    async markWelcomeCredited(_id) {
+      // no-op for tests; the row's existence in state is enough.
+    },
+    async setReferrerIfEligible(_args) {
+      // Default fake: never attribute. Specific tests can stub a different fake
+      // by reassigning this method on the returned object.
+      return false;
+    },
+    async findUsersWithExpiredWelcome(_args) {
+      return [];
+    },
+    async markWelcomeExpired(_id) {
+      // no-op for tests
+    },
   };
 }
 
