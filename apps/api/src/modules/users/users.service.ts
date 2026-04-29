@@ -38,11 +38,13 @@ export interface UsersRepo {
   findUsersWithExpiredWelcome(args: { expiryDays: number }): Promise<Array<{ id: string }>>;
   /** Stamp welcome_expired_at = NOW() so we don't double-claw. */
   markWelcomeExpired(id: string): Promise<void>;
-  /** Read raw welcome bonus state + finalized count for /me/welcome-status. */
+  /** Read raw welcome bonus state + finalized count + recruiter (joined via
+   * referrer_user_id) for /me/welcome-status. */
   getWelcomeRaw(id: string): Promise<{
     welcomeCreditedAt: Date | null;
     welcomeExpiredAt: Date | null;
     finalizedCount: number;
+    recruiter: { firstName: string | null; photoUrl: string | null } | null;
   } | null>;
 }
 
@@ -83,13 +85,15 @@ export interface UsersService {
   expireUnusedWelcome(): Promise<{ expiredCount: number }>;
   /** Derive welcome bonus status for /me/welcome-status: 'active' (still
    * counting down), 'used' (already played), 'expired' (cron clawed back),
-   * or 'grandfathered' (pre-rollout user, untracked). */
+   * or 'grandfathered' (pre-rollout user, untracked). Includes the recruiter
+   * profile when the caller landed via a ref-link — drives the Welcome screen. */
   getWelcomeStatus(userId: string): Promise<{
     state: 'active' | 'used' | 'expired' | 'grandfathered';
     welcomeBonusCents: number;
     welcomeCreditedAt: Date | null;
     welcomeExpiresAt: Date | null;
     daysUntilExpiry: number | null;
+    recruiter: { firstName: string | null; photoUrl: string | null } | null;
   }>;
 }
 
@@ -144,6 +148,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
     async getWelcomeStatus(userId) {
       const raw = await deps.repo.getWelcomeRaw(userId);
       const bonusCents = WELCOME_BONUS_CENTS;
+      const recruiter = raw?.recruiter ?? null;
       if (!raw || raw.welcomeCreditedAt === null) {
         // Pre-rollout user (migration 0011 left their welcome_credited_at NULL).
         return {
@@ -152,6 +157,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
           welcomeCreditedAt: null,
           welcomeExpiresAt: null,
           daysUntilExpiry: null,
+          recruiter,
         };
       }
       const expiresAt = new Date(
@@ -164,6 +170,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
           welcomeCreditedAt: raw.welcomeCreditedAt,
           welcomeExpiresAt: expiresAt,
           daysUntilExpiry: null,
+          recruiter,
         };
       }
       if (raw.finalizedCount > 0) {
@@ -173,6 +180,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
           welcomeCreditedAt: raw.welcomeCreditedAt,
           welcomeExpiresAt: expiresAt,
           daysUntilExpiry: null,
+          recruiter,
         };
       }
       // Active state — still in the 7-day window with no contests played.
@@ -184,6 +192,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
         welcomeCreditedAt: raw.welcomeCreditedAt,
         welcomeExpiresAt: expiresAt,
         daysUntilExpiry,
+        recruiter,
       };
     },
     async expireUnusedWelcome() {

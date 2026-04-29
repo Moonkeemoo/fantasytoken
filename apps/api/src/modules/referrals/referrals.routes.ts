@@ -108,6 +108,7 @@ export function makeReferralsRoutes(deps: ReferralsRoutesDeps): FastifyPluginAsy
         welcomeCreditedAt: s.welcomeCreditedAt?.toISOString() ?? null,
         welcomeExpiresAt: s.welcomeExpiresAt?.toISOString() ?? null,
         daysUntilExpiry: s.daysUntilExpiry,
+        recruiter: s.recruiter,
       };
       return response;
     });

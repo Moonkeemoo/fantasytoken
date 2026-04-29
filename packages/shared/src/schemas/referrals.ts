@@ -62,7 +62,11 @@ export type ReferralsPayoutsResponse = z.infer<typeof ReferralsPayoutsResponse>;
 
 /** GET /me/welcome-status — onboarding bonus state for the welcome screen
  * countdown. Grandfathered users (welcome_credited_at NULL after migration
- * 0011) get state='grandfathered' and the rest of the fields are null. */
+ * 0011) get state='grandfathered' and the rest of the fields are null.
+ *
+ * `recruiter` is non-null only when the caller landed via a ref-link AND the
+ * attribution succeeded (60s window + 0 finalized entries). It drives the
+ * referee Welcome screen ("Andriy invited you"). null = organic signup. */
 export const WelcomeStatusResponse = z.object({
   state: z.enum(['active', 'used', 'expired', 'grandfathered']),
   welcomeBonusCents: z.number().int().nonnegative(),
@@ -70,5 +74,11 @@ export const WelcomeStatusResponse = z.object({
   welcomeExpiresAt: z.string().datetime().nullable(),
   /** Computed: floor((credited + 7d - now) / 1d). Null when state ≠ 'active'. */
   daysUntilExpiry: z.number().int().nonnegative().nullable(),
+  recruiter: z
+    .object({
+      firstName: z.string().nullable(),
+      photoUrl: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type WelcomeStatusResponse = z.infer<typeof WelcomeStatusResponse>;

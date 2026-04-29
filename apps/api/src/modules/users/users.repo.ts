@@ -98,13 +98,20 @@ export function createUsersRepo(db: Database): UsersRepo {
         welcome_credited_at: Date | null;
         welcome_expired_at: Date | null;
         finalized_count: number;
+        recruiter_first_name: string | null;
+        recruiter_photo_url: string | null;
+        referrer_user_id: string | null;
       }>(sql`
         SELECT
           u.welcome_credited_at,
           u.welcome_expired_at,
+          u.referrer_user_id,
           (SELECT COUNT(*)::int FROM entries e
-            WHERE e.user_id = u.id AND e.status = 'finalized') AS finalized_count
+            WHERE e.user_id = u.id AND e.status = 'finalized') AS finalized_count,
+          r.first_name AS recruiter_first_name,
+          r.photo_url  AS recruiter_photo_url
         FROM ${users} u
+        LEFT JOIN ${users} r ON r.id = u.referrer_user_id
         WHERE u.id = ${id}
         LIMIT 1
       `);
@@ -113,6 +120,9 @@ export function createUsersRepo(db: Database): UsersRepo {
           welcome_credited_at: Date | null;
           welcome_expired_at: Date | null;
           finalized_count: number;
+          recruiter_first_name: string | null;
+          recruiter_photo_url: string | null;
+          referrer_user_id: string | null;
         }>
       )[0];
       if (!r) return null;
@@ -120,6 +130,13 @@ export function createUsersRepo(db: Database): UsersRepo {
         welcomeCreditedAt: r.welcome_credited_at,
         welcomeExpiredAt: r.welcome_expired_at,
         finalizedCount: r.finalized_count,
+        recruiter:
+          r.referrer_user_id === null
+            ? null
+            : {
+                firstName: r.recruiter_first_name,
+                photoUrl: r.recruiter_photo_url,
+              },
       };
     },
 
