@@ -79,9 +79,13 @@ function makeFakeRepo(
       return tokens.map((t) => t.symbol);
     },
     async lockAndSpawn(args) {
-      ops.push({ kind: 'lock', contestId: args.contestId, bots: args.botPicks.length });
+      const seatsLeft = Math.max(0, args.maxCapacity - (args.botPicks.length === 0 ? 0 : 0));
+      // Test fake mirrors prod: respect maxCapacity when user-side hasn't pre-trimmed.
+      const trimmed = args.botPicks.slice(0, seatsLeft || args.botPicks.length);
+      ops.push({ kind: 'lock', contestId: args.contestId, bots: trimmed.length });
       const c = contests.find((c) => c.id === args.contestId);
       if (c) c.status = 'active';
+      return { botsInserted: trimmed.length };
     },
     async finalizeStart(args) {
       ops.push({ kind: 'finalize', contestId: args.contestId });

@@ -7,7 +7,9 @@ export function useLive(contestId: string | undefined) {
     queryKey: ['contests', contestId, 'live'],
     queryFn: () => apiFetch(`/contests/${contestId!}/live`, LiveResponse),
     enabled: !!contestId,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    // Aligned with backend syncActive (30s): refetch every 10s so the user feels
+    // movement at-most 10s stale within a 30s price refresh window.
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   });
 }

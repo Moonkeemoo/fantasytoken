@@ -70,9 +70,19 @@ export function createContestsTickRepo(
       return rows.map((r) => r.symbol);
     },
 
-    async lockAndSpawn({ contestId, botPicks }) {
+    async lockAndSpawn({ contestId, maxCapacity, botPicks }) {
+      let botsInserted = 0;
       await db.transaction(async (tx) => {
         await tx.update(contests).set({ status: 'active' }).where(eq(contests.id, contestId));
+
+        // Recount real entries inside the tx so a late submit can't push us over capacity.
+        const [realCountRow] = await tx
+          .select({ n: sql<number>`COUNT(*)::int` })
+          .from(entries)
+          .where(and(eq(entries.contestId, contestId), sql`${entries.userId} IS NOT NULL`));
+        const realCount = realCountRow?.n ?? 0;
+        const seatsLeft = Math.max(0, maxCapacity - realCount);
+        const trimmedBotPicks = botPicks.slice(0, seatsLeft);
 
         const symbolsRaw = await tx.execute<{ symbol: string }>(
           sql`SELECT DISTINCT (pick->>'symbol')::text AS symbol
@@ -82,7 +92,7 @@ export function createContestsTickRepo(
         const realSymbols = (symbolsRaw as unknown as Array<{ symbol: string }>).map(
           (r) => r.symbol,
         );
-        const botSymbols = botPicks.flatMap((b) => b.picks.map((p) => p.symbol));
+        const botSymbols = trimmedBotPicks.flatMap((b) => b.picks.map((p) => p.symbol));
         const symbolSet = new Set<string>([...realSymbols, ...botSymbols]);
 
         if (symbolSet.size > 0) {
@@ -109,8 +119,8 @@ export function createContestsTickRepo(
           }
         }
 
-        if (botPicks.length > 0) {
-          const rows = botPicks.map((b) => ({
+        if (trimmedBotPicks.length > 0) {
+          const rows = trimmedBotPicks.map((b) => ({
             contestId,
             userId: null,
             isBot: true,
@@ -119,7 +129,9 @@ export function createContestsTickRepo(
           }));
           await tx.insert(entries).values(rows);
         }
+        botsInserted = trimmedBotPicks.length;
       });
+      return { botsInserted };
     },
 
     async finalizeStart({ contestId }) {

@@ -20,8 +20,9 @@ export interface ContestsTickRepo {
   listSymbols(): Promise<string[]>;
   lockAndSpawn(args: {
     contestId: string;
+    maxCapacity: number;
     botPicks: Array<{ handle: string; picks: { symbol: string; alloc: number }[] }>;
-  }): Promise<void>;
+  }): Promise<{ botsInserted: number }>;
   finalizeStart(args: { contestId: string }): Promise<void>;
   findContestsToFinalize2(): Promise<Array<{ id: string; prizePoolCents: bigint }>>;
   finalize(contestId: string): Promise<{ paidCount: number; totalCents: number }>;
@@ -75,8 +76,12 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
             botPicks.push({ handle, picks });
           }
 
-          await deps.repo.lockAndSpawn({ contestId: c.id, botPicks });
-          deps.log.info({ contestId: c.id, bots: botCount }, 'contests.tick locked');
+          const { botsInserted } = await deps.repo.lockAndSpawn({
+            contestId: c.id,
+            maxCapacity: c.maxCapacity,
+            botPicks,
+          });
+          deps.log.info({ contestId: c.id, bots: botsInserted }, 'contests.tick locked');
           if (deps.onContestLocked) {
             try {
               await deps.onContestLocked();
