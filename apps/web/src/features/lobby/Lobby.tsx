@@ -11,7 +11,6 @@ import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { NextRankTeaser } from '../rank/NextRankTeaser.js';
 import { useRank, useTeaser } from '../rank/useRank.js';
-import { useReferralsSummary } from '../referrals/useReferrals.js';
 import { PromoCarousel } from './PromoCarousel.js';
 import { InviteSlide } from './InviteSlide.js';
 
@@ -30,7 +29,6 @@ export function Lobby() {
   const my = useContests('my');
   const rank = useRank();
   const teaser = useTeaser();
-  const referralsSummary = useReferralsSummary();
 
   const cashItems = cash.data?.items ?? [];
   const freeItems = free.data?.items ?? [];
@@ -66,14 +64,19 @@ export function Lobby() {
     return undefined;
   }, [items, userRank, filter, freeItems]);
   const others = useMemo(() => {
-    const list = featured ? items.filter((c) => c.id !== featured.id) : items;
-    return list.slice().sort((a, b) => {
-      const aLocked = !a.userHasEntered && a.minRank > userRank;
-      const bLocked = !b.userHasEntered && b.minRank > userRank;
-      if (aLocked !== bLocked) return aLocked ? 1 : -1;
-      if (aLocked && bLocked) return a.minRank - b.minRank;
-      return 0;
-    });
+    const pool = featured ? items.filter((c) => c.id !== featured.id) : items;
+    // Split unlocked vs locked. Show ALL unlocked (the player's actual play
+    // surface), but only the NEXT 2 locked tiers — a long tail of locked
+    // contests just felt like wall-of-shame; the two-deep glimpse keeps the
+    // aspirational signal without burying the playable list.
+    const unlocked: typeof items = [];
+    const locked: typeof items = [];
+    for (const c of pool) {
+      if (!c.userHasEntered && c.minRank > userRank) locked.push(c);
+      else unlocked.push(c);
+    }
+    locked.sort((a, b) => a.minRank - b.minRank);
+    return [...unlocked, ...locked.slice(0, 2)];
   }, [items, featured, userRank]);
 
   // Banner shows ANY user-entered contest that isn't yet finalized — quick jump to Live.
@@ -107,9 +110,12 @@ export function Lobby() {
         if (featured) {
           slides.push(<FeaturedHero contest={featured} onEnter={goTeamBuilder} />);
         }
-        if (referralsSummary.data && referralsSummary.data.l1ActiveCount === 0) {
-          slides.push(<InviteSlide />);
-        }
+        // InviteSlide always rides — the previous "hide after first referral"
+        // rule made the carousel feel like it had broken (most testers thought
+        // their invite link was disabled). 5%-forever is a pitch worth
+        // repeating; copy adapts to whether the user has any active referrals
+        // already.
+        slides.push(<InviteSlide />);
         return slides.length > 0 ? <PromoCarousel slides={slides} /> : null;
       })()}
       <Tabs active={filter} counts={counts} onChange={setFilter} />

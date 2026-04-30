@@ -134,6 +134,13 @@
       "when": 1777481235700,
       "tag": "0018_coins_economy",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777481235800,
+      "tag": "0019_full_wipe_for_testing",
+      "breakpoints": true
     }
   ]
 }

@@ -5,60 +5,52 @@ export interface NextRankTeaserProps {
   rank: RankResponse;
 }
 
+/** Below this rank the teaser is always-on; above it the teaser only
+ * surfaces when the player is in the last 20% of their current tier. */
+const ALWAYS_VISIBLE_UPTO_RANK = 5;
+const CLOSE_PROGRESS_RATIO = 0.8;
+
 /**
- * Yellow paper-note banner: "Reach Rank N · Tier to unlock NAME" + a progress
- * bar driven by xpInRank/xpForRank.
+ * Compact one-line unlock nudge. Progress bar + XP-to-next + target name +
+ * target-rank pill, all on a single row. After Rank 5 the teaser stays
+ * silent until the player gets close to the next unlock — a constant
+ * always-on banner at every tier felt heavy.
  */
 export function NextRankTeaser({ teaser, rank }: NextRankTeaserProps) {
   if (rank.atMax || teaser.nextUnlock === null) {
     return (
-      <div
-        className="mx-3 mt-2 rounded-[6px] border-[1.5px] border-ink px-[12px] py-[8px]"
-        style={{ backgroundColor: '#facc15' }}
-      >
-        <div className="text-[12px] font-bold leading-tight">
-          Mythic crown · {rank.xpSeason} XP this season
-        </div>
+      <div className="mx-3 mt-2 flex items-center justify-between gap-2 rounded-md border border-ink bg-note px-3 py-1.5 text-[11px]">
+        <span className="font-bold">Mythic crown</span>
+        <span className="font-mono text-[10px] text-ink/70">
+          {rank.xpSeason.toLocaleString('en-US')} XP this season
+        </span>
       </div>
     );
   }
 
   const ratio = Math.min(1, rank.xpInRank / Math.max(1, rank.xpForRank));
-  // Display the rank where the unlock actually gates (e.g. Bear Trap @ R3),
-  // NOT the immediately-next rank. The two diverge whenever there's a gap
-  // between unlocks (R1 → R3 etc.) and showing "R2 → Bear Trap" while the
-  // contest list says "RANK 3" was confusing players.
   const targetRank = teaser.nextUnlock.rank;
+  if (rank.currentRank >= ALWAYS_VISIBLE_UPTO_RANK && ratio < CLOSE_PROGRESS_RATIO) {
+    return null;
+  }
+
   return (
-    <div
-      className="mx-3 mt-2 rounded-[6px] border-[1.5px] border-ink px-[12px] py-[10px]"
-      style={{ backgroundColor: '#facc15' }}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="text-[11px] font-mono uppercase tracking-[0.06em] text-ink/70">
-          Next unlock
-        </div>
-        <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.06em] text-ink/70">
-          R{rank.currentRank} → R{targetRank}
-        </span>
+    <div className="mx-3 mt-2 flex items-center gap-2 rounded-md border border-ink bg-note px-3 py-1.5 text-[11px]">
+      <span className="shrink-0 font-mono text-[9px] uppercase tracking-wider text-ink/70">
+        Next
+      </span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper">
+        <div className="h-full bg-ink" style={{ width: `${Math.round(ratio * 100)}%` }} />
       </div>
-      <div className="mt-[2px] text-[14px] font-extrabold leading-tight">
-        <span className="text-accent">{teaser.nextUnlock.name}</span>
-        <span className="ml-[6px] rounded-[3px] border-[1.5px] border-ink bg-paper px-[5px] py-[1px] font-mono text-[9px] font-bold uppercase tracking-[0.06em] text-ink">
-          R{targetRank}
-        </span>
-      </div>
-      <p className="mt-[2px] text-[11px] leading-snug text-ink/80">
-        {teaser.nextUnlock.description}
-      </p>
-      <div className="mt-[6px] flex items-center gap-2">
-        <div className="h-[5px] flex-1 overflow-hidden rounded-[2px] border border-ink bg-paper">
-          <div className="h-full bg-ink" style={{ width: `${Math.round(ratio * 100)}%` }} />
-        </div>
-        <span className="shrink-0 font-mono text-[10px] font-bold tracking-tight text-ink">
-          {teaser.xpToNext} XP
-        </span>
-      </div>
+      <span className="shrink-0 font-mono text-[10px] font-bold text-ink">
+        {teaser.xpToNext} XP
+      </span>
+      <span className="shrink-0 truncate text-[11px] font-bold text-accent">
+        {teaser.nextUnlock.name}
+      </span>
+      <span className="shrink-0 rounded border border-ink bg-paper px-1.5 py-px font-mono text-[8px] font-bold uppercase tracking-wider">
+        R{targetRank}
+      </span>
     </div>
   );
 }
