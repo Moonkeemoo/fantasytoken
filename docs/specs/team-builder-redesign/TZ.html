@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="uk"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasy Token — Team Builder Redesign · ТЗ на імплементацію</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<style>/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("d7e7604e-137a-4f24-944d-8028ddc637d2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("2403fa2c-0db6-42ae-83c8-2c01a5e6c18f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("6393820d-adcb-4888-8465-1075ad6894c2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("e81c1170-1e69-4c74-82bd-953d7b219cbf") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("97a18333-c3ce-411f-9cdf-92e4bc706d70") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("434fb185-fd23-45ab-baa3-f7b26623a222") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("c493b9b3-fcea-4206-991d-3f7b1d945848") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("d7e7604e-137a-4f24-944d-8028ddc637d2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("2403fa2c-0db6-42ae-83c8-2c01a5e6c18f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("6393820d-adcb-4888-8465-1075ad6894c2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("e81c1170-1e69-4c74-82bd-953d7b219cbf") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("97a18333-c3ce-411f-9cdf-92e4bc706d70") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("434fb185-fd23-45ab-baa3-f7b26623a222") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("c493b9b3-fcea-4206-991d-3f7b1d945848") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("d7e7604e-137a-4f24-944d-8028ddc637d2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("2403fa2c-0db6-42ae-83c8-2c01a5e6c18f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("6393820d-adcb-4888-8465-1075ad6894c2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("e81c1170-1e69-4c74-82bd-953d7b219cbf") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("97a18333-c3ce-411f-9cdf-92e4bc706d70") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("434fb185-fd23-45ab-baa3-f7b26623a222") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("c493b9b3-fcea-4206-991d-3f7b1d945848") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("d7e7604e-137a-4f24-944d-8028ddc637d2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("2403fa2c-0db6-42ae-83c8-2c01a5e6c18f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("6393820d-adcb-4888-8465-1075ad6894c2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("e81c1170-1e69-4c74-82bd-953d7b219cbf") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("97a18333-c3ce-411f-9cdf-92e4bc706d70") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("434fb185-fd23-45ab-baa3-f7b26623a222") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("c493b9b3-fcea-4206-991d-3f7b1d945848") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("d7e7604e-137a-4f24-944d-8028ddc637d2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("2403fa2c-0db6-42ae-83c8-2c01a5e6c18f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("6393820d-adcb-4888-8465-1075ad6894c2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("e81c1170-1e69-4c74-82bd-953d7b219cbf") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("97a18333-c3ce-411f-9cdf-92e4bc706d70") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("434fb185-fd23-45ab-baa3-f7b26623a222") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("c493b9b3-fcea-4206-991d-3f7b1d945848") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("94eaca50-75b3-44c4-a665-e6b4946b68c8") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("ed686a10-6169-4dd2-bb69-a96d78c25963") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("61e95b40-6dcc-4024-a3e4-b7a2cb10603a") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("f7a7f277-3b10-4157-b2a4-b49e5abdfa9f") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("a5717639-89fa-472e-b3c7-e0a3fbb0e299") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("ad113b73-17a9-4dbd-b19b-4554ae9e6a06") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("94eaca50-75b3-44c4-a665-e6b4946b68c8") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("ed686a10-6169-4dd2-bb69-a96d78c25963") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("61e95b40-6dcc-4024-a3e4-b7a2cb10603a") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("f7a7f277-3b10-4157-b2a4-b49e5abdfa9f") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("a5717639-89fa-472e-b3c7-e0a3fbb0e299") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("ad113b73-17a9-4dbd-b19b-4554ae9e6a06") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("94eaca50-75b3-44c4-a665-e6b4946b68c8") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("ed686a10-6169-4dd2-bb69-a96d78c25963") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("61e95b40-6dcc-4024-a3e4-b7a2cb10603a") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("f7a7f277-3b10-4157-b2a4-b49e5abdfa9f") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("a5717639-89fa-472e-b3c7-e0a3fbb0e299") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("ad113b73-17a9-4dbd-b19b-4554ae9e6a06") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  :root {
+    --paper: #f6f1e8;
+    --paper-dim: #ede6d8;
+    --paper-deep: #e0d7c5;
+    --ink: #1a1814;
+    --ink-soft: #4a463e;
+    --muted: #8a8478;
+    --line: #d8cfbd;
+    --bull: #1f8a3e;
+    --bear: #c0392b;
+    --gold: #b8842c;
+    --accent: #d4441c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(900px 700px at 10% 0%, #ece4d2 0%, transparent 55%),
+      radial-gradient(900px 700px at 90% 100%, #e3d9c2 0%, transparent 55%),
+      linear-gradient(180deg, #ece4d2 0%, #d8cfbd 100%);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 60px 0 120px;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ─── Header ─── */
+  .doc-head { margin-bottom: 56px; }
+  .doc-head .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .doc-head .meta .stamp {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.12em;
+  }
+  .doc-head h1 {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+  .doc-head .lede {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 56ch;
+    text-wrap: pretty;
+  }
+  .doc-head .lede b { color: var(--ink); }
+
+  /* ─── Sections ─── */
+  section { margin-bottom: 56px; }
+  section > .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    margin-bottom: 8px;
+  }
+  section > h2 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    line-height: 1.15;
+  }
+  section > .sub {
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+    max-width: 60ch;
+    font-size: 15px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 28px 0 10px;
+    letter-spacing: -0.005em;
+  }
+  h4 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin: 24px 0 8px;
+  }
+
+  p { margin: 0 0 12px; text-wrap: pretty; }
+  ul { padding-left: 22px; margin: 0 0 14px; }
+  ul li { margin-bottom: 6px; text-wrap: pretty; }
+  ul li::marker { color: var(--muted); }
+  strong { color: var(--ink); font-weight: 700; }
+
+  /* ─── Inline code & kbd ─── */
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: var(--paper-dim);
+    border: 1px solid var(--paper-deep);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* ─── Cards / boxes ─── */
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .card.dashed { border-style: dashed; background: transparent; }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .card-head .id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+  }
+  .card-head h3 { margin: 0; font-size: 16px; }
+  .card-head .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── Spec table ─── */
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 4px;
+    font-size: 14px;
+  }
+  table.spec th, table.spec td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px dashed var(--line);
+    vertical-align: top;
+  }
+  table.spec th {
+    font-weight: 700;
+    color: var(--ink-soft);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1.5px solid var(--ink);
+    padding-bottom: 6px;
+  }
+  table.spec td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  table.spec tr:last-child td { border-bottom: none; }
+
+  /* ─── Pills ─── */
+  .pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 4px 0 10px;
+  }
+  .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-soft);
+  }
+  .pill.bull { color: var(--bull); border-color: rgba(31,138,62,.3); background: rgba(31,138,62,.08); }
+  .pill.bear { color: var(--bear); border-color: rgba(192,57,43,.3); background: rgba(192,57,43,.08); }
+  .pill.new { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+
+  /* ─── Two-col ─── */
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .cols-2 { grid-template-columns: 1fr; }
+    .doc-head h1 { font-size: 36px; }
+    main { padding: 0 20px; }
+  }
+
+  /* ─── Numbered states ─── */
+  .state {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .state:last-child { border-bottom: none; }
+  .state .num-big {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .state .num-big small {
+    display: block;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .state h3 { margin: 0 0 6px; font-size: 18px; }
+  .state .body { color: var(--ink-soft); font-size: 14px; }
+
+  /* ─── Quote / callout ─── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 16px;
+    margin: 16px 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .callout b { color: var(--ink); }
+
+  /* ─── Decision row ─── */
+  .decisions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .decision {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--line);
+    align-items: baseline;
+  }
+  .decision:last-child { border-bottom: none; }
+  .decision .q {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+  }
+  .decision .a { font-size: 14px; }
+  .decision .a b { color: var(--ink); }
+
+  /* ─── Footer ─── */
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px dashed var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* preview-toolbar */
+  .open-design {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ink);
+    color: var(--paper);
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-top: 10px;
+  }
+  .open-design:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+<main>
+
+<header class="doc-head">
+  <div class="meta">
+    <span class="stamp">ТЗ · TZ-001</span>
+    <span>Team Builder Redesign</span>
+    <span>· v1 · 30 квіт 2026</span>
+  </div>
+  <h1>Build → Lock → Live → Browse</h1>
+  <p class="lede">
+    Редизайн потоку контесту: збір команди, кімната очікування, лайв-таблиця,
+    перегляд інших lineups + нова <b>модалка allocation</b> з $-first вводом.
+    Ціль — зробити кожне рішення гравця <b>розраховуваним у доларах</b>, а не у відсотках.
+  </p>
+  <a href="Team Builder Redesign.html" class="open-design">→ Відкрити інтерактивний прототип</a>
+</header>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">01 · Сфера змін</div>
+  <h2>Що входить у скоуп</h2>
+  <p class="sub">
+    Чотири пов'язані стани одного контесту + одна модалка управління токеном.
+    Решта потоку (lobby, wallet, live-list, rankings) — без змін.
+  </p>
+
+  <div class="state">
+    <div class="num-big">01<small>state</small></div>
+    <div>
+      <h3>Draft — збір lineup <span class="pill new">redesign</span></h3>
+      <div class="body">
+        Контест-aware вибір 5 токенів. У header — назва спринту, $ tier-бейдж, mode (bull/bear).
+        Слоти заповнюються $-сумами замість %. Список токенів сортований за внеском у contest mode.
+        Sticky CTA <code>GO BULL · 50 ⭐ entry</code> внизу — disabled поки lineup невалідний.
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <div class="num-big">02<small>state</small></div>
+    <div>
+      <h3>Locked — waiting room <span class="pill new">new</span></h3>
+      <div class="body">
+        Stamp <code>YOU'RE LOCKED IN</code>, countdown до kickoff (56px JetBrains Mono),
+        room-fill метрики (players, prize), live activity feed. Команда у read-only вигляді
+        з alloc-bars.
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <div class="num-big">03<small>state</small></div>
+    <div>
+      <h3>Live — під час контесту <span class="pill new">redesign</span></h3>
+      <div class="body">
+        <b>Split hero</b>: rank (#8 of 347) + portfolio PnL (+$340 · +0.34%) однакової ваги.
+        Команда з per-token PnL у $ і %. Локальний leaderboard "Around you"
+        з divider'ом між top-3 і своєю позицією.
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <div class="num-big">04<small>state</small></div>
+    <div>
+      <h3>Browse Others <span class="pill new">new</span></h3>
+      <div class="body">
+        Список lineups інших гравців pre-kickoff. Тільки склад команди — без stake size та PnL
+        до старту. Фільтри: All / Friends / Just locked.
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <div class="num-big">M1<small>modal</small></div>
+    <div>
+      <h3>Allocation Bottom Sheet <span class="pill new">new</span></h3>
+      <div class="body">
+        ~62% висоти екрана. $-input + % slider із cap-маркером залишку budget,
+        quick-chips (10/25/50/max), token info (price, 24h, sparkline, picked-by),
+        contest-fit hint. Add / Update / Remove.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">02 · Архітектурні рішення</div>
+  <h2>Як це лягає на існуючий код</h2>
+  <p class="sub">
+    Reuse того, що є у <code>features/team-builder/</code> та <code>features/live/</code>.
+    Нові стани та модалка — окремі компоненти.
+  </p>
+
+  <h3>Маппінг на існуючі файли</h3>
+  <table class="spec">
+    <thead><tr><th>Існуючий</th><th>Дія</th><th>Деталі</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>features/team-builder/<br>TeamBuilder.tsx</td>
+        <td>refactor</td>
+        <td>Замінити <code>TokenSearch</code> + <code>LineupSummary</code> на новий <code>&lt;DraftScreen&gt;</code>. Тригерити <code>&lt;AllocSheet&gt;</code> з обох: <code>TokenSearchRow</code> та <code>LineupSlot</code>.</td>
+      </tr>
+      <tr>
+        <td>features/team-builder/<br>lineupReducer.ts</td>
+        <td>extend</td>
+        <td>Додати дії <code>ALLOC_SET</code> (зміна %), <code>ALLOC_REMOVE</code>. Поточні <code>ADD_PICK</code> / <code>REMOVE_PICK</code> — лишити.</td>
+      </tr>
+      <tr>
+        <td>features/team-builder/<br>ConfirmBar.tsx</td>
+        <td>replace</td>
+        <td>Стає sticky CTA внизу Draft. Стани: <code>PICK N MORE</code> → <code>ALLOCATE X% MORE</code> → <code>OVER BUDGET</code> → <code>GO BULL</code>.</td>
+      </tr>
+      <tr>
+        <td>features/team-builder/<br>useDraft.ts</td>
+        <td>extend</td>
+        <td>Додати <code>openSheet(token)</code> / <code>closeSheet()</code> та selector <code>remainingPct</code>.</td>
+      </tr>
+      <tr>
+        <td>features/team-builder/<br>useSubmitEntry.ts</td>
+        <td>reuse</td>
+        <td>Без змін. Після успіху — <code>navigate(/lobby/locked/:id)</code>.</td>
+      </tr>
+      <tr>
+        <td>features/live/Live.tsx</td>
+        <td>refactor</td>
+        <td>Замінити <code>Scoreboard</code> на новий <code>&lt;LiveHero&gt;</code> (split rank/PnL) + <code>&lt;LiveTeam&gt;</code> + <code>&lt;LocalLeaderboard&gt;</code>.</td>
+      </tr>
+      <tr>
+        <td>features/live/<br>MiniLeaderboard.tsx</td>
+        <td>replace</td>
+        <td>Новий <code>&lt;LocalLeaderboard&gt;</code> з divider'ом між top-3 і навколо мене.</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>add</td>
+        <td>Нові маршрути: <code>/lobby/locked/:contestId</code>, <code>/lobby/browse/:contestId</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Нові компоненти</h3>
+  <table class="spec">
+    <thead><tr><th>Компонент</th><th>Файл</th><th>Призначення</th></tr></thead>
+    <tbody>
+      <tr><td>&lt;DraftScreen&gt;</td><td>features/team-builder/<br>DraftScreen.tsx</td><td>Новий root для Draft state</td></tr>
+      <tr><td>&lt;AllocSheet&gt;</td><td>features/team-builder/<br>AllocSheet.tsx</td><td>Bottom sheet управління allocation</td></tr>
+      <tr><td>&lt;LineupSlot&gt;</td><td>features/team-builder/<br>LineupSlot.tsx</td><td>Один з 5 слотів. Tap → AllocSheet</td></tr>
+      <tr><td>&lt;LockedScreen&gt;</td><td>features/lobby/<br>LockedScreen.tsx</td><td>Waiting room</td></tr>
+      <tr><td>&lt;BrowseScreen&gt;</td><td>features/lobby/<br>BrowseScreen.tsx</td><td>Список чужих lineups pre-kickoff</td></tr>
+      <tr><td>&lt;LiveHero&gt;</td><td>features/live/LiveHero.tsx</td><td>Split rank + PnL</td></tr>
+      <tr><td>&lt;LiveTeam&gt;</td><td>features/live/LiveTeam.tsx</td><td>Per-token PnL list</td></tr>
+      <tr><td>&lt;LocalLeaderboard&gt;</td><td>features/live/<br>LocalLeaderboard.tsx</td><td>Top-3 + навколо мене</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">03 · Allocation Sheet (M1) — детально</div>
+  <h2>Модалка управління токеном</h2>
+  <p class="sub">
+    Найважливіший новий примітив. Викликається з трьох місць.
+  </p>
+
+  <h3>Тригери</h3>
+  <ul>
+    <li><b>Tap по token row</b> у списку <i>Browse tokens</i> (Draft) — додати або підправити alloc.</li>
+    <li><b>Tap по слоту lineup</b> (Draft) — підправити alloc вже доданого, або відкрити picker якщо слот пустий.</li>
+    <li><b>Tap по token row</b> у Live (під час контесту) — read-only режим з PnL замість input. <span class="pill">v1.1</span></li>
+  </ul>
+
+  <h3>Поведінка</h3>
+  <table class="spec">
+    <thead><tr><th>Аспект</th><th>Специфікація</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Анімація відкриття</td>
+        <td>Slide-up з низу екрана, <code>cubic-bezier(.2, .8, .25, 1)</code>, 220ms. Backdrop fade-in 180ms, opacity 0 → 0.42.</td>
+      </tr>
+      <tr>
+        <td>Висота</td>
+        <td><code>max-height: 62%</code> від screen. Контент скролиться всередині, якщо overflow.</td>
+      </tr>
+      <tr>
+        <td>Закриття</td>
+        <td>Tap по backdrop · swipe-down handle · кнопка Cancel · кнопка Add/Update (apply + close).</td>
+      </tr>
+      <tr>
+        <td>Default $-amount</td>
+        <td>Якщо edit — <code>existing.alloc</code>. Якщо новий і lineup порожній → <b>20%</b>. Якщо є вже інші — <b>min(20%, remaining)</b>.</td>
+      </tr>
+      <tr>
+        <td>Cap behavior</td>
+        <td>Slider <code>max</code> = <code>100 - sum(other.alloc)</code>. Cap-маркер на rail у позиції cap. <b>Не дозволяти ввід &gt; cap</b> — обрізаємо при <code>onChange</code>.</td>
+      </tr>
+      <tr>
+        <td>$ ↔ %</td>
+        <td>Two-way bind через alloc%: <code>dollars = round(tier × alloc / 100)</code>. Inверсія при ввімкненні $: <code>alloc = round(dollars / tier × 100)</code>.</td>
+      </tr>
+      <tr>
+        <td>Quick chips</td>
+        <td>10 / 25 / 50 / max(remaining). Приховувати числові chips що &gt; cap (max — завжди).</td>
+      </tr>
+      <tr>
+        <td>Contest fit</td>
+        <td>Bull mode + d24&gt;0 → <code>✓ rising — fits</code>. Bull mode + d24&lt;0 → <code>✗ falling — fights</code>. Bear — інверсія.</td>
+      </tr>
+      <tr>
+        <td>Confirm CTA</td>
+        <td>Колір по mode (bull green / bear red). Текст: <code>Add · $20,000</code> або <code>Update · $20,000</code>. Disabled при <code>alloc = 0</code> або <code>lineup full &amp;&amp; !isEdit</code>.</td>
+      </tr>
+      <tr>
+        <td>Remove</td>
+        <td>Видима тільки якщо <code>isEdit</code>. Не disabled. Викликає <code>onConfirm({ remove: true })</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Edge cases</h3>
+  <ul>
+    <li><b>Lineup повний (5/5) і користувач відкриває новий токен</b> — confirm = <code>Lineup full</code>, disabled. Підказка: <code>Remove a token first or tap a slot to swap</code>.</li>
+    <li><b>Remaining = 0</b> (інші alloc дають 100%) — тільки edit існуючого; новий додати неможливо. Slider max = 0, всі chips disabled.</li>
+    <li><b>Користувач набирає &gt; budget у $-input</b> — auto-clamp до remaining. Без помилок, без shake — просто значення обрізається.</li>
+    <li><b>Token ціна змінилась поки sheet відкритий</b> — оновлюємо <code>price</code> та <code>d24</code> live, але alloc% (вибір користувача) не чіпаємо.</li>
+    <li><b>Backdrop tap із незбереженими змінами</b> — закриваємо без confirm. Зміни втрачаються. (Альтернатива: confirm dialog — <i>не робимо у v1, тримаємо легкість</i>.)</li>
+  </ul>
+
+  <h3>Доступність</h3>
+  <ul>
+    <li><code>role="dialog"</code> + <code>aria-modal="true"</code> + <code>aria-labelledby</code> на token-symbol.</li>
+    <li>Focus trap всередині sheet. Перший focus — на $-input.</li>
+    <li>Esc — закрити (як backdrop tap).</li>
+    <li>Slider — keyboard nav (←→ ±1%, ↑↓ ±5%).</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">04 · Стан та дані</div>
+  <h2>Reducer, контракти, виклики</h2>
+
+  <h3>Lineup reducer — нові дії</h3>
+  <table class="spec">
+    <thead><tr><th>Action</th><th>Payload</th><th>Ефект</th></tr></thead>
+    <tbody>
+      <tr><td>ADD_PICK</td><td><code>{ sym, alloc }</code></td><td>Додає токен. Кидає, якщо <code>length === 5</code> або сума &gt; 100.</td></tr>
+      <tr><td>UPDATE_ALLOC</td><td><code>{ sym, alloc }</code></td><td>Змінює alloc існуючого. Кидає, якщо new sum &gt; 100.</td></tr>
+      <tr><td>REMOVE_PICK</td><td><code>{ sym }</code></td><td>Видаляє токен.</td></tr>
+      <tr><td>RESET</td><td>—</td><td>Очищає lineup (для preset apply).</td></tr>
+      <tr><td>APPLY_PRESET</td><td><code>{ picks: [{sym, alloc}] }</code></td><td>Замінює lineup цілком. Сума має дорівнювати 100.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Selectors (з useDraft)</h3>
+  <ul>
+    <li><code>totalAlloc</code> — сума alloc%, 0–100.</li>
+    <li><code>totalDollars</code> — <code>tier × totalAlloc / 100</code>.</li>
+    <li><code>remainingPct</code> — <code>100 - totalAlloc</code>, для cap у sheet.</li>
+    <li><code>isValid</code> — <code>length === 5 &amp;&amp; totalAlloc === 100</code>.</li>
+    <li><code>cta</code> — текст + state для CTA: <code>{ label, mode: 'idle' | 'pick' | 'alloc' | 'over' | 'ready' }</code>.</li>
+  </ul>
+
+  <h3>API контракти</h3>
+  <p>Існуюче <code>useSubmitEntry</code> приймає вже валідовану lineup. Очікуємо payload:</p>
+  <div class="card">
+    <pre style="margin:0; font-family:'JetBrains Mono', monospace; font-size:12px; line-height:1.6; overflow-x:auto;">POST /entries
+{
+  contestId: string,
+  picks: [
+    { sym: 'PEPE', allocPct: 30 },  // % від tier, не $
+    { sym: 'SOL',  allocPct: 25 },
+    ...
+  ]
+}</pre>
+  </div>
+  <p>Сервер сам обчислює $-equivalent на момент kickoff. Клієнт показує $-precomputed для UX.</p>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">05 · Live screen</div>
+  <h2>Що змінюється під час контесту</h2>
+
+  <h3>Split hero</h3>
+  <p>
+    Дві однакові картки: <b>rank</b> та <b>PnL</b>. Не одна головна метрика — обидві.
+    Гравцю однаково важливо знати, де він у таблиці і скільки заробляє.
+  </p>
+  <ul>
+    <li><b>Rank card</b>: <code>#8</code> (32px) + <code>of 347</code> (11px) + delta <code>↑ +12 / 1h</code> у pill (зелений / червоний / сірий).</li>
+    <li><b>PnL card</b>: <code>+$340</code> (24px JetBrains Mono) + <code>+0.34%</code> + prize estimate <code>prize est. $61</code> (тільки якщо в призовій зоні).</li>
+  </ul>
+
+  <h3>Moment banner</h3>
+  <p>Тонкий контекст-aware banner між live-banner і hero. Умови (один за раз, top priority виграє):</p>
+  <ul>
+    <li><code>rank ≤ 10</code> → <code>🏆 You broke into top 10! Keep the lead.</code> (gold gradient)</li>
+    <li><code>rankDelta ≥ +10 за 1h</code> → <code>🚀 Climbing fast — N ranks in an hour</code></li>
+    <li><code>rankDelta ≤ -20 за 1h</code> → <code>⚠️ Dropping fast — review your team</code></li>
+    <li>Інакше — banner не показується.</li>
+  </ul>
+
+  <h3>Per-token PnL row</h3>
+  <p>
+    Лівий border 3px: <span class="pill bull">helping</span> = bull-зелений, <span class="pill bear">hurting</span> = bear-червоний.
+    "Helping" розраховується з врахуванням mode: у bear контесті падіння токена — це helping.
+  </p>
+
+  <h3>Local leaderboard</h3>
+  <p>Top-3 → divider <code>↕ skip · ranks 4–N-2</code> → 4 рядки навколо мене (мій + 1 вище + 2 нижче).</p>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">06 · Token cards</div>
+  <h2>Контест-aware візуальна мова</h2>
+  <p class="sub">
+    Лінійка токенів у Browse-секції Draft має сортуватись та маркуватись по mode.
+  </p>
+
+  <table class="spec">
+    <thead><tr><th>Поле</th><th>Bull mode</th><th>Bear mode</th></tr></thead>
+    <tbody>
+      <tr><td>Sort</td><td>desc by d24% (найбільші ріст зверху)</td><td>asc by d24% (найбільші падіння зверху)</td></tr>
+      <tr><td>contest-tag</td><td>d24&gt;0 → <code>✓ rising</code> · d24&lt;0 → <code>✗ falling</code></td><td>d24&lt;0 → <code>✓ falling</code> · d24&gt;0 → <code>✗ rising</code></td></tr>
+      <tr><td>d24% колір</td><td>зелений завжди для +, червоний для −</td><td>так само (це ринкова ціна, не score)</td></tr>
+      <tr><td>Sparkline колір</td><td>наслідує знак d24</td><td>наслідує знак d24</td></tr>
+      <tr><td>picked-by</td><td>≥30% → 🔥 N% picked · ≥15% → · N% picked · &lt;15% → не показуємо</td><td>так само</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <b>Ключовий принцип:</b> ціна та d24% — це <b>ринкова</b> інформація, вони не змінюють кольори.
+    Зелений завжди ріст. А <b>contest-fit</b> (✓/✗) — це <b>гравецька</b> інтерпретація: чи вписується у мій контест.
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">07 · Дизайн-токени</div>
+  <h2>Що додаємо в design system</h2>
+  <p class="sub">Нові семантичні токени у CSS-vars / Tailwind preset / DS.</p>
+
+  <div class="cols-2">
+    <div class="card">
+      <h4>Semantic colors (нові)</h4>
+      <table class="spec">
+        <tbody>
+          <tr><td>--bull</td><td>#1f8a3e</td></tr>
+          <tr><td>--bear</td><td>#c0392b</td></tr>
+          <tr><td>--gold</td><td>#b8842c (prize)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h4>Тип</h4>
+      <table class="spec">
+        <tbody>
+          <tr><td>countdown</td><td>56px JetBrains Mono 700</td></tr>
+          <tr><td>big-number</td><td>32px JetBrains Mono 700</td></tr>
+          <tr><td>pnl-big</td><td>24px JetBrains Mono 700</td></tr>
+          <tr><td>label</td><td>10px Inter 700, +.08em, uppercase</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h4 style="margin-top:24px;">Шрифт-стек</h4>
+  <p>
+    <b>Inter</b> — UI копірайт, заголовки, описи. Weights: 400, 500, 600, 700, 800.<br>
+    <b>JetBrains Mono</b> — будь-які числа: $-суми, %, time, ranks, alloc. Weights: 400, 500, 700.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">08 · Що НЕ робимо у v1</div>
+  <h2>Свідомо відкладено</h2>
+  <ul>
+    <li><b>Modal у Live</b> з PnL та history — read-only AllocSheet. Поки що tap по live-token нічого не робить. <span class="pill">v1.1</span></li>
+    <li><b>Friends filter</b> у Browse — UI є, логіки немає (показуємо all). <span class="pill">v1.1</span></li>
+    <li><b>Share lineup</b> — кнопка є, шаринг через native share API. <span class="pill">v1.1</span></li>
+    <li><b>Push notifications</b> на rank-change moments. <span class="pill">v1.2</span></li>
+    <li><b>Анімація переходу Locked → Live</b> при kickoff. <span class="pill">v1.2</span></li>
+    <li><b>Prediction helpers</b> у AllocSheet ("якщо +10% → заробиш $X") — підтверджено <i>не робимо</i>.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">09 · Прийняті рішення</div>
+  <h2>Запитання, на які вже є відповідь</h2>
+  <div class="decisions">
+    <div class="decision">
+      <div class="q">Тригер модалки</div>
+      <div class="a">Tap по token row у Browse tokens. <b>+ Tap по слоту lineup</b> (додано після ревʼю).</div>
+    </div>
+    <div class="decision">
+      <div class="q">Що в модалці</div>
+      <div class="a">$ amount, % slider, token info (price + 24h + picked-by + sparkline), quick-chips, contest-fit hint, Add/Update/Remove.</div>
+    </div>
+    <div class="decision">
+      <div class="q">Формат модалки</div>
+      <div class="a">Bottom sheet, ~62% висоти екрана, slide-up animation.</div>
+    </div>
+    <div class="decision">
+      <div class="q">Prediction helpers</div>
+      <div class="a">Не робимо. Тільки allocation.</div>
+    </div>
+    <div class="decision">
+      <div class="q">Bull/Bear pill</div>
+      <div class="a">Прибраний з UI — режим зашитий у назву контесту (Sprint #284 Bull) + у колір CTA.</div>
+    </div>
+    <div class="decision">
+      <div class="q">$-first</div>
+      <div class="a">Скрізь де є alloc — показуємо $ на першому місці, % як вторинне число.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<section>
+  <div class="num">10 · Питання до продакта / бекенда</div>
+  <h2>Що треба прояснити перед стартом</h2>
+  <ul>
+    <li><b>Live update частота</b> — як часто оновлювати rank і PnL? Polling vs WebSocket?</li>
+    <li><b>"Around you" leaderboard</b> — окремий API endpoint чи fetch повного board і slice на клієнті?</li>
+    <li><b>Activity feed у Locked</b> — джерело даних? Оптимістично тільки великі ставки чи всі дії?</li>
+    <li><b>Browse Others до kickoff</b> — який privacy contract? Показуємо тільки склад чи stake size теж?</li>
+    <li><b>Prize estimate у Live</b> — формула на клієнті чи приходить з бекенду?</li>
+    <li><b>Locked → Live перехід</b> — клієнт сам polling'ує kickoff, чи push'имо подію?</li>
+  </ul>
+</section>
+
+<footer>
+  <span>Fantasy Token · TZ-001 · v1</span>
+  <span>30 квіт 2026</span>
+</footer>
+
+</main>
+
+
+</body></html>
