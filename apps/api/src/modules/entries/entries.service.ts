@@ -51,6 +51,9 @@ export interface EntriesRepo {
     filter: 'all' | 'friends' | 'recent';
     limit: number;
   }): Promise<{ lineups: LineupSummary[]; total: number }>;
+  /** Lifetime count of finalized entries for a user — drives onboarding
+   * action-gates (DESIGN.md §8 R1→R3 unlocks). */
+  countFinalizedForUser(userId: string): Promise<number>;
 }
 
 export interface EntriesServiceDeps {
@@ -69,6 +72,7 @@ export interface EntriesService {
   listPublicLineups(args: ListLineupsArgs): Promise<{ lineups: LineupSummary[]; total: number }>;
   findLastLineupForUser(userId: string): Promise<LastLineupResponse['lineup']>;
   listActivity(args: { contestId: string; limit: number }): Promise<ActivityItem[]>;
+  countFinalizedForUser(userId: string): Promise<number>;
 }
 
 export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
@@ -135,6 +139,10 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
     async listActivity({ contestId, limit }) {
       const clamped = Math.max(1, Math.min(50, limit));
       return deps.repo.listActivity({ contestId, limit: clamped });
+    },
+
+    async countFinalizedForUser(userId) {
+      return deps.repo.countFinalizedForUser(userId);
     },
   };
 }

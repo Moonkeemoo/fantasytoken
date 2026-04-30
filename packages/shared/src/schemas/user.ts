@@ -16,6 +16,11 @@ export const MeResponse = z.object({
   /** Server-side onboarding flag — false → frontend routes to /tutorial.
    * Survives wipes and crosses devices, unlike the localStorage cache. */
   tutorialDone: z.boolean(),
+  /** Number of finalized contest entries the user has, ever. Drives the
+   * onboarding R1→R3 action-gated unlocks (DESIGN.md §8): the lobby hides
+   * paid cells until first Practice complete, etc. Default 0 for backward-
+   * compat with pre-rollout responses. */
+  finalizedContests: z.number().int().nonnegative().default(0),
 });
 export type MeResponse = z.infer<typeof MeResponse>;
 

@@ -38,6 +38,9 @@ function makeFakeRepo(
     async listActivity() {
       return [];
     },
+    async countFinalizedForUser() {
+      return 0;
+    },
     async listPublicLineups({ limit }) {
       // Two fake lineups, sorted oldest-first for filter='all'.
       const all = [

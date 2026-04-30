@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, tokens, users } from '../../db/schema/index.js';
 import type { ActivityItem, LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
@@ -160,6 +160,14 @@ export function createEntriesRepo(db: Database): EntriesRepo {
           submittedAt: r.submittedAt.toISOString(),
         };
       });
+    },
+
+    async countFinalizedForUser(userId) {
+      const [r] = await db
+        .select({ n: sql<number>`COUNT(*)::int` })
+        .from(entries)
+        .where(and(eq(entries.userId, userId), eq(entries.status, 'finalized')));
+      return r?.n ?? 0;
     },
   };
 }

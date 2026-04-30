@@ -3,9 +3,9 @@ import { Lobby } from './features/lobby/Lobby.js';
 import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
 import { AllocSheetDev } from './features/team-builder/AllocSheetDev.js';
 import { LockedScreen } from './features/lobby/LockedScreen.js';
-import { BrowseScreen } from './features/lobby/BrowseScreen.js';
 import { StatusPage } from './features/status/StatusPage.js';
 import { Live } from './features/live/Live.js';
+import { Spectator } from './features/spectator/Spectator.js';
 import { LiveList } from './features/live-list/LiveList.js';
 import { Rankings } from './features/rankings/Rankings.js';
 import { Result } from './features/result/Result.js';
@@ -31,8 +31,8 @@ export function App() {
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/contests/:id/build" element={<TeamBuilder />} />
         <Route path="/contests/:id/locked" element={<LockedScreen />} />
-        <Route path="/contests/:id/browse" element={<BrowseScreen />} />
         <Route path="/contests/:id/live" element={<Live />} />
+        <Route path="/contests/:id/watch" element={<Spectator />} />
         <Route path="/contests/:id/result" element={<Result />} />
         <Route path="/live" element={<LiveList />} />
         <Route path="/rankings" element={<Rankings />} />

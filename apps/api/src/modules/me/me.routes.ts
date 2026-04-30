@@ -40,6 +40,8 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
         ...(tgUser.photo_url !== undefined && { photoUrl: tgUser.photo_url }),
       });
 
+      const finalizedContests = await deps.entries.countFinalizedForUser(upsert.userId);
+
       return {
         user: {
           id: tgUser.id,
@@ -51,6 +53,7 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
         },
         balanceCents: Number(upsert.balanceCents),
         tutorialDone: upsert.tutorialDoneAt !== null,
+        finalizedContests,
       };
     });
 

@@ -3,25 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { useMe } from '../me/useMe.js';
 import { useContests } from './useContests.js';
 import { Header } from './Header.js';
-import { Tabs, type LobbyFilter } from './Tabs.js';
-import { FeaturedHero } from './FeaturedHero.js';
 import { ContestList } from './ContestList.js';
-import { ActiveBanner } from './ActiveBanner.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { NextRankTeaser } from '../rank/NextRankTeaser.js';
 import { useRank, useTeaser } from '../rank/useRank.js';
 import { PromoCarousel } from './PromoCarousel.js';
 import { InviteSlide } from './InviteSlide.js';
+import { zoneContests } from './zones.js';
+import { applyOnboardingGate } from './onboarding-gate.js';
 
-const IN_PROGRESS_STATUSES = new Set(['scheduled', 'active', 'finalizing']);
-
+/**
+ * Lobby v2 — 4 zones (DESIGN.md §4).
+ *
+ *   1. MY CONTESTS    — user's live entries, ends_at ASC
+ *   2. STARTING SOON  — joinable scheduled, starts_at ASC
+ *   3. WATCH LIVE     — active, not entered (spectator)
+ *   4. LOCKED         — scheduled, rank > user.rank, sorted by closest unlock
+ *
+ * Header summary (`🎯 N live · ⏰ M soon · 👀 K watching`) sits below the
+ * wallet header so the player can see at a glance what their day looks like.
+ */
 export function Lobby() {
   const navigate = useNavigate();
   const me = useMe();
-  // Default to 'all' so a fresh user sees both Practice (free) and the cash
-  // ladder in one list — mirrors what most players want before they specialise.
-  const [filter, setFilter] = useState<LobbyFilter>('all');
   const [topUpOpen, setTopUpOpen] = useState(false);
 
   const cash = useContests('cash');
@@ -30,57 +35,25 @@ export function Lobby() {
   const rank = useRank();
   const teaser = useTeaser();
 
-  const cashItems = cash.data?.items ?? [];
-  const freeItems = free.data?.items ?? [];
-  // 'all' = cash + free merged client-side. Backend has no 'all' filter
-  // since cash/free already cover the full schedule for any logged-in user.
-  const allItems = useMemo(() => [...cashItems, ...freeItems], [cashItems, freeItems]);
-
-  const counts: Record<LobbyFilter, number> = {
-    all: allItems.length,
-    cash: cashItems.length,
-    free: freeItems.length,
-  };
-
-  const items = filter === 'all' ? allItems : filter === 'cash' ? cashItems : freeItems;
-  // Unlocked-first, then locked sorted by min_rank ascending. Aspirational, not frustrating.
   const userRank = rank.data?.currentRank ?? 1;
-  // Featured = the highest-min_rank contest the user has actually unlocked
-  // within the current tab. The latest unlock becomes the headline; older
-  // unlocks demote to All Contests. No fallback to a static is_featured flag
-  // — keeps the headline truthful per user.
-  // Cash-tab fallback: if the user hasn't unlocked any cash contest yet
-  // (fresh Rank-1 player), surface a Free contest (typically Practice) so the
-  // lobby has a real "Enter contest →" headline instead of an empty hero slot.
-  const featured = useMemo(() => {
-    const pickHighest = (pool: typeof items) => {
-      const unlocked = pool.filter((c) => c.minRank <= userRank);
-      if (unlocked.length === 0) return undefined;
-      return unlocked.reduce((best, c) => (c.minRank > best.minRank ? c : best), unlocked[0]!);
-    };
-    const primary = pickHighest(items);
-    if (primary) return primary;
-    if (filter === 'cash') return pickHighest(freeItems);
-    return undefined;
-  }, [items, userRank, filter, freeItems]);
-  const others = useMemo(() => {
-    const pool = featured ? items.filter((c) => c.id !== featured.id) : items;
-    // Split unlocked vs locked. Show ALL unlocked (the player's actual play
-    // surface), but only the NEXT 2 locked tiers — a long tail of locked
-    // contests just felt like wall-of-shame; the two-deep glimpse keeps the
-    // aspirational signal without burying the playable list.
-    const unlocked: typeof items = [];
-    const locked: typeof items = [];
-    for (const c of pool) {
-      if (!c.userHasEntered && c.minRank > userRank) locked.push(c);
-      else unlocked.push(c);
-    }
-    locked.sort((a, b) => a.minRank - b.minRank);
-    return [...unlocked, ...locked.slice(0, 2)];
-  }, [items, featured, userRank]);
+  const finalizedContests = me.data?.finalizedContests ?? 0;
 
-  // Banner shows ANY user-entered contest that isn't yet finalized — quick jump to Live.
-  const myInProgress = (my.data?.items ?? []).filter((c) => IN_PROGRESS_STATUSES.has(c.status));
+  // Merge cash + free + my into one canonical list (dedupe by id), then zone.
+  const zones = useMemo(() => {
+    const byId = new Map<
+      string,
+      (typeof cash.data extends { items: infer T } ? T : never[])[number]
+    >();
+    for (const c of cash.data?.items ?? []) byId.set(c.id, c);
+    for (const c of free.data?.items ?? []) byId.set(c.id, c);
+    // /my response carries the authoritative `userHasEntered=true` for those rows.
+    for (const c of my.data?.items ?? []) byId.set(c.id, c);
+    const all = Array.from(byId.values());
+    const z = zoneContests(all, userRank);
+    // Onboarding gate (DESIGN.md §8) only applies to `soon` — we don't hide
+    // user's own running contests, spectate cards, or locked aspirational tier.
+    return { ...z, soon: applyOnboardingGate(z.soon, finalizedContests) };
+  }, [cash.data, free.data, my.data, userRank, finalizedContests]);
 
   if (me.isLoading) return <LoadingSplash />;
   if (me.isError || !me.data)
@@ -90,6 +63,7 @@ export function Lobby() {
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
   const goLocked = (id: string) => navigate(`/contests/${id}/locked`);
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
+  const goWatch = (id: string) => navigate(`/contests/${id}/watch`);
 
   return (
     <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
@@ -99,37 +73,78 @@ export function Lobby() {
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
-      <ActiveBanner inProgress={myInProgress} onView={goLive} onLocked={goLocked} />
+
+      {/* Permanent summary bar — orientator. */}
+      <div className="flex items-center gap-3 border-b border-rule px-4 py-2 font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
+        <span>🎯 {zones.my.length} live</span>
+        <span>·</span>
+        <span>⏰ {zones.soon.length} soon</span>
+        <span>·</span>
+        <span>👀 {zones.watch.length} watching</span>
+      </div>
+
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
-      {(() => {
-        // Promo carousel = Featured contest + Invite slide. Invite slide only
-        // appears for users with no active referrees (mirrors the old teaser
-        // visibility rule). When neither Featured nor Invite are eligible,
-        // the carousel renders nothing — no empty padding.
-        const slides = [];
-        if (featured) {
-          slides.push(<FeaturedHero contest={featured} onEnter={goTeamBuilder} />);
-        }
-        // InviteSlide always rides — the previous "hide after first referral"
-        // rule made the carousel feel like it had broken (most testers thought
-        // their invite link was disabled). 5%-forever is a pitch worth
-        // repeating; copy adapts to whether the user has any active referrals
-        // already.
-        slides.push(<InviteSlide />);
-        return slides.length > 0 ? <PromoCarousel slides={slides} /> : null;
-      })()}
-      <Tabs active={filter} counts={counts} onChange={setFilter} />
-      <ContestList
-        items={others}
-        balanceCents={me.data.balanceCents}
-        userRank={userRank}
-        onJoin={goTeamBuilder}
-        onView={goLive}
-        onLocked={goLocked}
-        onResult={goResult}
-        onTopUp={() => setTopUpOpen(true)}
-        heading="All contests"
-      />
+
+      <PromoCarousel slides={[<InviteSlide key="invite" />]} />
+
+      {zones.my.length > 0 && (
+        <ContestList
+          items={zones.my}
+          balanceCents={me.data.balanceCents}
+          userRank={userRank}
+          onJoin={goTeamBuilder}
+          onView={goLive}
+          onLocked={goLocked}
+          onResult={goResult}
+          onTopUp={() => setTopUpOpen(true)}
+          heading={`my contests · ${zones.my.length} live`}
+        />
+      )}
+
+      {zones.soon.length > 0 && (
+        <ContestList
+          items={zones.soon}
+          balanceCents={me.data.balanceCents}
+          userRank={userRank}
+          onJoin={goTeamBuilder}
+          onView={goLive}
+          onLocked={goLocked}
+          onResult={goResult}
+          onTopUp={() => setTopUpOpen(true)}
+          heading="starting soon · join now"
+        />
+      )}
+
+      {zones.watch.length > 0 && (
+        <ContestList
+          items={zones.watch}
+          balanceCents={me.data.balanceCents}
+          userRank={userRank}
+          onJoin={goTeamBuilder}
+          onView={goWatch}
+          onLocked={goLocked}
+          onResult={goResult}
+          onTopUp={() => setTopUpOpen(true)}
+          heading={`watch live · ${zones.watch.length} running`}
+        />
+      )}
+
+      {zones.locked.length > 0 && (
+        <ContestList
+          // Show only the next 3 locked tiers — anything further is buried as
+          // a long-tail wall. The full list is implied by the rank teaser.
+          items={zones.locked.slice(0, 3)}
+          balanceCents={me.data.balanceCents}
+          userRank={userRank}
+          onJoin={goTeamBuilder}
+          onView={goLive}
+          onLocked={goLocked}
+          onResult={goResult}
+          onTopUp={() => setTopUpOpen(true)}
+          heading="locked · keep playing to unlock"
+        />
+      )}
+
       <div className="flex-1" />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>
