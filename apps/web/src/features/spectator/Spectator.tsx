@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { fmtPnL } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
@@ -69,12 +70,21 @@ export function Spectator(): JSX.Element {
             const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${row.rank}`;
             const plClass =
               row.scorePct > 0 ? 'text-hl-green' : row.scorePct < 0 ? 'text-hl-red' : 'text-muted';
+            // Both $ PnL (matches the hero card on Live screen) and the
+            // raw % so spectators can compare apples-to-apples regardless
+            // of contest tier. Bigger pill is $; smaller is the %.
+            const pnlUsd = row.scorePct * data.virtualBudgetCents;
             return (
               <div key={row.rank} className="flex items-center gap-2">
                 <div className="w-[36px] text-center font-mono text-[12px] font-bold">{medal}</div>
                 <div className="flex-1 truncate text-[12px]">{row.displayName ?? 'anon'}</div>
-                <div className={`text-right font-mono text-[12px] font-bold ${plClass}`}>
-                  {formatPctPrecise(row.scorePct)}
+                <div className="text-right leading-tight">
+                  <div className={`font-mono text-[13px] font-bold ${plClass}`}>
+                    {fmtPnL(pnlUsd)}
+                  </div>
+                  <div className={`font-mono text-[10px] ${plClass}`}>
+                    {formatPctPrecise(row.scorePct)}
+                  </div>
                 </div>
               </div>
             );
@@ -82,9 +92,16 @@ export function Spectator(): JSX.Element {
         </Card>
       </div>
 
-      {/* Capacity / context. */}
+      {/* Capacity / context. `totalEntries` already includes bot fillers,
+          so the room reads as "full" the moment kickoff happens — that
+          matches what the lobby cards show (e.g. "20/20"). The previous
+          `realEntries / totalEntries` wording rendered "0 / 20 entries"
+          for a Practice that was bot-filled, which read as "empty room"
+          to the player. */}
       <div className="px-3 py-1 text-center font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
-        {data.realEntries} / {data.totalEntries} entries · prize 🪙 {Math.round(data.topPrizeCents)}
+        {data.totalEntries} entries
+        {data.realEntries > 0 ? ` (${data.realEntries} real)` : ''} · prize 🪙{' '}
+        {Math.round(data.topPrizeCents)}
       </div>
 
       <div className="flex-1" />

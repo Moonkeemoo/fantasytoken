@@ -49,9 +49,17 @@ export function Lobby() {
     for (const c of my.data?.items ?? []) byId.set(c.id, c);
     const all = Array.from(byId.values());
     const z = zoneContests(all, userRank);
-    // Onboarding gate (DESIGN.md §8) only applies to `soon` — we don't hide
-    // user's own running contests, spectate cards, or locked aspirational tier.
-    return { ...z, soon: applyOnboardingGate(z.soon, finalizedContests) };
+    // Filter Watch zone: only contests where the user's rank is within
+    // reach — minRank ≤ userRank + 2. Prevents the wall-of-RANK-13
+    // problem reported by the user where spectator cards far above their
+    // tier flooded the screen. Showing every active contest "you can
+    // watch but not play" turned the lobby into noise.
+    const watchInRange = z.watch.filter((c) => c.minRank <= userRank + 2);
+    return {
+      ...z,
+      soon: applyOnboardingGate(z.soon, finalizedContests),
+      watch: watchInRange,
+    };
   }, [cash.data, free.data, my.data, userRank, finalizedContests]);
 
   if (me.isLoading) return <LoadingSplash />;
@@ -100,7 +108,12 @@ export function Lobby() {
           When neither qualifies, the carousel renders nothing. */}
       {(() => {
         const slides: ReactNode[] = [];
-        if (finalizedContests === 0) {
+        // NewbieHero stays visible while the player is still a newbie
+        // (rank === 1), not just on the first launch. Earlier the hero
+        // disappeared the moment they finalized one Practice — too soon,
+        // user feedback was "пропала промо контест позиція". Hides as
+        // soon as they rank up to R2 and InviteSlide takes over.
+        if (userRank === 1) {
           const practice = zones.soon.find((c) => c.payAll && c.entryFeeCents === 0);
           if (practice) {
             slides.push(<NewbieHero key="newbie" contest={practice} onJoin={goTeamBuilder} />);
