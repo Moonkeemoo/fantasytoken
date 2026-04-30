@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { Lobby } from './features/lobby/Lobby.js';
 import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
+import { AllocSheetDev } from './features/team-builder/AllocSheetDev.js';
 import { StatusPage } from './features/status/StatusPage.js';
 import { Live } from './features/live/Live.js';
 import { LiveList } from './features/live-list/LiveList.js';
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/me/referrals" element={<ReferralsDetail />} />
         <Route path="/me/referrals/:friendId" element={<ReferralFriend />} />
         <Route path="/status" element={<StatusPage />} />
+        <Route path="/dev/alloc-sheet" element={<AllocSheetDev />} />
         <Route
           path="*"
           element={
