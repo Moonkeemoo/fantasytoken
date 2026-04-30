@@ -58,14 +58,19 @@ export function createContestsRepo(db: Database, rakePct: number): ContestsRepo 
     async list({ filter, userId }) {
       const baseQuery = db.select({ row: contests }).from(contests).$dynamic();
 
+      // Lobby v2 (DESIGN.md §4) needs ACTIVE contests for the Watch zone too,
+      // not just scheduled. Pre-v2 we only ever showed scheduled because the
+      // sole UX surface was "join now"; spectator mode broke that assumption.
+      const inProgress = sql`${contests.status} IN ('scheduled','active')`;
+
       let rows: Array<{ row: typeof contests.$inferSelect }>;
       if (filter === 'cash') {
         rows = await baseQuery
-          .where(and(eq(contests.status, 'scheduled'), sql`${contests.entryFeeCents} > 0`))
+          .where(and(inProgress, sql`${contests.entryFeeCents} > 0`))
           .orderBy(sql`${contests.isFeatured} DESC`, sql`${contests.startsAt} ASC`);
       } else if (filter === 'free') {
         rows = await baseQuery
-          .where(and(eq(contests.status, 'scheduled'), sql`${contests.entryFeeCents} = 0`))
+          .where(and(inProgress, sql`${contests.entryFeeCents} = 0`))
           .orderBy(sql`${contests.isFeatured} DESC`, sql`${contests.startsAt} ASC`);
       } else {
         // 'my'
