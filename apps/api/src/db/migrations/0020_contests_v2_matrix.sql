@@ -41,13 +41,24 @@ ALTER TABLE contests
   ALTER COLUMN mode          SET NOT NULL;
 
 -- CHECK constraints — keep enum-like values from going stale.
-ALTER TABLE contests
-  ADD CONSTRAINT contests_duration_lane_chk
-    CHECK (duration_lane IN ('10m','30m','1h','24h','7d')),
-  ADD CONSTRAINT contests_stake_tier_chk
-    CHECK (stake_tier IN ('free','c1','c5','c25','c100','c500')),
-  ADD CONSTRAINT contests_mode_chk
-    CHECK (mode IN ('bull','bear'));
+-- Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so guard via a DO block
+-- (this migration was hand-applied to prod via a script before being run
+-- by drizzle-kit; raw ADD would error on the second pass).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contests_duration_lane_chk') THEN
+    ALTER TABLE contests ADD CONSTRAINT contests_duration_lane_chk
+      CHECK (duration_lane IN ('10m','30m','1h','24h','7d'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contests_stake_tier_chk') THEN
+    ALTER TABLE contests ADD CONSTRAINT contests_stake_tier_chk
+      CHECK (stake_tier IN ('free','c1','c5','c25','c100','c500'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contests_mode_chk') THEN
+    ALTER TABLE contests ADD CONSTRAINT contests_mode_chk
+      CHECK (mode IN ('bull','bear'));
+  END IF;
+END $$;
 
 -- Generated cell-key: lane:stake:mode[:flavor]. The optional `flavor` is
 -- distinct in `name` (e.g. Practice vs other Free-bull-10m), but for the
