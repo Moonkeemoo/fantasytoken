@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { addToken, bumpAlloc, isValid, removeToken } from './lineupReducer.js';
 
+// INV-3 (ADR-0003): step=1, min=0, max=100, sum=100, count=5.
 describe('lineupReducer', () => {
   describe('addToken', () => {
-    it('first token gets 80% (max alloc)', () => {
-      expect(addToken([], 'BTC')).toEqual([{ symbol: 'BTC', alloc: 80 }]);
+    it('first token gets full 100% (no longer capped at 80)', () => {
+      expect(addToken([], 'BTC')).toEqual([{ symbol: 'BTC', alloc: 100 }]);
     });
 
-    it('second token rebalances to equal split rounded to %5, total stays 100', () => {
-      const after = addToken([{ symbol: 'BTC', alloc: 80 }], 'ETH');
+    it('second token rebalances to equal split, total stays 100', () => {
+      const after = addToken([{ symbol: 'BTC', alloc: 100 }], 'ETH');
       expect(after.map((p) => p.symbol).sort()).toEqual(['BTC', 'ETH']);
       const sum = after.reduce((s, p) => s + p.alloc, 0);
       expect(sum).toBe(100);
-      after.forEach((p) => expect(p.alloc % 5).toBe(0));
     });
 
-    it('5 tokens add to exactly 100, all in [5,80] multiples of 5', () => {
+    it('5 tokens equal-split to 20% each (sum=100)', () => {
       let lineup: ReturnType<typeof addToken> = [];
       for (const s of ['BTC', 'ETH', 'PEPE', 'WIF', 'BONK']) {
         lineup = addToken(lineup, s);
@@ -23,10 +23,20 @@ describe('lineupReducer', () => {
       expect(lineup).toHaveLength(5);
       expect(lineup.reduce((s, p) => s + p.alloc, 0)).toBe(100);
       lineup.forEach((p) => {
-        expect(p.alloc % 5).toBe(0);
-        expect(p.alloc).toBeGreaterThanOrEqual(5);
-        expect(p.alloc).toBeLessThanOrEqual(80);
+        expect(Number.isInteger(p.alloc)).toBe(true);
+        expect(p.alloc).toBeGreaterThanOrEqual(0);
+        expect(p.alloc).toBeLessThanOrEqual(100);
       });
+    });
+
+    it('3 tokens with non-divisible 100 — first absorbs remainder', () => {
+      let lineup: ReturnType<typeof addToken> = [];
+      for (const s of ['BTC', 'ETH', 'PEPE']) lineup = addToken(lineup, s);
+      // 100/3 → 33 each, remainder 1 → first slot = 34, others = 33
+      expect(lineup.reduce((s, p) => s + p.alloc, 0)).toBe(100);
+      expect(lineup[0]!.alloc).toBe(34);
+      expect(lineup[1]!.alloc).toBe(33);
+      expect(lineup[2]!.alloc).toBe(33);
     });
 
     it('refuses to add 6th token (no-op)', () => {
@@ -39,7 +49,7 @@ describe('lineupReducer', () => {
     });
 
     it('refuses duplicate symbol (no-op)', () => {
-      const after = addToken([{ symbol: 'BTC', alloc: 80 }], 'BTC');
+      const after = addToken([{ symbol: 'BTC', alloc: 100 }], 'BTC');
       expect(after).toHaveLength(1);
     });
   });
@@ -58,38 +68,49 @@ describe('lineupReducer', () => {
   });
 
   describe('bumpAlloc', () => {
-    it('+5 within bounds adjusts only target token', () => {
+    it('+1 within bounds adjusts only target token', () => {
       const after = bumpAlloc(
         [
           { symbol: 'BTC', alloc: 40 },
           { symbol: 'ETH', alloc: 60 },
         ],
         'BTC',
-        +5,
+        +1,
       );
-      expect(after.find((p) => p.symbol === 'BTC')?.alloc).toBe(45);
+      expect(after.find((p) => p.symbol === 'BTC')?.alloc).toBe(41);
       expect(after.find((p) => p.symbol === 'ETH')?.alloc).toBe(60);
     });
 
-    it('clamps to max 80', () => {
-      const after = bumpAlloc([{ symbol: 'BTC', alloc: 80 }], 'BTC', +5);
-      expect(after[0]!.alloc).toBe(80);
+    it('clamps to max 100 (no longer 80)', () => {
+      const after = bumpAlloc([{ symbol: 'BTC', alloc: 100 }], 'BTC', +5);
+      expect(after[0]!.alloc).toBe(100);
     });
 
-    it('clamps to min 5', () => {
-      const after = bumpAlloc([{ symbol: 'BTC', alloc: 5 }], 'BTC', -5);
-      expect(after[0]!.alloc).toBe(5);
+    it('clamps to min 0 (no longer 5)', () => {
+      const after = bumpAlloc([{ symbol: 'BTC', alloc: 0 }], 'BTC', -5);
+      expect(after[0]!.alloc).toBe(0);
     });
   });
 
   describe('isValid', () => {
-    it('5 tokens, sum=100, all in [5,80] multiples of 5 → valid', () => {
+    it('5 tokens, sum=100 (integer mix) → valid', () => {
       const lineup = [
-        { symbol: 'BTC', alloc: 40 },
-        { symbol: 'ETH', alloc: 25 },
-        { symbol: 'PEPE', alloc: 15 },
-        { symbol: 'WIF', alloc: 10 },
-        { symbol: 'BONK', alloc: 10 },
+        { symbol: 'BTC', alloc: 37 },
+        { symbol: 'ETH', alloc: 28 },
+        { symbol: 'PEPE', alloc: 19 },
+        { symbol: 'WIF', alloc: 9 },
+        { symbol: 'BONK', alloc: 7 },
+      ];
+      expect(isValid(lineup)).toBe(true);
+    });
+
+    it('5 tokens with one at 0% and one at 100%-rest → valid (degenerate but legal)', () => {
+      const lineup = [
+        { symbol: 'BTC', alloc: 100 },
+        { symbol: 'ETH', alloc: 0 },
+        { symbol: 'PEPE', alloc: 0 },
+        { symbol: 'WIF', alloc: 0 },
+        { symbol: 'BONK', alloc: 0 },
       ];
       expect(isValid(lineup)).toBe(true);
     });
@@ -103,6 +124,17 @@ describe('lineupReducer', () => {
         { symbol: 'BTC', alloc: 30 },
         { symbol: 'ETH', alloc: 25 },
         { symbol: 'PEPE', alloc: 15 },
+        { symbol: 'WIF', alloc: 10 },
+        { symbol: 'BONK', alloc: 10 },
+      ];
+      expect(isValid(lineup)).toBe(false);
+    });
+
+    it('non-integer alloc → invalid', () => {
+      const lineup = [
+        { symbol: 'BTC', alloc: 33.3 },
+        { symbol: 'ETH', alloc: 33.3 },
+        { symbol: 'PEPE', alloc: 13.4 },
         { symbol: 'WIF', alloc: 10 },
         { symbol: 'BONK', alloc: 10 },
       ];

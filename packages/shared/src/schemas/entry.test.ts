@@ -11,8 +11,9 @@ const VALID = {
   ],
 };
 
+// INV-3 (ADR-0003): step=1, range [0,100], sum=100, count=5.
 describe('entrySubmissionSchema', () => {
-  it('accepts a valid lineup (5 tokens, sum=100, all multiples of 5, range 5-80)', () => {
+  it('accepts a valid lineup (5 tokens, sum=100, integer allocs in [0,100])', () => {
     expect(entrySubmissionSchema.safeParse(VALID).success).toBe(true);
   });
 
@@ -36,7 +37,7 @@ describe('entrySubmissionSchema', () => {
     ).toBe(false);
   });
 
-  it('rejects allocation that is not a multiple of 5', () => {
+  it('accepts non-multiple-of-5 allocs (ADR-0003: step=1)', () => {
     expect(
       entrySubmissionSchema.safeParse({
         picks: [
@@ -47,10 +48,10 @@ describe('entrySubmissionSchema', () => {
           { symbol: 'BONK', alloc: 10 },
         ],
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('rejects allocation < 5%', () => {
+  it('accepts 0% alloc on a slot (ADR-0003: min=0)', () => {
     expect(
       entrySubmissionSchema.safeParse({
         picks: [
@@ -61,18 +62,60 @@ describe('entrySubmissionSchema', () => {
           { symbol: 'BONK', alloc: 25 },
         ],
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('rejects allocation > 80%', () => {
+  it('accepts 100% on a single slot when others are 0% (ADR-0003: max=100)', () => {
     expect(
       entrySubmissionSchema.safeParse({
         picks: [
-          { symbol: 'BTC', alloc: 85 },
-          { symbol: 'ETH', alloc: 5 },
-          { symbol: 'PEPE', alloc: 5 },
+          { symbol: 'BTC', alloc: 100 },
+          { symbol: 'ETH', alloc: 0 },
+          { symbol: 'PEPE', alloc: 0 },
           { symbol: 'WIF', alloc: 0 },
-          { symbol: 'BONK', alloc: 5 },
+          { symbol: 'BONK', alloc: 0 },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects negative alloc', () => {
+    expect(
+      entrySubmissionSchema.safeParse({
+        picks: [
+          { symbol: 'BTC', alloc: -5 },
+          { symbol: 'ETH', alloc: 35 },
+          { symbol: 'PEPE', alloc: 25 },
+          { symbol: 'WIF', alloc: 25 },
+          { symbol: 'BONK', alloc: 20 },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects alloc > 100', () => {
+    expect(
+      entrySubmissionSchema.safeParse({
+        picks: [
+          { symbol: 'BTC', alloc: 101 },
+          { symbol: 'ETH', alloc: -1 },
+          { symbol: 'PEPE', alloc: 0 },
+          { symbol: 'WIF', alloc: 0 },
+          { symbol: 'BONK', alloc: 0 },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects non-integer alloc', () => {
+    expect(
+      entrySubmissionSchema.safeParse({
+        picks: [
+          { symbol: 'BTC', alloc: 33.3 },
+          { symbol: 'ETH', alloc: 33.3 },
+          { symbol: 'PEPE', alloc: 13.4 },
+          { symbol: 'WIF', alloc: 10 },
+          { symbol: 'BONK', alloc: 10 },
         ],
       }).success,
     ).toBe(false);

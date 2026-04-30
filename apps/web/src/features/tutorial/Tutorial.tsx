@@ -63,7 +63,7 @@ export function Tutorial() {
         {step === 1 && (
           <>
             <h2 className="text-[28px] font-extrabold leading-tight">split your bankroll</h2>
-            <p className="mt-1 text-[12px] text-muted">$100 across 5 tokens · multiples of 5%</p>
+            <p className="mt-1 text-[12px] text-muted">$100K across 5 tokens · any % split</p>
           </>
         )}
         {step === 2 && (

@@ -1,14 +1,18 @@
-// INV-3 (revised 2026-04-28, ADR-0002): allocation rules.
+// INV-3 (revised 2026-04-30, ADR-0003): allocation rules.
 export const PORTFOLIO_TOKEN_COUNT = 5 as const;
 export const PORTFOLIO_PCT_TOTAL = 100 as const;
-export const ALLOCATION_STEP_PCT = 5 as const;
-export const ALLOCATION_MIN_PCT = 5 as const;
-export const ALLOCATION_MAX_PCT = 80 as const;
+export const ALLOCATION_STEP_PCT = 1 as const;
+export const ALLOCATION_MIN_PCT = 0 as const;
+export const ALLOCATION_MAX_PCT = 100 as const;
 
 // Legacy: scoring function takes a generic `totalBudgetUsd`. Tests pass 100_000;
 // MVP code paths pass 100 (unit = percent). Kept here so existing scoring tests
 // don't churn — see ADR-0002.
 export const PORTFOLIO_BUDGET_USD = 100_000 as const;
+
+// ADR-0003: virtualBudget per contest is the new $-first UX layer. Default for
+// contests without an explicit value (e.g. legacy fixtures, dev seeds).
+export const DEFAULT_VIRTUAL_BUDGET_USD = 100_000 as const;
 
 // INV-4 (frozen for MVP): preserved for V2 unfreeze.
 export const LEAGUE_MULTIPLIERS = {

@@ -1,19 +1,16 @@
-import {
-  ALLOCATION_MAX_PCT,
-  ALLOCATION_MIN_PCT,
-  ALLOCATION_STEP_PCT,
-  PORTFOLIO_PCT_TOTAL,
-  PORTFOLIO_TOKEN_COUNT,
-} from '@fantasytoken/shared';
+import { PORTFOLIO_PCT_TOTAL, PORTFOLIO_TOKEN_COUNT } from '@fantasytoken/shared';
 
 export interface PickOutput {
   symbol: string;
   alloc: number;
 }
 
-const MIN = ALLOCATION_MIN_PCT;
-const MAX = ALLOCATION_MAX_PCT;
-const STEP = ALLOCATION_STEP_PCT;
+// ADR-0003: bot lineups intentionally use a coarser distribution than user input.
+// `step=1, min=0` (per @fantasytoken/shared) on 5 slots produces noisy allocations
+// like [3, 47, 12, 31, 7]; bots should look like players, not random-noise generators.
+const BOT_MIN = 5;
+const BOT_MAX = 80;
+const BOT_STEP = 5;
 const TOTAL = PORTFOLIO_PCT_TOTAL;
 const N = PORTFOLIO_TOKEN_COUNT;
 
@@ -35,18 +32,18 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
 }
 
 function randomAllocations(rng: () => number): number[] {
-  const allocs = new Array<number>(N).fill(MIN);
-  const chunks = (TOTAL - N * MIN) / STEP;
+  const allocs = new Array<number>(N).fill(BOT_MIN);
+  const chunks = (TOTAL - N * BOT_MIN) / BOT_STEP;
   for (let c = 0; c < chunks; c++) {
     const eligible: number[] = [];
     for (let i = 0; i < N; i++) {
-      if (allocs[i]! + STEP <= MAX) eligible.push(i);
+      if (allocs[i]! + BOT_STEP <= BOT_MAX) eligible.push(i);
     }
     if (eligible.length === 0) {
       throw new Error('randomAllocations: no eligible slot — invariant violated');
     }
     const idx = eligible[Math.floor(rng() * eligible.length)]!;
-    allocs[idx] = allocs[idx]! + STEP;
+    allocs[idx] = allocs[idx]! + BOT_STEP;
   }
   return allocs;
 }

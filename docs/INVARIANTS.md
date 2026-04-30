@@ -15,7 +15,7 @@
 
 **INV-2** — Snapshot цін на старті та фініші контесту immutable після запису в `price_snapshots`. Якщо API повернув ціну — вона зафіксована, навіть якщо джерело потім "виправило". Consequence: disputed payouts, гравці не довіряють результатам.
 
-**INV-3** — Allocation портфеля: рівно 5 токенів, кожен % є multiple of 5, range 5–80%, сума всіх часток рівно 100%. Frontend валідує UX, backend є source of truth. Consequence: гравець з 110% портфелем виграє нечесно, leaderboard ламається. Replaces 2026-04-27 версію (бюджет $100K) — див. ADR-0002.
+**INV-3** — Allocation портфеля: рівно 5 токенів, кожен alloc — ціле число (`step=1`), `0 ≤ alloc ≤ 100`, сума всіх часток рівно 100%. Frontend валідує UX, backend є source of truth. Consequence: гравець з 110% портфелем виграє нечесно, leaderboard ламається. Revisions: ADR-0003 (2026-04-30, поточна — step=1, range [0,100]), ADR-0002 (2026-04-28, step=5, range [5,80]), 2026-04-27 версія ($100K budget).
 
 **INV-4** _(FROZEN for MVP — Bull-only; код preserved)_ — Bear league score = `-1 × pct_change × weight`. Не `abs(pct_change)`, не `1 / pct_change`. Падіння −50% = +50 × weight, зростання +10% = −10 × weight. Consequence: поламана ключова диференціююча механіка продукту.
 
