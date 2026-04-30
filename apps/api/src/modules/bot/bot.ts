@@ -23,6 +23,11 @@ export interface CreateBotArgs {
    * web_app inline button on /start AND the persistent chat menu
    * button. Must be HTTPS. */
   miniAppUrl?: string;
+  /** Mini-app short_name registered in @BotFather (the `<short>` portion
+   * of `https://t.me/<bot>/<short>`). Used to synthesise a fallback
+   * deep-link when MINI_APP_URL isn't configured — that way buttons
+   * always render even on a half-configured environment. */
+  miniAppShortName?: string;
 }
 
 /**
@@ -53,14 +58,37 @@ function openAppButton(
   return { text: '🎯 Open app', web_app: { url } };
 }
 
-export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstance {
+export function createBot({
+  token,
+  log,
+  miniAppUrl,
+  miniAppShortName = 'fantasytoken',
+}: CreateBotArgs): BotInstance {
   const bot = new Bot(token);
 
-  /** Reusable inline keyboard for the "Open app" CTA. Lets us reuse the
-   * same button across /start and /play so muscle memory works. */
-  const openAppKeyboard = miniAppUrl
-    ? { inline_keyboard: [[openAppButton(miniAppUrl)]] }
-    : { inline_keyboard: [] };
+  /**
+   * Resolve the URL to use for "Open app" buttons. Priority:
+   *   1. Explicit MINI_APP_URL env (most flexible — can be either the
+   *      raw frontend HTTPS URL or a t.me alias).
+   *   2. Synthetic t.me alias built from the bot's own username and
+   *      the configured mini-app short_name. Available only after
+   *      bot.start() resolves bot.botInfo.
+   *   3. Empty inline_keyboard — the bot replies with text only.
+   *
+   * Computed lazily inside command handlers so we always use the latest
+   * resolved value (botInfo isn't populated until start completes).
+   */
+  function effectiveMiniAppUrl(): string | null {
+    if (miniAppUrl) return miniAppUrl;
+    const username = bot.botInfo?.username;
+    if (username && miniAppShortName) return `https://t.me/${username}/${miniAppShortName}`;
+    return null;
+  }
+
+  function buildOpenAppKeyboard() {
+    const url = effectiveMiniAppUrl();
+    return url ? { inline_keyboard: [[openAppButton(url)]] } : { inline_keyboard: [] };
+  }
 
   bot.command('start', async (ctx) => {
     // Welcome message + deep-link to the mini-app. The startapp param is
@@ -74,7 +102,7 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
         '_Tip: tap the blue *Play* button below the message bar to open the app any time\\._',
       {
         parse_mode: 'MarkdownV2',
-        reply_markup: openAppKeyboard,
+        reply_markup: buildOpenAppKeyboard(),
       },
     );
   });
@@ -83,7 +111,7 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
   bot.command('play', async (ctx) => {
     await ctx.reply('🎯 Tap below to jump into the lobby\\.', {
       parse_mode: 'MarkdownV2',
-      reply_markup: openAppKeyboard,
+      reply_markup: buildOpenAppKeyboard(),
     });
   });
 
@@ -124,16 +152,25 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
       //     "Recent Apps" tray so users find it from the home/main menu
       //   • a fresh chat shows it immediately on first /start
       // Telegram only accepts the raw frontend URL for menu_button.web_app
-      // (a t.me/<bot>/<short> deep-link is rejected). When MINI_APP_URL
-      // is the t.me variant we fall back to type:'commands' — the slash-
-      // command list (set above) becomes the visible menu instead of
-      // text saying nothing's there.
-      const isTmeAlias = miniAppUrl && /^https:\/\/t\.me\//i.test(miniAppUrl);
-      if (!miniAppUrl || isTmeAlias) {
+      // (a t.me/<bot>/<short> deep-link is rejected). When the effective
+      // URL is the t.me variant we fall back to type:'commands' — the
+      // slash-command list (set above) becomes the visible menu instead
+      // of text saying nothing's there.
+      const url = effectiveMiniAppUrl();
+      log.info(
+        {
+          envUrl: miniAppUrl ?? null,
+          effectiveUrl: url,
+          source: miniAppUrl ? 'MINI_APP_URL' : url ? 'fallback (botInfo + short_name)' : 'none',
+        },
+        'bot.setup resolving mini-app URL',
+      );
+      const isTmeAlias = url && /^https:\/\/t\.me\//i.test(url);
+      if (!url || isTmeAlias) {
         try {
           await bot.api.setChatMenuButton({ menu_button: { type: 'commands' } });
           log.info(
-            { reason: !miniAppUrl ? 'MINI_APP_URL unset' : 't.me alias unsupported by web_app' },
+            { reason: !url ? 'no effective URL' : 't.me alias unsupported by web_app' },
             'bot.setup menu button → commands list (set MINI_APP_URL to the raw frontend HTTPS URL to enable the Play button)',
           );
         } catch (err) {
@@ -146,15 +183,12 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
           menu_button: {
             type: 'web_app',
             text: 'Play',
-            web_app: { url: miniAppUrl },
+            web_app: { url },
           },
         });
-        log.info({ miniAppUrl }, 'bot.setup menu button installed');
+        log.info({ url }, 'bot.setup menu button installed');
       } catch (err) {
-        log.warn(
-          { err, miniAppUrl },
-          'bot.setup setChatMenuButton failed — falling back to commands',
-        );
+        log.warn({ err, url }, 'bot.setup setChatMenuButton failed — falling back to commands');
         try {
           await bot.api.setChatMenuButton({ menu_button: { type: 'commands' } });
         } catch (err2) {
