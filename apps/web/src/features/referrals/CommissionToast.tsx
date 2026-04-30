@@ -25,15 +25,29 @@ const LAST_SEEN_KEY = 'ft.referrals.lastSeenPayoutId';
  *
  * Mounted once at the App root so it sees every screen.
  */
+/** Discriminated state so the toast can render commission OR signup-unlock
+ * with the same component (avoids two near-identical floating elements
+ * stacking on top of each other). */
+type ToastState =
+  | {
+      kind: 'commission';
+      id: string;
+      payoutCents: number;
+      sourceFirstName: string | null;
+      sourcePrizeCents: number;
+      level: 1 | 2;
+    }
+  | {
+      kind: 'referral_unlock';
+      id: string;
+      bonusType: 'REFEREE' | 'RECRUITER';
+      amountCents: number;
+      sourceFirstName: string | null;
+    };
+
 export function CommissionToast() {
   const navigate = useNavigate();
-  const [shown, setShown] = useState<{
-    id: string;
-    payoutCents: number;
-    sourceFirstName: string | null;
-    sourcePrizeCents: number;
-    level: 1 | 2;
-  } | null>(null);
+  const [shown, setShown] = useState<ToastState | null>(null);
 
   const q = useQuery({
     queryKey: ['referrals', 'payouts', 5],
@@ -45,22 +59,36 @@ export function CommissionToast() {
     staleTime: 0,
   });
 
-  // WS path — fires sub-second after the commission credit.
+  // WS path — fires sub-second after the credit. Two event kinds map to
+  // the same toast surface (commission + referral_unlock) so the user
+  // sees a single consistent affordance regardless of which flow paid.
   const realtime = useRealtime();
   useEffect(() => {
     const ev = realtime.lastEvent;
-    if (!ev || ev.kind !== 'commission') return;
-    // Synthetic id so the polling-side dedup also recognises this toast.
-    // `ws:` prefix avoids ever colliding with a real referral_payouts UUID.
-    const synthId = `ws:${Date.now()}`;
-    setShown({
-      id: synthId,
-      payoutCents: ev.payoutCents,
-      sourceFirstName: ev.sourceFirstName,
-      sourcePrizeCents: ev.sourcePrizeCents,
-      level: ev.level,
-    });
-    telegram.hapticNotification('success');
+    if (!ev) return;
+    if (ev.kind === 'commission') {
+      // Synthetic id so the polling-side dedup also recognises this toast.
+      // `ws:` prefix avoids ever colliding with a real referral_payouts UUID.
+      const synthId = `ws:${Date.now()}`;
+      setShown({
+        kind: 'commission',
+        id: synthId,
+        payoutCents: ev.payoutCents,
+        sourceFirstName: ev.sourceFirstName,
+        sourcePrizeCents: ev.sourcePrizeCents,
+        level: ev.level,
+      });
+      telegram.hapticNotification('success');
+    } else if (ev.kind === 'referral_unlock') {
+      setShown({
+        kind: 'referral_unlock',
+        id: `ws-unlock:${Date.now()}`,
+        bonusType: ev.bonusType,
+        amountCents: ev.amountCents,
+        sourceFirstName: ev.sourceFirstName,
+      });
+      telegram.hapticNotification('success');
+    }
     // Don't write LAST_SEEN here — once polling sees the matching real row it
     // will compare against this synthId, miss, and we'd briefly re-pop. Keep
     // the LAST_SEEN as the canonical authoritative marker (real row id).
@@ -81,6 +109,7 @@ export function CommissionToast() {
 
     if (newest.id !== lastSeen) {
       setShown({
+        kind: 'commission',
         id: newest.id,
         payoutCents: newest.payoutCents,
         sourceFirstName: newest.sourceFirstName,
@@ -94,7 +123,29 @@ export function CommissionToast() {
 
   if (!shown) return null;
 
-  const friend = shown.sourceFirstName ?? 'Your friend';
+  // Per-kind copy. Both variants share the same animation + slide affordance
+  // and route the user to /me so they can see the matching transaction in
+  // their referrals breakdown.
+  let icon: string;
+  let title: string;
+  let subtitle: string;
+  if (shown.kind === 'commission') {
+    const friend = shown.sourceFirstName ?? 'Your friend';
+    icon = '💸';
+    title = `+${formatCents(shown.payoutCents)} from ${friend}'s win`;
+    subtitle = `L${shown.level} commission · ${shown.level === 1 ? '5%' : '1%'} of ${formatCents(shown.sourcePrizeCents)} prize`;
+  } else {
+    icon = '🎉';
+    if (shown.bonusType === 'RECRUITER') {
+      const friend = shown.sourceFirstName ?? 'Your friend';
+      title = `+${formatCents(shown.amountCents)} — ${friend} played their first`;
+      subtitle = 'Referral signup bonus unlocked';
+    } else {
+      title = `+${formatCents(shown.amountCents)} welcome bonus unlocked`;
+      subtitle = 'Your first contest is in — credit applied';
+    }
+  }
+
   return (
     <button
       onClick={() => {
@@ -106,14 +157,11 @@ export function CommissionToast() {
       className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b-2 border-accent bg-ink px-4 py-3 text-left text-paper shadow-lg"
       style={{ animation: 'commission-slide 500ms ease-out' }}
     >
-      <span className="text-[20px] leading-none">💸</span>
+      <span className="text-[20px] leading-none">{icon}</span>
       <div className="flex-1">
-        <div className="text-[13px] font-extrabold leading-tight">
-          +{formatCents(shown.payoutCents)} from {friend}'s win
-        </div>
+        <div className="text-[13px] font-extrabold leading-tight">{title}</div>
         <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-paper/70">
-          L{shown.level} commission · {shown.level === 1 ? '5%' : '1%'} of{' '}
-          {formatCents(shown.sourcePrizeCents)} prize
+          {subtitle}
         </div>
       </div>
       <span className="font-mono text-[16px] text-paper/80">›</span>

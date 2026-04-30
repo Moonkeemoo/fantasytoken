@@ -160,6 +160,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     currency,
     log: deps.logger,
     ...(dmQueue ? { dmQueue } : {}),
+    ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
     realtimeHub,
   });
 

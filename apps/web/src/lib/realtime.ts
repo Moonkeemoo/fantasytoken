@@ -12,6 +12,12 @@ export type RealtimeEvent =
       level: 1 | 2;
       currencyCode: string;
     }
+  | {
+      kind: 'referral_unlock';
+      bonusType: 'REFEREE' | 'RECRUITER';
+      amountCents: number;
+      sourceFirstName: string | null;
+    }
   | { kind: 'ping' };
 
 export type ConnectionState = 'connecting' | 'open' | 'closed';

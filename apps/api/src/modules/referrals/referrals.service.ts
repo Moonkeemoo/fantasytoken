@@ -57,15 +57,20 @@ export interface ReferralsRepo {
     payoutCents: bigint;
     currency: ReferralCurrency;
   }): Promise<{ paid: boolean }>;
-  /** Find still-locked signup bonus rows for this user (REFEREE + maybe RECRUITER). */
+  /** Find still-locked signup bonus rows for this user (REFEREE + maybe RECRUITER).
+   *  `sourceUserId` is the referee whose play triggered the row (RECRUITER
+   *  side); NULL for the REFEREE row (recipient IS the referee). */
   findLockedSignupBonuses(userId: string): Promise<
     Array<{
       id: string;
       recipientUserId: string;
       bonusType: 'REFEREE' | 'RECRUITER';
       amountCents: bigint;
+      sourceUserId: string | null;
     }>
   >;
+  /** Look up the friend's first_name for the unlock DM/toast copy. */
+  lookupFirstName(userId: string): Promise<string | null>;
   /** Mark row unlocked + record triggering entry. */
   markBonusUnlocked(args: {
     bonusRowId: string;
@@ -195,6 +200,9 @@ export interface ReferralsServiceDeps {
   /** Optional — when present, payCommissions also pushes a realtime event so
    * the FE in-app toast shows in <1s instead of waiting for 30s polling. */
   realtimeHub?: RealtimeHub;
+  /** Mini-app deep-link base, used by signup-unlock DMs to point the user
+   * back into the app. Same env var as the contest-finalized DM uses. */
+  miniAppUrl?: string;
 }
 
 export interface ReferralsService {
@@ -382,6 +390,41 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
               transactionId: tx.txId,
             });
             unlockedCount += 1;
+
+            // Bot DM + realtime toast — best-effort, INV-7 guards inside
+            // each subsystem. Failures here must NOT block the next row.
+            // RECRUITER copy names the friend (sourceUserId on the row);
+            // REFEREE copy congratulates the new user themselves.
+            try {
+              const sourceFirstName =
+                row.bonusType === 'RECRUITER' && row.sourceUserId
+                  ? await deps.repo.lookupFirstName(row.sourceUserId)
+                  : null;
+              if (deps.dmQueue && deps.miniAppUrl) {
+                await deps.dmQueue.enqueueReferralUnlock({
+                  recipientUserId: row.recipientUserId,
+                  event: {
+                    bonusType: row.bonusType,
+                    amountCents: Number(credit),
+                    sourceFirstName,
+                    appUrl: deps.miniAppUrl,
+                  },
+                });
+              }
+              if (deps.realtimeHub) {
+                deps.realtimeHub.publish(row.recipientUserId, {
+                  kind: 'referral_unlock',
+                  bonusType: row.bonusType,
+                  amountCents: Number(credit),
+                  sourceFirstName,
+                });
+              }
+            } catch (notifyErr) {
+              deps.log.warn(
+                { err: notifyErr, bonusRowId: row.id },
+                'referrals.maybeUnlockSignupBonuses notify failed',
+              );
+            }
           } catch (err) {
             deps.log.error(
               { err, bonusRowId: row.id, recipientUserId: row.recipientUserId },

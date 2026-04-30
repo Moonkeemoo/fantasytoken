@@ -4,16 +4,19 @@ import {
   formatCommissionDM,
   formatContestCancelledDM,
   formatContestFinalizedDM,
+  formatReferralUnlockDM,
   type CommissionEvent,
   type ContestCancelledEvent,
   type ContestFinalizedEvent,
+  type ReferralUnlockEvent,
 } from './notifications.js';
 
 /** Discriminated union of payloads stored on bot_dm_queue.payload (jsonb). */
 export type DmPayload =
   | { kind: 'commission'; event: CommissionEvent }
   | { kind: 'contest_finalized'; event: ContestFinalizedEvent }
-  | { kind: 'contest_cancelled'; event: ContestCancelledEvent };
+  | { kind: 'contest_cancelled'; event: ContestCancelledEvent }
+  | { kind: 'referral_unlock'; event: ReferralUnlockEvent };
 
 export interface DmQueueRepo {
   /** Insert a row with `scheduled_at = max(now + floorSeconds, lastDmSent + 1h)`.
@@ -66,6 +69,10 @@ export interface DmQueueService {
     recipientUserId: string;
     event: ContestCancelledEvent;
   }): Promise<void>;
+  enqueueReferralUnlock(args: {
+    recipientUserId: string;
+    event: ReferralUnlockEvent;
+  }): Promise<void>;
   /** Cron entry-point. Called from server.ts every minute. */
   drain(): Promise<{ sentCount: number; failedCount: number; skippedCount: number }>;
 }
@@ -79,6 +86,9 @@ const CONTEST_FINALIZED_FLOOR_SECONDS = 5 * 60;
 /** Floor for cancellation rows — short. Refund already landed in their
  * balance, the DM is just informational; no benefit to delaying it. */
 const CONTEST_CANCELLED_FLOOR_SECONDS = 60;
+/** Floor for referral-unlock rows — short. Bonus already landed; we just
+ * tell the user *why* they got the +$25 so it doesn't look mystery. */
+const REFERRAL_UNLOCK_FLOOR_SECONDS = 60;
 
 export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
   const maxAttempts = deps.maxAttempts ?? 3;
@@ -125,6 +135,20 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
         );
       }
     },
+    async enqueueReferralUnlock({ recipientUserId, event }) {
+      try {
+        await deps.repo.enqueue({
+          recipientUserId,
+          payload: { kind: 'referral_unlock', event },
+          floorSeconds: REFERRAL_UNLOCK_FLOOR_SECONDS,
+        });
+      } catch (err) {
+        deps.log.warn(
+          { err, recipientUserId, bonusType: event.bonusType },
+          'dm.enqueueReferralUnlock failed',
+        );
+      }
+    },
     async drain() {
       let sentCount = 0;
       let failedCount = 0;
@@ -138,19 +162,33 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           .filter((r) => r.payload.kind === 'contest_finalized')
           .map((r) => (r.payload as { event: ContestFinalizedEvent }).event.entryId),
       );
-      const viewedEntryIds =
-        finalizedEntryIds.length > 0
-          ? await deps.repo.findViewedEntryIds(finalizedEntryIds)
-          : new Set<string>();
+      // Best-effort lookup: if findViewedEntryIds errors (e.g. the
+      // result_viewed_at column doesn't exist yet on a half-deployed
+      // env), default to "nothing viewed" so DMs still go out — better
+      // a redundant DM than a silent black hole that drops every
+      // contest_finalized notification.
+      let viewedEntryIds = new Set<string>();
+      if (finalizedEntryIds.length > 0) {
+        try {
+          viewedEntryIds = await deps.repo.findViewedEntryIds(finalizedEntryIds);
+        } catch (err) {
+          deps.log.warn(
+            { err, count: finalizedEntryIds.length },
+            'dm.drain findViewedEntryIds failed — sending all queued contest_finalized rows',
+          );
+        }
+      }
 
       for (const group of ready) {
         // Partition into kinds; skip any contest_finalized row whose entry was
         // already viewed (user came back on their own — DM would be redundant).
-        // Cancellation rows are NOT skip-on-viewed: even if the user saw the
-        // refund result page, a DM confirming the balance change is helpful.
+        // Other kinds are NOT skip-on-viewed: cancellation + unlock are pure
+        // balance-change explainers and the user benefits from explicit
+        // confirmation regardless of whether they opened the app.
         const commissionEvents: CommissionEvent[] = [];
         const finalizedEvents: ContestFinalizedEvent[] = [];
         const cancelledEvents: ContestCancelledEvent[] = [];
+        const unlockEvents: ReferralUnlockEvent[] = [];
         const skipIds: string[] = [];
         const sendIds: string[] = [];
         for (const r of group.rows) {
@@ -165,9 +203,12 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
               finalizedEvents.push(ev);
               sendIds.push(r.id);
             }
-          } else {
-            // contest_cancelled
+          } else if (r.payload.kind === 'contest_cancelled') {
             cancelledEvents.push(r.payload.event);
+            sendIds.push(r.id);
+          } else {
+            // referral_unlock
+            unlockEvents.push(r.payload.event);
             sendIds.push(r.id);
           }
         }
@@ -198,6 +239,12 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           }
           if (cancelledEvents.length > 0) {
             const text = formatContestCancelledDM(cancelledEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+              parse_mode: 'MarkdownV2',
+            });
+          }
+          if (unlockEvents.length > 0) {
+            const text = formatReferralUnlockDM(unlockEvents);
             await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
               parse_mode: 'MarkdownV2',
             });

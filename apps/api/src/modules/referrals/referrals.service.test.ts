@@ -92,7 +92,11 @@ function makeFakeRepo(): FakeRepo {
           recipientUserId: r.userId,
           bonusType: r.bonusType,
           amountCents: r.amountCents,
+          sourceUserId: null,
         }));
+    },
+    async lookupFirstName(_userId: string) {
+      return null;
     },
     async markBonusUnlocked({ bonusRowId }) {
       const row = this.bonusRows.find((r) => r.id === bonusRowId);

@@ -139,6 +139,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
           recipientUserId: referralSignupBonuses.userId,
           bonusType: referralSignupBonuses.bonusType,
           amountCents: referralSignupBonuses.amountCents,
+          sourceUserId: referralSignupBonuses.sourceUserId,
         })
         .from(referralSignupBonuses)
         .where(
@@ -149,6 +150,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
         recipientUserId: r.recipientUserId,
         bonusType: r.bonusType === 'RECRUITER' ? ('RECRUITER' as const) : ('REFEREE' as const),
         amountCents: r.amountCents,
+        sourceUserId: r.sourceUserId,
       }));
     },
 
@@ -325,6 +327,15 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
           viaUserId: r.via_user_id,
         })),
       };
+    },
+
+    async lookupFirstName(userId: string): Promise<string | null> {
+      const [row] = await db
+        .select({ firstName: users.firstName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      return row?.firstName ?? null;
     },
 
     async lookupCommissionDmContext({ sourceUserId, sourceContestId }) {

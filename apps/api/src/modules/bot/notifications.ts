@@ -42,6 +42,27 @@ export interface ContestCancelledEvent {
   resultUrl: string;
 }
 
+/**
+ * One signup-bonus unlock event. Emitted when a referee finalises their
+ * first contest — the queue gets one row per side of the pair (REFEREE
+ * for the new user, RECRUITER for their inviter). Without a dedicated
+ * notification the +$25 looks like it appeared from nowhere on the
+ * balance, especially when it lands at the same time as a +$0.08 prize.
+ */
+export interface ReferralUnlockEvent {
+  /** Whose unlock this is. Drives the copy: 'REFEREE' = welcome bonus
+   * for the new user; 'RECRUITER' = "your friend played their first" for
+   * the inviter. */
+  bonusType: 'REFEREE' | 'RECRUITER';
+  amountCents: number;
+  /** RECRUITER side: the referee whose first game tripped the unlock.
+   * REFEREE side: null (the recipient IS that user). */
+  sourceFirstName: string | null;
+  /** Deep-link to the app — the result page for the referee's first
+   * finished contest (lets the inviter peek at what their friend did). */
+  appUrl: string;
+}
+
 /** MarkdownV2 reserved chars per https://core.telegram.org/bots/api#markdownv2-style. */
 function escMd(s: string): string {
   return s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => `\\${c}`);
@@ -191,4 +212,49 @@ export function formatContestCancelledDM(events: ContestCancelledEvent[]): strin
       : `↩️ *${events.length} contests* cancelled`;
   const firstUrl = escMdUrl(events[0]!.resultUrl);
   return `${header}\n\n${lines.join('\n')}\n\n[Open app →](${firstUrl})`;
+}
+
+/**
+ * Format the signup-bonus unlock DM. RECRUITER copy names the friend;
+ * REFEREE copy congratulates the new user. Aggregation merges when one
+ * recipient unlocks multiple bonuses in the same window (rare but
+ * possible — e.g. a recruiter whose two referees finalised at once).
+ */
+export function formatReferralUnlockDM(events: ReferralUnlockEvent[]): string {
+  if (events.length === 0) throw new Error('formatReferralUnlockDM: empty events');
+
+  if (events.length === 1) {
+    const e = events[0]!;
+    const amount = escMd(fmtUsd(e.amountCents));
+    const url = escMdUrl(e.appUrl);
+    if (e.bonusType === 'RECRUITER') {
+      const friend = escMd(e.sourceFirstName ?? 'Your friend');
+      return (
+        `🎉 *${friend}* just played their first contest\n\n` +
+        `*\\+${amount}* unlocked to your balance \\(referral signup bonus\\)\n\n` +
+        `[Open app →](${url})`
+      );
+    }
+    return (
+      `🎉 *Welcome bonus unlocked* — first contest in the books\n\n` +
+      `*\\+${amount}* added to your balance\n\n` +
+      `[Open app →](${url})`
+    );
+  }
+
+  const total = events.reduce((s, e) => s + e.amountCents, 0);
+  const lines = events.map((e) => {
+    const amt = escMd(fmtUsd(e.amountCents));
+    if (e.bonusType === 'RECRUITER') {
+      const friend = escMd(e.sourceFirstName ?? 'a friend');
+      return `• *${friend}* played their first → *\\+${amt}*`;
+    }
+    return `• *Welcome bonus* → *\\+${amt}*`;
+  });
+  const url = escMdUrl(events[0]!.appUrl);
+  return (
+    `🎉 *${events.length} signup bonuses* unlocked\n\n` +
+    `*\\+${escMd(fmtUsd(total))}* total to your balance\n\n` +
+    `${lines.join('\n')}\n\n[Open app →](${url})`
+  );
 }
