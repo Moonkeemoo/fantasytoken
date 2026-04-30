@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { computeActualPrizeCents } from '@fantasytoken/shared';
+import { computeActualPrizeCents, virtualBudgetCentsFor } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
 import type { ContestsRepo, ContestRowFromRepo, CreateContestArgs } from './contests.service.js';
@@ -44,7 +44,11 @@ function rowFromDbRow(
     isFeatured: row.isFeatured,
     minRank: row.minRank,
     payAll: row.payAll,
-    virtualBudgetCents: Number(row.virtualBudgetCents),
+    // ADR-0003: virtualBudgetCents is derived from entryFeeCents via the
+    // shared tier ladder. The DB column exists as a future-override hook;
+    // we ignore its value here so all contests get a consistent UX without
+    // requiring admins to set the field manually for every new contest.
+    virtualBudgetCents: virtualBudgetCentsFor(Number(row.entryFeeCents)),
     userHasEntered,
   };
 }
