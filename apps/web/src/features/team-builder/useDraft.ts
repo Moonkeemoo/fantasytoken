@@ -47,7 +47,7 @@ const DEFAULT_TIER = 100_000;
 export function useDraft(contestId: string, options: UseDraftOptions = {}): UseDraft {
   const mode = options.mode ?? 'bull';
   const tier = options.tier ?? DEFAULT_TIER;
-  const entryLabel = options.entryLabel ?? '$0.50 entry';
+  const entryLabel = options.entryLabel ?? '🪙 1 entry';
 
   const [draft, setDraftState] = useState<LineupPick[]>(() => {
     try {

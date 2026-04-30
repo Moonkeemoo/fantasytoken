@@ -2,17 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { formatCents, formatPct, formatPnl, formatTimeLeft } from './format.js';
 
 // TZ-002: amounts are now whole COINS (1 coin = $1 fantasy display).
-// Function name kept under `formatCents` so call sites don't churn; semantic
-// flipped from "cents of USD" to "whole coins".
+// Function name kept under `formatCents`; output uses 🪙 prefix + compact.
 describe('formatCents', () => {
-  it('formats whole dollars', () => {
-    expect(formatCents(100)).toBe('$100');
+  it('formats whole coins under 1K', () => {
+    expect(formatCents(100)).toBe('🪙 100');
   });
-  it('formats with thousands separator', () => {
-    expect(formatCents(48_200)).toBe('$48,200');
+  it('formats thousands as compact K', () => {
+    expect(formatCents(48_200)).toBe('🪙 48.2K');
   });
   it('formats zero', () => {
-    expect(formatCents(0)).toBe('$0');
+    expect(formatCents(0)).toBe('🪙 0');
+  });
+  it('millions as compact M', () => {
+    expect(formatCents(1_500_000)).toBe('🪙 1.5M');
   });
 });
 
@@ -29,17 +31,17 @@ describe('formatPct', () => {
 });
 
 describe('formatPnl', () => {
-  it('positive +$10 from score 0.10 on 100-coin portfolio', () => {
-    expect(formatPnl(0.1)).toBe('+$10');
+  it('positive +🪙 10 from score 0.10 on 100-coin portfolio', () => {
+    expect(formatPnl(0.1)).toBe('+🪙 10');
   });
-  it('negative -$2 from score -0.025 (Math.round half-up to -2)', () => {
-    expect(formatPnl(-0.025)).toBe('-$2');
+  it('negative -🪙 2 from score -0.025', () => {
+    expect(formatPnl(-0.025)).toBe('-🪙 2');
   });
-  it('zero shows $0 with no sign', () => {
-    expect(formatPnl(0)).toBe('$0');
+  it('zero shows 🪙 0 with no sign', () => {
+    expect(formatPnl(0)).toBe('🪙 0');
   });
-  it('sub-coin movement collapses to $0', () => {
-    expect(formatPnl(0.001)).toBe('$0');
+  it('sub-coin movement collapses to 🪙 0', () => {
+    expect(formatPnl(0.001)).toBe('🪙 0');
   });
 });
 

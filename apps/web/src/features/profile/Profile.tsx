@@ -248,10 +248,10 @@ function RecentContestRow({ row, onView }: { row: ProfileRecentContest; onView: 
   );
 }
 
-function formatPnlCents(cents: number): string {
-  if (cents === 0) return '$0.00';
-  const sign = cents > 0 ? '+' : '-';
-  return `${sign}${formatCents(Math.abs(cents))}`;
+function formatPnlCents(coins: number): string {
+  if (coins === 0) return '🪙 0';
+  const sign = coins > 0 ? '+' : '-';
+  return `${sign}${formatCents(Math.abs(coins))}`;
 }
 
 function timeAgo(iso: string): string {

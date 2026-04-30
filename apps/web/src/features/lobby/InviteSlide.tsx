@@ -27,14 +27,14 @@ export function InviteSlide() {
         Earn <span className="text-accent">5%</span> forever
       </div>
       <p className="mt-[4px] text-[12px] leading-snug text-ink-soft">
-        Both of you get <span className="font-bold text-ink">$25</span> after their first contest —
-        plus 5% of every entry they ever pay.
+        Both of you get <span className="font-bold text-ink">🪙 25</span> after their first contest
+        — plus 5% of every entry they ever pay.
       </p>
       <div className="my-[10px] border-t border-dashed border-ink/40" />
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>per friend</Label>
-          <div className="mt-[2px] text-[18px] font-extrabold leading-none">$25</div>
+          <div className="mt-[2px] text-[18px] font-extrabold leading-none">🪙 25</div>
         </div>
         <div>
           <Label>then forever</Label>

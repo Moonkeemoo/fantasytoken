@@ -63,13 +63,13 @@ export function Tutorial() {
         {step === 1 && (
           <>
             <h2 className="text-[28px] font-extrabold leading-tight">split your bankroll</h2>
-            <p className="mt-1 text-[12px] text-muted">$100K across 5 tokens · any % split</p>
+            <p className="mt-1 text-[12px] text-muted">🪙 100K across 5 tokens · any % split</p>
           </>
         )}
         {step === 2 && (
           <>
             <h2 className="text-[28px] font-extrabold leading-tight">win the prize pool</h2>
-            <p className="mt-1 text-[12px] text-muted">top 50% of entries · payouts in $</p>
+            <p className="mt-1 text-[12px] text-muted">top 50% of entries · payouts in 🪙</p>
           </>
         )}
       </div>
@@ -77,7 +77,7 @@ export function Tutorial() {
       <div className="mt-3 flex items-center justify-between px-4 pb-5">
         <Dots active={step} total={STEPS} />
         <Button variant="primary" size="md" onClick={next}>
-          {step < STEPS - 1 ? 'next →' : 'claim $100 →'}
+          {step < STEPS - 1 ? 'next →' : 'claim 🪙 20 →'}
         </Button>
       </div>
     </div>
@@ -102,9 +102,9 @@ function Dots({ active, total }: { active: number; total: number }) {
 // ─── Slide 1: pick a league ────────────────────────────────────────────────
 function PickLeague() {
   const rows: Array<{ name: string; pool: string; tag: string; highlight?: boolean }> = [
-    { name: 'Memecoin Madness', pool: 'pool · $500', tag: 'FREE', highlight: true },
-    { name: 'Quick Match', pool: 'pool · $20', tag: '$1' },
-    { name: 'Bear Trap', pool: 'pool · $1k', tag: 'BEAR' },
+    { name: 'Memecoin Madness', pool: 'pool · 🪙 500', tag: 'FREE', highlight: true },
+    { name: 'Quick Match', pool: 'pool · 🪙 20', tag: '🪙 1' },
+    { name: 'Bear Trap', pool: 'pool · 🪙 1K', tag: 'BEAR' },
   ];
   return (
     <div className="flex flex-col gap-[10px]">
@@ -142,7 +142,7 @@ function SplitBankroll() {
   ];
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="font-mono text-[11px] text-muted">$100 bankroll</div>
+      <div className="font-mono text-[11px] text-muted">🪙 100K bankroll</div>
       <div
         className="flex w-full max-w-[320px] overflow-hidden rounded-[6px] border-[2px] border-ink"
         style={{ height: '52px' }}
@@ -177,9 +177,9 @@ function WinPool() {
     <div className="flex flex-col items-center gap-2">
       <div className="font-mono text-[11px] text-muted">top 3 take most of the pool</div>
       <div className="mt-2 flex items-end gap-3">
-        <Podium rank={2} prize="$100" height={120} />
-        <Podium rank={1} prize="$200" height={170} highlight crown />
-        <Podium rank={3} prize="$60" height={90} />
+        <Podium rank={2} prize="🪙 100" height={120} />
+        <Podium rank={1} prize="🪙 200" height={170} highlight crown />
+        <Podium rank={3} prize="🪙 60" height={90} />
       </div>
     </div>
   );

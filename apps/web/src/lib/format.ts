@@ -1,11 +1,16 @@
+import { fmtMoney } from '@fantasytoken/shared';
+
 // TZ-002: amounts on the wire are now WHOLE COINS (1 coin = $1 fantasy
 // display). Function name kept under `formatCents` so the 60+ call sites
-// don't churn — semantic flipped, math simplified to "format as dollars".
+// don't churn — output flipped from `$N` to `🪙 N` and switched to compact
+// notation. Plain `20,000` confused Ukrainian-locale readers (where comma
+// is the decimal separator → "20.0"); `🪙 20K` is unambiguous.
 export function formatCents(amount: number): string {
-  if (!Number.isFinite(amount)) return '$0';
-  const rounded = Math.round(amount);
-  if (rounded === 0) return '$0';
-  return `$${rounded.toLocaleString('en-US')}`;
+  if (!Number.isFinite(amount)) return '🪙 0';
+  // Reuse fmtMoney's compact rules ($, 1.2K, 100K, 1.5M) — same source of
+  // truth as DraftScreen / hero / top-up sheet. Strip `$` prefix, re-prefix
+  // with coin emoji.
+  return `🪙 ${fmtMoney(Math.abs(amount)).replace(/^\$/, '')}`;
 }
 
 export function formatPct(decimal: number): string {
@@ -27,12 +32,12 @@ export function formatPctPrecise(decimal: number): string {
 
 /**
  * P&L on the fixed 100-coin portfolio (TZ-002 swap-in). `score` is a fraction
- * (e.g. 0.10 → +$10 = +10 coins). Sign-prefixed; zero unsigned.
+ * (e.g. 0.10 → +🪙 10). Sign-prefixed; zero unsigned.
  */
 export function formatPnl(score: number): string {
-  if (!Number.isFinite(score)) return '$0';
+  if (!Number.isFinite(score)) return '🪙 0';
   const coins = Math.round(score * 100);
-  if (coins === 0) return '$0';
+  if (coins === 0) return '🪙 0';
   const sign = coins > 0 ? '+' : '-';
   return `${sign}${formatCents(Math.abs(coins))}`;
 }

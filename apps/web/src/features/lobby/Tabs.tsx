@@ -17,9 +17,14 @@ const LABELS: Record<LobbyFilter, string> = {
 };
 
 export function Tabs({ active, counts, onChange }: TabsProps) {
+  // Hide empty filter tabs — a "Cash · 0" pill just looks like dead space.
+  // `All` always shows (even at 0) because it owns the merged-list contract.
+  const filters = (Object.keys(LABELS) as LobbyFilter[]).filter(
+    (f) => f === 'all' || counts[f] > 0,
+  );
   return (
     <div className="flex gap-2 px-3 py-2">
-      {(Object.keys(LABELS) as LobbyFilter[]).map((f) => (
+      {filters.map((f) => (
         <Pill key={f} active={active === f} onClick={() => onChange(f)}>
           {LABELS[f]} · {counts[f]}
         </Pill>

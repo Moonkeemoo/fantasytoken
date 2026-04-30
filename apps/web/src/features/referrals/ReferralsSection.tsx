@@ -55,10 +55,10 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
     <div className="rounded-[6px] border-[1.5px] border-ink bg-note px-[14px] py-3">
       <Label>your network</Label>
       <div className="mt-1 text-[15px] font-extrabold leading-tight">
-        Invite 1 friend → +$50 and 5% from their wins forever
+        Invite 1 friend → +🪙 50 and 5% from their wins forever
       </div>
       <p className="mt-1 text-[11px] text-muted">
-        When they join via your link and play 1 contest, you both get +$25.
+        When they join via your link and play 1 contest, you both get +🪙 25.
       </p>
       <div className="mt-3">
         <Button variant="primary" size="md" onClick={onInvite}>

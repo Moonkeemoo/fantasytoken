@@ -60,7 +60,7 @@ export function Headline({ result, onShare }: HeadlineProps) {
         portfolio P&amp;L {formatPctPrecise(result.finalPlPct)}
       </div>
       <div className="mt-1 text-[10px] text-muted">
-        {formatPct(result.finalPlPct)} on a $100 lineup — outside paying ranks
+        {formatPct(result.finalPlPct)} on a 🪙 100 lineup — outside paying ranks
       </div>
     </Card>
   );
