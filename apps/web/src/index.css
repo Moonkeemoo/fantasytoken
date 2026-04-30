@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ADR-0003: design tokens accessible from non-Tailwind contexts (raw CSS animations,
+ * inline styles in ported JSX, etc.). Mirrors tailwind.config.ts color palette. */
+:root {
+  --paper: #f6f1e8;
+  --paper-dim: #eee5d2;
+  --paper-deep: #e0d7c5;
+  --ink: #1a1814;
+  --ink-soft: #4a4540;
+  --muted: #8a8478;
+  --line: #d0c5b0;
+  --accent: #d4441c;
+  --bull: #1f8a3e;
+  --bear: #c0392b;
+  --gold: #b8842c;
+
+  --easing-sheet: cubic-bezier(0.2, 0.8, 0.25, 1);
+  --duration-sheet: 220ms;
+}
+
 html,
 body {
   margin: 0;
