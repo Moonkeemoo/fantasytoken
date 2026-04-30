@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useMe } from '../me/useMe.js';
 import { useWelcomeStatus } from '../referrals/useReferrals.js';
+import { useReferralAttribution } from '../referrals/useReferralAttribution.js';
 import { telegram } from '../../lib/telegram.js';
 import { LoadingSplash } from './LoadingSplash.js';
 
@@ -17,6 +18,10 @@ export function Loading() {
   // tutorial and get their personalised /welcome screen instead. Cheap query,
   // 60s staleTime — it shares cache with anyone else who reads it later.
   const welcome = useWelcomeStatus();
+  // Block routing until the referral friendship POST settles. Without this
+  // a fresh referee would race past welcome-status (which still reports
+  // recruiter=null) and end up on /tutorial instead of /welcome.
+  const attribution = useReferralAttribution();
 
   // Soft handoff: while the me query is in flight (or transiently errored on cold
   // start) keep showing the splash. Once data is available we redirect via the
@@ -27,6 +32,10 @@ export function Loading() {
 
   if (me.isLoading || !me.data || welcome.isLoading) return <LoadingSplash />;
   if (me.isError) return <LoadingSplash caption="connection issue · retrying…" />;
+  // Hold while the referral POST is in flight — the next render after it
+  // resolves invalidates welcome-status and we re-evaluate the recruiter
+  // check below with the fresh data.
+  if (attribution.pending) return <LoadingSplash caption="linking your invite…" />;
 
   // Bot deep-link: ?startapp=result_<contestId> jumps the user straight to
   // the result page (skips lobby). Takes precedence over tutorial/welcome
