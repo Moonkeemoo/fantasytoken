@@ -26,19 +26,23 @@ export function Live(): JSX.Element {
   const live = useLive(id);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Once-only gate: prevents the locked↔live ping-pong that piled up
-  // history.replaceState calls and crashed TG WebView with SecurityError.
-  const finalizeNavRef = useRef(false);
+  // Once-only gate per Live mount — fires at most one navigation. Combined
+  // with LockedScreen's own once-only ref this closes the locked↔live
+  // ping-pong that previously piled up history.replaceState calls and
+  // crashed TG WebView with SecurityError.
+  const navFiredRef = useRef(false);
   useEffect(() => {
-    if (finalizeNavRef.current || !live.data) return;
+    if (navFiredRef.current || !live.data) return;
     const status = live.data.status;
     if (status === 'finalizing' || status === 'finalized' || status === 'cancelled') {
-      finalizeNavRef.current = true;
+      navFiredRef.current = true;
       navigate(`/contests/${id}/result`);
+    } else if (status === 'scheduled') {
+      // User landed on /live for a contest that hasn't kicked off — bounce
+      // them to the locked-room countdown where the pre-kickoff UX lives.
+      navFiredRef.current = true;
+      navigate(`/contests/${id}/locked`);
     }
-    // Pre-kickoff (status='scheduled') is now rendered inline as a "starting
-    // soon" banner — the previous redirect-back-to-locked race-looped against
-    // LockedScreen's auto-nav-to-live and crashed history.replaceState.
   }, [live.data, id, navigate]);
 
   const slice = useLiveSlice(live.data ?? null);
