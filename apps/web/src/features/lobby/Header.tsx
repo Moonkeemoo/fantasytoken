@@ -1,6 +1,5 @@
 import { Label } from '../../components/ui/Label.js';
 import { Avatar } from '../../components/ui/Avatar.js';
-import { formatCents } from '../../lib/format.js';
 import { RankChip } from '../rank/RankChip.js';
 import { useRank } from '../rank/useRank.js';
 
@@ -32,24 +31,25 @@ export function Header({ firstName, photoUrl, balanceCents, onTopUp }: HeaderPro
           )}
         </div>
       </div>
-      {/* Wallet block: balance and top-up read as one piece — single border,
-          shared bg, divider in between. Less visual noise than two siblings. */}
+      {/* Wallet block (TZ-002): coins balance + Top-up as one tap-target.
+          The whole pill opens TopUpModal — the explicit "+" cap on the right
+          tells the player there's a buy flow without forcing them to read. */}
       <button
         type="button"
         onClick={onTopUp}
         className="flex shrink-0 items-stretch overflow-hidden rounded-md border border-ink bg-paper transition-colors active:bg-paper-dim"
-        aria-label={`Balance ${formatCents(balanceCents)}, tap to top up`}
+        aria-label={`Balance ${balanceCents.toLocaleString('en-US')} coins, tap to top up`}
       >
-        <span className="flex flex-col items-end justify-center gap-0 px-2.5 py-1 text-right leading-tight">
-          <span className="font-mono text-[8px] font-bold uppercase tracking-[0.08em] text-muted">
-            balance
+        <span className="flex items-center gap-1 px-2.5 py-1.5 leading-none">
+          <span className="text-[14px]" aria-hidden="true">
+            🪙
           </span>
-          <span className="font-mono text-[12px] font-bold text-ink">
-            {formatCents(balanceCents)}
+          <span className="font-mono text-[13px] font-bold text-ink">
+            {balanceCents.toLocaleString('en-US')}
           </span>
         </span>
-        <span className="flex items-center justify-center border-l border-ink bg-ink px-2.5 font-mono text-[10px] font-bold uppercase tracking-wider text-paper">
-          + Top up
+        <span className="flex items-center justify-center border-l border-ink bg-ink px-2.5 font-mono text-[14px] font-bold leading-none text-paper">
+          +
         </span>
       </button>
     </div>

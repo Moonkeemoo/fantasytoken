@@ -24,6 +24,7 @@ export function TeamBuilder(): JSX.Element {
   const contest = useContest(id);
   const submit = useSubmitEntry();
   const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpHint, setTopUpHint] = useState<{ required: number; current: number } | undefined>();
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
   const onSubmit = (picks: LineupPick[]): void => {
@@ -48,7 +49,28 @@ export function TeamBuilder(): JSX.Element {
         },
         onError: (err) => {
           const msg = String(err);
-          if (msg.includes('402') || msg.includes('INSUFFICIENT_BALANCE')) {
+          // Backend (TZ-002) returns 402 with `code: INSUFFICIENT_COINS` and a
+          // `details: { required, current }` payload so we can prefill the
+          // top-up hint. Older 'INSUFFICIENT_BALANCE' kept as a fallback.
+          if (
+            msg.includes('INSUFFICIENT_COINS') ||
+            msg.includes('INSUFFICIENT_BALANCE') ||
+            msg.includes('402')
+          ) {
+            const detailsMatch = /"details":\s*({[^}]+})/.exec(msg);
+            if (detailsMatch && detailsMatch[1]) {
+              try {
+                const details = JSON.parse(detailsMatch[1]) as {
+                  required?: number;
+                  current?: number;
+                };
+                if (typeof details.required === 'number' && typeof details.current === 'number') {
+                  setTopUpHint({ required: details.required, current: details.current });
+                }
+              } catch {
+                // fall through with no hint
+              }
+            }
             setTopUpOpen(true);
           } else {
             setErrMsg(msg);
@@ -102,7 +124,14 @@ export function TeamBuilder(): JSX.Element {
         onBack={() => navigate(-1)}
         onTopUp={() => setTopUpOpen(true)}
       />
-      <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
+      <TopUpModal
+        open={topUpOpen}
+        onClose={() => {
+          setTopUpOpen(false);
+          setTopUpHint(undefined);
+        }}
+        {...(topUpHint && { insufficient: topUpHint })}
+      />
     </>
   );
 }

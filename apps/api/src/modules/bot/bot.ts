@@ -1,6 +1,22 @@
 import { Bot } from 'grammy';
 import type { Logger } from '../../logger.js';
 
+export interface PaymentHandlers {
+  /** Telegram gives 10s to confirm — keep this fast (single DB lookup). */
+  preCheckout(args: {
+    invoicePayload: string;
+    totalAmount: number;
+  }): Promise<{ ok: true } | { ok: false; reason: string }>;
+  /** Fired when the charge actually goes through. Idempotent on
+   * `telegramPaymentChargeId`. */
+  successfulPayment(args: {
+    invoicePayload: string;
+    totalAmount: number;
+    telegramPaymentChargeId: string;
+    fromTelegramId: number;
+  }): Promise<void>;
+}
+
 export interface BotInstance {
   /** grammY bot — exposed so the queue service can call bot.api.sendMessage. */
   api: Bot['api'];
@@ -12,6 +28,10 @@ export interface BotInstance {
    * blue button next to the chat input opens it in one tap. Called
    * after start() succeeds (best-effort, errors are logged). */
   setup(): Promise<void>;
+  /** Wire up TG payment lifecycle hooks (Stars-based purchases). Called
+   * after the shop service is constructed. Safe to call once; subsequent
+   * calls are ignored. */
+  attachPaymentHandlers(handlers: PaymentHandlers): void;
   /** Graceful stop. Safe to call even if start() never resolved. */
   stop(): Promise<void>;
 }
@@ -122,9 +142,69 @@ export function createBot({
     log.error({ err: err.error, ctx: err.ctx?.update?.update_id }, 'bot error');
   });
 
+  let paymentHandlersAttached = false;
+
   return {
     get api() {
       return bot.api;
+    },
+    attachPaymentHandlers(handlers: PaymentHandlers) {
+      if (paymentHandlersAttached) {
+        log.warn('bot.attachPaymentHandlers called twice — ignored');
+        return;
+      }
+      paymentHandlersAttached = true;
+
+      // Telegram requires the bot to confirm the pre-checkout within ~10s;
+      // we delegate to a fast service path (single SELECT to validate
+      // package id + amount).
+      bot.on('pre_checkout_query', async (ctx) => {
+        try {
+          const result = await handlers.preCheckout({
+            invoicePayload: ctx.preCheckoutQuery.invoice_payload,
+            totalAmount: ctx.preCheckoutQuery.total_amount,
+          });
+          if (result.ok) {
+            await ctx.answerPreCheckoutQuery(true);
+          } else {
+            await ctx.answerPreCheckoutQuery(false, result.reason);
+            log.warn({ reason: result.reason }, 'bot.preCheckout rejected');
+          }
+        } catch (err) {
+          log.error({ err }, 'bot.preCheckout handler crashed');
+          try {
+            await ctx.answerPreCheckoutQuery(false, 'Internal error, please retry.');
+          } catch {
+            // already logged
+          }
+        }
+      });
+
+      // Charge succeeded — credit the user. UNIQUE index on
+      // transactions.payment_charge_id absorbs duplicate webhook deliveries.
+      bot.on('message:successful_payment', async (ctx) => {
+        const payment = ctx.message.successful_payment;
+        const fromId = ctx.from?.id;
+        if (!fromId) {
+          log.warn({ payment }, 'bot.successfulPayment without ctx.from');
+          return;
+        }
+        try {
+          await handlers.successfulPayment({
+            invoicePayload: payment.invoice_payload,
+            totalAmount: payment.total_amount,
+            telegramPaymentChargeId: payment.telegram_payment_charge_id,
+            fromTelegramId: fromId,
+          });
+        } catch (err) {
+          // INV-7: log + swallow. The grammY framework will retry on throw,
+          // and our idempotency guard absorbs the retry safely.
+          log.error(
+            { err, telegramPaymentChargeId: payment.telegram_payment_charge_id },
+            'bot.successfulPayment handler failed',
+          );
+        }
+      });
     },
     async start() {
       await bot.start({

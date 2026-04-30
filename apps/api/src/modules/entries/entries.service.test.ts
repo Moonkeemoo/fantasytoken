@@ -113,13 +113,13 @@ describe('EntriesService.submit', () => {
     ).rejects.toMatchObject({ code: 'CONTEST_CLOSED' });
   });
 
-  it('throws INSUFFICIENT_BALANCE when balance < entryFee', async () => {
+  it('throws INSUFFICIENT_COINS when balance < entryFee', async () => {
     const repo = makeFakeRepo();
     const cur = makeFakeCurrency({ balance: 100n });
     const svc = createEntriesService({ repo, currency: cur });
     await expect(
       svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS }),
-    ).rejects.toMatchObject({ code: 'INSUFFICIENT_BALANCE' });
+    ).rejects.toMatchObject({ code: 'INSUFFICIENT_COINS' });
     expect(repo.createdEntry).toBeNull();
   });
 

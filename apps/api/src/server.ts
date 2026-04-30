@@ -47,6 +47,9 @@ import { makeReferralsRoutes } from './modules/referrals/referrals.routes.js';
 import { createBot } from './modules/bot/bot.js';
 import { createDmQueueRepo } from './modules/bot/queue.repo.js';
 import { createDmQueueService } from './modules/bot/queue.service.js';
+import { createShopRepo } from './modules/shop/shop.repo.js';
+import { createShopService } from './modules/shop/shop.service.js';
+import { makeShopRoutes } from './modules/shop/shop.routes.js';
 import { createRealtimeHub } from './modules/realtime/hub.js';
 import { makeRealtimeRoutes } from './modules/realtime/realtime.routes.js';
 import websocketPlugin from '@fastify/websocket';
@@ -98,8 +101,12 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
-      req.log.warn({ code: err.code, cause: err.cause }, err.message);
-      return reply.status(err.httpStatus).send({ code: err.code, message: err.message });
+      req.log.warn({ code: err.code, cause: err.cause, details: err.details }, err.message);
+      return reply.status(err.httpStatus).send({
+        code: err.code,
+        message: err.message,
+        ...(err.details ? { details: err.details } : {}),
+      });
     }
     req.log.error({ err }, 'Unhandled error');
     return reply.status(500).send({ code: 'INTERNAL', message: 'Internal server error' });
@@ -245,6 +252,45 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     { prefix: '/share' },
   );
   await app.register(makeRankingsRoutes({ rankings, friends, users }), { prefix: '/rankings' });
+
+  // Shop module (TZ-002): coin packages catalog + invoice creation. Bot's
+  // payment hooks (preCheckout + successful_payment) wired to shop service
+  // below so frontend `WebApp.openInvoice` flows credit on completion.
+  const shopRepo = createShopRepo(deps.db);
+  const shop = bot
+    ? createShopService({
+        repo: shopRepo,
+        currency,
+        // Adapter: shop service speaks an object-shaped API; grammY's
+        // createInvoiceLink is positional. Single wrap site keeps the
+        // service test-friendly (fake the BotApi without grammY peer dep).
+        bot: {
+          createInvoiceLink: (args) =>
+            bot.api.createInvoiceLink(
+              args.title,
+              args.description,
+              args.payload,
+              args.provider_token,
+              args.currency,
+              args.prices,
+            ),
+        },
+        log: deps.logger,
+      })
+    : null;
+  if (shop) {
+    await app.register(makeShopRoutes({ shop, users }), { prefix: '/shop' });
+    bot!.attachPaymentHandlers({
+      preCheckout: (args) => shop.validatePreCheckout(args),
+      successfulPayment: async (args) => {
+        await shop.creditFromPayment({
+          invoicePayload: args.invoicePayload,
+          totalAmount: args.totalAmount,
+          telegramPaymentChargeId: args.telegramPaymentChargeId,
+        });
+      },
+    });
+  }
   await app.register(makeProfileRoutes({ profile, users }), { prefix: '/profile' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 

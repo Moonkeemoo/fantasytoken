@@ -46,7 +46,9 @@ export function ContestRow({
   const ms = useCountdown(contest.startsAt);
   const isFull = contest.spotsFilled >= contest.maxCapacity;
   const cantAfford = balanceCents < contest.entryFeeCents;
-  const fee = contest.entryFeeCents === 0 ? 'FR' : `$${Math.floor(contest.entryFeeCents / 100)}`;
+  // TZ-002: entryFeeCents now stores whole coins (1 coin = $1). Display
+  // as "🪙 N" so the currency reads consistent with header / top-up.
+  const fee = contest.entryFeeCents === 0 ? 'FR' : `🪙 ${contest.entryFeeCents}`;
   // Locked when contest gates by rank and user hasn't reached it yet — and they
   // haven't already managed to enter (legacy entries should still be visible).
   const isLocked = !contest.userHasEntered && contest.minRank > userRank;

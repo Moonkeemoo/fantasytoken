@@ -61,7 +61,9 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     onTopUp,
   } = props;
 
-  const entryLabel = `${formatCents(entryFeeCents)} entry`;
+  // TZ-002: entry fees are now coins. Label reads as "🪙 5 entry" so the
+  // currency stays unambiguous next to the GO/Top-up flow.
+  const entryLabel = entryFeeCents === 0 ? 'free entry' : `🪙 ${entryFeeCents} entry`;
   const draftCtx = useDraft(contestId, { mode, tier, entryLabel });
   const { draft, setDraft, cta, dollarsCommitted, sheetToken, sheetOpen, openSheet, closeSheet } =
     draftCtx;
@@ -189,7 +191,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
         : 'bg-paper-deep text-muted';
 
   const ctaLabel = showTopUp
-    ? `Top up ${formatCents(entryFeeCents - balanceCents)} to enter`
+    ? `Top up — need 🪙 ${entryFeeCents - balanceCents} more`
     : isSubmitting
       ? 'Submitting…'
       : cta.label;

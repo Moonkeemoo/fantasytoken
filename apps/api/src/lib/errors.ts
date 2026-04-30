@@ -6,6 +6,7 @@ export type ErrorCode =
   | 'VALIDATION_FAILED'
   | 'INVALID_LINEUP'
   | 'INSUFFICIENT_BALANCE'
+  | 'INSUFFICIENT_COINS'
   | 'CONTEST_CLOSED'
   | 'CONTEST_NOT_OPEN'
   | 'INTERNAL';
@@ -14,13 +15,24 @@ export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly httpStatus: number;
   public override readonly cause?: unknown;
+  /** Structured payload surfaced on the wire alongside `code` + `message`. Used
+   * for actionable errors like INSUFFICIENT_COINS where the client needs to
+   * know how much is required vs current to render a top-up CTA. */
+  public readonly details?: Record<string, unknown>;
 
-  constructor(code: ErrorCode, message: string, httpStatus = 400, cause?: unknown) {
+  constructor(
+    code: ErrorCode,
+    message: string,
+    httpStatus = 400,
+    cause?: unknown,
+    details?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = 'AppError';
     this.code = code;
     this.httpStatus = httpStatus;
     if (cause !== undefined) this.cause = cause;
+    if (details !== undefined) this.details = details;
   }
 }
 
@@ -32,6 +44,14 @@ export const errors = {
   contestNotOpen: () => new AppError('CONTEST_NOT_OPEN', 'Contest is not open for entries', 409),
   invalidLineup: (cause?: unknown) => new AppError('INVALID_LINEUP', 'Invalid lineup', 400, cause),
   insufficientBalance: () => new AppError('INSUFFICIENT_BALANCE', 'Insufficient balance', 402),
+  /** TZ-002: paid contest entry attempted with too few coins. `required` and
+   * `current` ride along on the wire so the frontend can prefill the
+   * top-up sheet ("Need 250 more 🪙"). */
+  insufficientCoins: (required: number, current: number) =>
+    new AppError('INSUFFICIENT_COINS', 'Insufficient coins', 402, undefined, {
+      required,
+      current,
+    }),
   contestClosed: () => new AppError('CONTEST_CLOSED', 'Contest is closed for entries', 409),
   internal: (msg: string, cause?: unknown) => new AppError('INTERNAL', msg, 500, cause),
 };

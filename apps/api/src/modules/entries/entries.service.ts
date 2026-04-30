@@ -94,7 +94,9 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
       }
 
       const balance = await deps.currency.getBalance(userId);
-      if (balance < contest.entryFeeCents) throw errors.insufficientBalance();
+      if (balance < contest.entryFeeCents) {
+        throw errors.insufficientCoins(Number(contest.entryFeeCents), Number(balance));
+      }
 
       const created = await deps.repo.create({ userId, contestId, picks });
       try {
@@ -106,8 +108,11 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
           refId: created.id,
         });
       } catch {
-        // INV-7: re-throw as INSUFFICIENT_BALANCE; AppError gets logged by global handler.
-        throw errors.insufficientBalance();
+        // INV-7: race-loss between getBalance() check and currency.transact().
+        // We don't have the precise current balance at this point — use 0 as
+        // the conservative current amount; UX still shows the right "Need N
+        // more" once the user re-fetches balance.
+        throw errors.insufficientCoins(Number(contest.entryFeeCents), 0);
       }
 
       return {
