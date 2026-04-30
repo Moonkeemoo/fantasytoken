@@ -34,6 +34,11 @@ export function Live(): JSX.Element {
     const status = live.data.status;
     if (status === 'finalizing' || status === 'finalized' || status === 'cancelled') {
       navigate(`/contests/${id}/result`);
+    } else if (status === 'scheduled') {
+      // ADR-0003: pre-kickoff goes through the LockedScreen waiting room.
+      // Lobby's "VIEW" CTA on already-entered scheduled contests bounces here;
+      // redirect on so the player lands in the right state.
+      navigate(`/contests/${id}/locked`, { replace: true });
     }
   }, [live.data, id, navigate]);
 

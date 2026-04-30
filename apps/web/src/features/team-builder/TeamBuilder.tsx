@@ -69,6 +69,19 @@ export function TeamBuilder(): JSX.Element {
     document.title = contest.data ? `Build · ${contest.data.name}` : 'Team Builder';
   }, [contest.data]);
 
+  // INV-10: lineups immutable after submit. If the user already entered this
+  // contest, route them onward — never re-show the editable Build screen.
+  useEffect(() => {
+    if (!id || !contest.data?.userHasEntered) return;
+    const next =
+      contest.data.status === 'active'
+        ? `/contests/${id}/live`
+        : contest.data.status === 'finalized' || contest.data.status === 'cancelled'
+          ? `/contests/${id}/result`
+          : `/contests/${id}/locked`;
+    navigate(next, { replace: true });
+  }, [id, contest.data, navigate]);
+
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
   if (me.isLoading || contest.isLoading) return <div className="p-6 text-muted">loading…</div>;
   if (contest.isError || !contest.data)
