@@ -320,9 +320,16 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   // server stays up. Single-replica deploy on Railway, so no leader election
   // needed. Move to webhook mode if scaling to N>1 replicas.
   if (bot) {
-    void bot.start().catch((err) => {
+    const botInstance = bot;
+    void botInstance.start().catch((err) => {
       deps.logger.error({ err }, 'bot.start failed (DMs will not send)');
     });
+    // Best-effort post-start setup (slash commands + persistent menu
+    // button). Run async after a small delay so bot.start has had a
+    // chance to authenticate; failures are logged inside setup().
+    setTimeout(() => {
+      void botInstance.setup();
+    }, 2_000);
   }
 
   // Welcome bonus expiry: claw back $25 from users who never played within
