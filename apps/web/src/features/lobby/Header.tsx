@@ -13,7 +13,12 @@ export interface HeaderProps {
 export function Header({ firstName, photoUrl, balanceCents, onTopUp }: HeaderProps) {
   const rank = useRank();
   return (
-    <div className="flex items-center justify-between gap-2 border-b-[1.5px] border-ink px-3 py-2">
+    <div
+      className="flex items-center justify-between gap-2 border-b-[1.5px] border-ink px-3 py-2"
+      // iPhone notch / Dynamic Island guard. Without this the wallet pill
+      // collides with the carrier bar on devices with safe-area top inset.
+      style={{ paddingTop: 'max(8px, env(safe-area-inset-top))' }}
+    >
       {/* Identity stack: avatar + greeting on top, rank chip directly below
           the name so it reads as "this is who I am, this is my tier". */}
       <div className="flex min-w-0 items-center gap-2">

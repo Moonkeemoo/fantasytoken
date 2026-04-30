@@ -85,7 +85,10 @@ export function Lobby() {
 
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
 
-      <PromoCarousel slides={[<InviteSlide key="invite" />]} />
+      {/* Invite promo only after the user has played a few contests (DESIGN.md
+          §8 R3 — once they've done 3 finals they have something to share).
+          Earlier than that the "Earn 5%" pitch reads as noise. */}
+      {finalizedContests >= 3 && <PromoCarousel slides={[<InviteSlide key="invite" />]} />}
 
       {zones.my.length > 0 && (
         <ContestList
