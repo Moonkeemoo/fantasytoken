@@ -126,7 +126,10 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Practice',
     minRank: 1,
-    xpMultiplier: 0.5,
+    // No XP penalty for the free contest. Earlier we ran 0.5× to discourage
+    // grinding the free pool for XP, but the result-screen breakdown showed
+    // a confusing "Multiplier ×0.5 → −5" row that read as a punishment to
+    // newcomers. Lane default (1.0×) treats Practice as a real game.
     payAll: true,
     staggerOffsetSec: 0,
   },
@@ -173,7 +176,9 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Lightning',
     minRank: 25,
-    xpMultiplier: 1.2,
+    // Falls back to the 10m lane default (1.0×). Earlier 1.2× sprint-whale
+    // boost was inconsistent with the rest of the matrix where stakes
+    // don't tilt XP — duration does.
     staggerOffsetSec: 500,
   },
 

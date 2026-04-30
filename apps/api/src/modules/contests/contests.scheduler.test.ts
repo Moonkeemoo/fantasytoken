@@ -37,12 +37,15 @@ describe('contests v2 matrix', () => {
     }
   });
 
-  it('Practice cell is pay-all + free + 0.5x XP', () => {
+  it('Practice cell is pay-all + free; XP follows lane default (1.0×)', () => {
     const practice = MATRIX_CELLS.find((c) => c.name === 'Practice');
     expect(practice).toBeDefined();
     expect(practice?.payAll).toBe(true);
     expect(practice?.stake).toBe('free');
-    expect(effectiveXpMultiplier(practice!)).toBe(0.5);
+    // No per-cell XP penalty (the old 0.5× created a confusing
+    // "Multiplier ×0.5 → −5" breakdown row for newbies). Lane default
+    // 10m=1.0× applies.
+    expect(effectiveXpMultiplier(practice!)).toBe(1.0);
   });
 
   it('Marathon caps at 2.0× XP — anti grind for stake/duration whales', () => {
