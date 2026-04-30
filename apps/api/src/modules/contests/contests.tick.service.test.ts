@@ -179,6 +179,80 @@ describe('ContestsTickService', () => {
       expect(ops[0]).toMatchObject({ kind: 'lock', contestId: 'c1', bots: 20 });
     });
 
+    it('Marathon (7d) cancels + refunds when below floor (real=10 < 250)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'marathon',
+            status: 'scheduled',
+            startsAt: nowPlusMin(-1),
+            endsAt: nowPlusMin(7 * 24 * 60),
+            maxCapacity: 500,
+            realEntries: 10,
+          },
+        ],
+      });
+      // Inject durationLane onto the row that findContestsToLock returns —
+      // mimics 0020 schema. The fake rep had no field for it; we patch it
+      // post-hoc since the test focuses on the service-side gate.
+      const orig = repo.findContestsToLock;
+      repo.findContestsToLock = async () => {
+        const rows = await orig();
+        return rows.map((r) => ({ ...r, durationLane: '7d' }));
+      };
+      const svc = createContestsTickService({ repo, log: noopLog });
+      await svc.tick();
+      expect(ops).toHaveLength(1);
+      expect(ops[0]?.kind).toBe('cancel');
+    });
+
+    it('24h cancels when below floor (real=10 < 30)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'daily',
+            status: 'scheduled',
+            startsAt: nowPlusMin(-1),
+            endsAt: nowPlusMin(24 * 60),
+            maxCapacity: 100,
+            realEntries: 10,
+          },
+        ],
+      });
+      const orig = repo.findContestsToLock;
+      repo.findContestsToLock = async () => {
+        const rows = await orig();
+        return rows.map((r) => ({ ...r, durationLane: '24h' }));
+      };
+      const svc = createContestsTickService({ repo, log: noopLog });
+      await svc.tick();
+      expect(ops).toHaveLength(1);
+      expect(ops[0]?.kind).toBe('cancel');
+    });
+
+    it('24h locks when above floor (real=35 >= 30)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'daily',
+            status: 'scheduled',
+            startsAt: nowPlusMin(-1),
+            endsAt: nowPlusMin(24 * 60),
+            maxCapacity: 100,
+            realEntries: 35,
+          },
+        ],
+      });
+      const orig = repo.findContestsToLock;
+      repo.findContestsToLock = async () => {
+        const rows = await orig();
+        return rows.map((r) => ({ ...r, durationLane: '24h' }));
+      };
+      const svc = createContestsTickService({ repo, log: noopLog });
+      await svc.tick();
+      expect(ops[0]?.kind).toBe('lock');
+    });
+
     it('fills only the empty seats (cap=20, real=1 → 19 bots)', async () => {
       const { repo, ops } = makeFakeRepo({
         contests: [

@@ -19,6 +19,7 @@ export function createContestsTickRepo(
           startsAt: contests.startsAt,
           endsAt: contests.endsAt,
           maxCapacity: contests.maxCapacity,
+          durationLane: contests.durationLane,
           realEntries: sql<number>`(SELECT COUNT(*)::int FROM ${entries} WHERE ${entries.contestId} = ${contests.id} AND ${entries.userId} IS NOT NULL)`,
         })
         .from(contests)

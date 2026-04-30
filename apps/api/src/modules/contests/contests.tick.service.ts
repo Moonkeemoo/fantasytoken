@@ -1,4 +1,5 @@
 import type { Logger } from '../../logger.js';
+import { LANE_CANCEL_FLOOR, type DurationLane } from '@fantasytoken/shared';
 import { generateRandomPicks } from '../../lib/random-picks.js';
 import { BOT_HANDLES } from '../../db/seed/bot-handles.js';
 
@@ -8,6 +9,8 @@ export interface ContestRow {
   endsAt: Date;
   maxCapacity: number;
   realEntries: number;
+  /** Optional for legacy callers / tests that pre-date contests-v2. */
+  durationLane?: string;
 }
 
 export interface ContestsTickRepo {
@@ -73,6 +76,27 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
       }
       for (const c of toLock) {
         try {
+          // Long-lane cancel-on-undersold (DESIGN.md §10): 24h needs ≥30
+          // organic, 7d Marathon ≥250. Below floor → refund + skip the lock.
+          // Bot-fill on short lanes always brings 10m/30m/1h to capacity, so
+          // their floors are 0 and this branch is a no-op.
+          const floor = LANE_CANCEL_FLOOR[c.durationLane as DurationLane] ?? 0;
+          if (floor > 0 && c.realEntries < floor) {
+            const r = await deps.repo.cancelContest(c.id);
+            deps.log.info(
+              {
+                contestId: c.id,
+                lane: c.durationLane,
+                realEntries: c.realEntries,
+                floor,
+                refunded: r.refundedCount,
+                refundedTotal: r.totalCents,
+              },
+              'contests.tick undersold-cancel',
+            );
+            continue;
+          }
+
           const tokens = await deps.repo.getTokensInPicks(c.id);
           const cutoff = Date.now() - STALE_PRICE_HOURS * 3600_000;
           const stale = tokens.filter((t) => t.lastUpdatedAt && t.lastUpdatedAt.getTime() < cutoff);
