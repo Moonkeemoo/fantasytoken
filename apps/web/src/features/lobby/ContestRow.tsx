@@ -46,9 +46,7 @@ export function ContestRow({
   const ms = useCountdown(contest.startsAt);
   const isFull = contest.spotsFilled >= contest.maxCapacity;
   const cantAfford = balanceCents < contest.entryFeeCents;
-  // TZ-002: entryFeeCents now stores whole coins (1 coin = $1). Display
-  // as "🪙 N" so the currency reads consistent with header / top-up.
-  const fee = contest.entryFeeCents === 0 ? 'FR' : `🪙 ${contest.entryFeeCents}`;
+  const isFree = contest.entryFeeCents === 0;
   // Locked when contest gates by rank and user hasn't reached it yet — and they
   // haven't already managed to enter (legacy entries should still be visible).
   const isLocked = !contest.userHasEntered && contest.minRank > userRank;
@@ -101,14 +99,15 @@ export function ContestRow({
   const isBear = contest.type === 'bear';
   return (
     <Card
-      className={`flex items-center gap-[10px] !px-[10px] !py-[6px] ${isBear ? 'border-l-[3px] border-l-hl-red' : ''} ${isLocked ? 'opacity-[0.55]' : ''}`}
+      className={`flex items-center gap-[10px] !px-[10px] !py-[8px] ${isBear ? 'border-l-[3px] border-l-hl-red' : ''} ${isLocked ? 'opacity-[0.55]' : ''}`}
     >
-      <div className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold">
-        {fee}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-[6px] text-[12px] font-bold leading-tight">
-          {contest.name}
+      <div className="min-w-0 flex-1">
+        {/* Top row: name + mode tag + fee tag. The fee escaped its old
+            28×28 avatar circle (large coin amounts overflowed); inline pill
+            shape scales to any digit count and reads as cost-information
+            rather than "this is the contest's icon". */}
+        <div className="flex flex-wrap items-center gap-[6px] text-[12px] font-bold leading-tight">
+          <span className="truncate">{contest.name}</span>
           <span
             className={`rounded-[2px] border-[1px] px-[4px] py-[1px] font-mono text-[8px] uppercase tracking-[0.06em] ${
               isBear ? 'border-hl-red text-hl-red' : 'border-hl-green text-hl-green'
@@ -116,8 +115,15 @@ export function ContestRow({
           >
             {isBear ? '↓ Bear' : '↑ Bull'}
           </span>
+          <span
+            className={`rounded-[2px] px-[5px] py-[1px] font-mono text-[8px] font-bold uppercase tracking-[0.06em] ${
+              isFree ? 'bg-hl-green text-paper' : 'border-[1px] border-ink bg-paper-dim text-ink'
+            }`}
+          >
+            {isFree ? 'FREE' : `🪙 ${contest.entryFeeCents}`}
+          </span>
         </div>
-        <div className="text-[10px] text-muted">{caption}</div>
+        <div className="mt-[2px] truncate text-[10px] text-muted">{caption}</div>
       </div>
       <Button
         variant={cta.variant ?? 'primary'}
