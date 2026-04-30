@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ContestListItem } from '@fantasytoken/shared';
 import { useMe } from '../me/useMe.js';
 import { useContests } from './useContests.js';
 import { Header } from './Header.js';
@@ -40,10 +41,7 @@ export function Lobby() {
 
   // Merge cash + free + my into one canonical list (dedupe by id), then zone.
   const zones = useMemo(() => {
-    const byId = new Map<
-      string,
-      (typeof cash.data extends { items: infer T } ? T : never[])[number]
-    >();
+    const byId = new Map<string, ContestListItem>();
     for (const c of cash.data?.items ?? []) byId.set(c.id, c);
     for (const c of free.data?.items ?? []) byId.set(c.id, c);
     // /my response carries the authoritative `userHasEntered=true` for those rows.
