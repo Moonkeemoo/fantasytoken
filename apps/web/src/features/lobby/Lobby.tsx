@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ContestListItem } from '@fantasytoken/shared';
 import { useMe } from '../me/useMe.js';
@@ -90,22 +90,26 @@ export function Lobby() {
 
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
 
-      {/* Invite promo gates on rank ≥ 2 — players need to have actually
-          experienced a contest cycle before we ask them to invite friends.
-          Earlier (per-finalized count) made the pitch land too late for
-          power players who burned through R1 in two minutes; later (R3)
-          missed the natural hand-off moment right after first rank-up. */}
-      {userRank >= 2 && <PromoCarousel slides={[<InviteSlide key="invite" />]} />}
-
-      {/* Newbie hero: only for first-launch (0 finalized) and only when
-          Practice is actually in their soon zone. Once a player finishes
-          their first contest the hero quietly disappears — the regular
-          Soon list is enough orientation by then. */}
+      {/* Promo carousel — both NewbieHero and InviteSlide live here so the
+          carousel handles uniform sizing and the rotation animation
+          consistently. Slide visibility:
+            • NewbieHero — first-launch only (0 finalized contests).
+            • InviteSlide — gates on userRank ≥ 2 so brand-new players don't
+              get the "Earn 5%" pitch before they understand the contest
+              mechanic. Lands at the natural rank-up moment.
+          When neither qualifies, the carousel renders nothing. */}
       {(() => {
-        if (finalizedContests !== 0) return null;
-        const practice = zones.soon.find((c) => c.payAll && c.entryFeeCents === 0);
-        if (!practice) return null;
-        return <NewbieHero contest={practice} onJoin={goTeamBuilder} />;
+        const slides: ReactNode[] = [];
+        if (finalizedContests === 0) {
+          const practice = zones.soon.find((c) => c.payAll && c.entryFeeCents === 0);
+          if (practice) {
+            slides.push(<NewbieHero key="newbie" contest={practice} onJoin={goTeamBuilder} />);
+          }
+        }
+        if (userRank >= 2) {
+          slides.push(<InviteSlide key="invite" />);
+        }
+        return slides.length > 0 ? <PromoCarousel slides={slides} /> : null;
       })()}
 
       {zones.my.length > 0 && (

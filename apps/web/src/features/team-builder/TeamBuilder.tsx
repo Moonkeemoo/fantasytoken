@@ -14,6 +14,14 @@ function useContest(id: string | undefined) {
     queryKey: ['contests', id],
     queryFn: () => apiFetch(`/contests/${id!}`, ContestListItem),
     enabled: !!id,
+    // While the user picks their lineup, the contest can transition
+    // scheduled → active and the room can fill. Without polling the build
+    // screen showed "00:00 to start" with 20/20 filled and a still-active
+    // GO CTA — tap landed on a backend "contest closed" error. 10s tick
+    // catches the kickoff window with room for the redirect effect to fire.
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: 'always',
   });
 }
 

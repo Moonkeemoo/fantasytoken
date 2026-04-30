@@ -74,11 +74,17 @@ export function PromoCarousel({ slides }: { slides: ReactNode[] }) {
         onTouchEnd={onTouchEnd}
       >
         <div
-          className="flex transition-transform duration-300 ease-out"
+          // items-stretch (flex default) makes every child match the tallest
+          // slide so InviteSlide and NewbieHero don't render at different
+          // heights when carousel rotates between them.
+          className="flex items-stretch transition-transform duration-300 ease-out"
           style={{ transform: `translateX(-${idx * 100}%)` }}
         >
           {slides.map((slide, i) => (
-            <div key={i} className="w-full shrink-0">
+            // Inner flex so the slide content (Card with `m-0`) fills the
+            // slot vertically — without this the shorter slide leaves an
+            // empty band below it once the taller sibling sets the height.
+            <div key={i} className="flex w-full shrink-0 [&>*]:flex-1">
               {slide}
             </div>
           ))}
