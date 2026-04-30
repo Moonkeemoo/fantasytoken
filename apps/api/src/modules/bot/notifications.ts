@@ -10,9 +10,37 @@ export interface CommissionEvent {
   currency: ReferralCurrency;
 }
 
+/**
+ * One contest-finalized event. Emitted per (real entry, finalized contest)
+ * once payouts settle; the queue may aggregate multiple of these for the
+ * same recipient (e.g. user entered 3 contests that all finalized in the
+ * same hour) into a single summary DM.
+ */
+export interface ContestFinalizedEvent {
+  /** entries.id — used by the drain to skip rows whose result was already viewed. */
+  entryId: string;
+  contestId: string;
+  contestName: string;
+  finalRank: number;
+  totalEntries: number;
+  prizeCents: number;
+  /** Deep-link back into the mini-app's result page. */
+  resultUrl: string;
+}
+
 /** MarkdownV2 reserved chars per https://core.telegram.org/bots/api#markdownv2-style. */
 function escMd(s: string): string {
   return s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => `\\${c}`);
+}
+
+/** Inside an inline-link `(url)` only `)` and `\` must be escaped — running
+ * the full escMd here would break percent-encodings and dots in domains. */
+function escMdUrl(url: string): string {
+  return url.replace(/[)\\]/g, (c) => `\\${c}`);
+}
+
+function fmtUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 function fmtMoney(cents: number, currency: ReferralCurrency): string {
@@ -57,4 +85,54 @@ export function formatCommissionDM(events: CommissionEvent[]): string {
     .join(' \\+ ');
   const friends = events.length === 2 ? '2 friends' : `${events.length} friends`;
   return `🎉 *${friends}* just won contests\n\n` + `*\\+${totalParts}* total to your balance`;
+}
+
+/**
+ * Format a "your contest finished" DM. Single event → personal message
+ * with the contest name + rank + prize line + a link button. Multiple
+ * events → grouped summary with the per-contest one-liners and a single
+ * link to the live list (so the user picks which one to open).
+ *
+ * USD-only for V1 (matches the cash economy). Returns MarkdownV2.
+ */
+export function formatContestFinalizedDM(events: ContestFinalizedEvent[]): string {
+  if (events.length === 0) throw new Error('formatContestFinalizedDM: empty events');
+
+  if (events.length === 1) {
+    const e = events[0]!;
+    const contest = escMd(e.contestName);
+    const rank = `\\#${e.finalRank} of ${e.totalEntries}`;
+    const url = escMdUrl(e.resultUrl);
+    if (e.prizeCents > 0) {
+      const prize = escMd(fmtUsd(e.prizeCents));
+      return (
+        `🏁 *${contest}* finished — you placed ${rank}\n\n` +
+        `*\\+${prize}* credited to your balance\n\n` +
+        `[View result →](${url})`
+      );
+    }
+    return (
+      `🏁 *${contest}* finished — you placed ${rank}\n\n` +
+      `No prize this round\\. New contests are open already\\.\n\n` +
+      `[View result →](${url})`
+    );
+  }
+
+  // Aggregate: list each contest as a one-liner, total prize underneath.
+  const totalCents = events.reduce((s, e) => s + e.prizeCents, 0);
+  const lines = events.map((e) => {
+    const name = escMd(e.contestName);
+    const rank = `\\#${e.finalRank}/${e.totalEntries}`;
+    const tail = e.prizeCents > 0 ? `*\\+${escMd(fmtUsd(e.prizeCents))}*` : '_no prize_';
+    return `• *${name}* — ${rank} · ${tail}`;
+  });
+  const header =
+    totalCents > 0
+      ? `🏁 *${events.length} contests* finished\n\n` +
+        `*\\+${escMd(fmtUsd(totalCents))}* total to your balance`
+      : `🏁 *${events.length} contests* finished`;
+  // Aggregated DMs send the user to the live list rather than picking one
+  // contest's URL arbitrarily; the result rows are reachable from there.
+  const firstUrl = escMdUrl(events[0]!.resultUrl);
+  return `${header}\n\n${lines.join('\n')}\n\n[Open app →](${firstUrl})`;
 }

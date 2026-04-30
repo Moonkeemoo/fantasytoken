@@ -113,6 +113,13 @@
       "when": 1777481235400,
       "tag": "0015_contest_pay_all",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1777481235500,
+      "tag": "0016_entries_result_viewed_at",
+      "breakpoints": true
     }
   ]
 }

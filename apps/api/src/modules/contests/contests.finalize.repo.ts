@@ -14,11 +14,23 @@ import {
 import type { CurrencyService } from '../currency/currency.service.js';
 import type { Logger } from '../../logger.js';
 import type { ReferralsService } from '../referrals/referrals.service.js';
+import type { DmQueueService } from '../bot/queue.service.js';
 import { finalizeContest, type FinalizeInputEntry } from './contests.finalize.js';
 
 export interface ContestsFinalizeRepo {
   findContestsToFinalize2(): Promise<Array<{ id: string; prizePoolCents: bigint }>>;
   finalize(contestId: string): Promise<{ paidCount: number; totalCents: number }>;
+}
+
+export interface ContestsFinalizeRepoOptions {
+  /** Optional bot DM queue. When provided, every real entry gets a
+   * "your contest finished" DM enqueued with a 5-min grace window
+   * (skipped on send if the user opens the result themselves first). */
+  dmQueue?: DmQueueService;
+  /** Mini-app deep-link base, e.g. `https://t.me/fantasytokenbot/fantasytoken`.
+   * Combined with `?startapp=result_<contestId>` to point the DM at the
+   * specific result page. Optional — without it the DM is not enqueued. */
+  miniAppUrl?: string;
 }
 
 export function createContestsFinalizeRepo(
@@ -27,7 +39,9 @@ export function createContestsFinalizeRepo(
   rakePct: number,
   log: Logger,
   referrals: ReferralsService,
+  options: ContestsFinalizeRepoOptions = {},
 ): ContestsFinalizeRepo {
+  const { dmQueue, miniAppUrl } = options;
   return {
     async findContestsToFinalize2() {
       return db
@@ -41,6 +55,7 @@ export function createContestsFinalizeRepo(
       const [contest] = await db
         .select({
           id: contests.id,
+          name: contests.name,
           prizePoolCents: contests.prizePoolCents,
           entryFeeCents: contests.entryFeeCents,
           type: contests.type,
@@ -242,6 +257,30 @@ export function createContestsFinalizeRepo(
           sourcePrizeCents: BigInt(e.prizeCents),
           currency: 'USD',
         });
+      }
+
+      // 9. Bot DM nudge — "your contest finished, here's the result".
+      // Enqueued with a 5-min grace floor; the queue's drain skips any row
+      // whose entries.result_viewed_at was set during the wait (i.e. user
+      // came back on their own). Only real users; needs both a configured
+      // bot dmQueue AND a miniAppUrl so the link points somewhere useful.
+      if (dmQueue && miniAppUrl) {
+        const totalEntries = result.entries.length;
+        const url = `${miniAppUrl}?startapp=result_${contestId}`;
+        for (const e of realFinalized) {
+          await dmQueue.enqueueContestFinalized({
+            recipientUserId: e.userId!,
+            event: {
+              entryId: e.entryId,
+              contestId,
+              contestName: contest.name,
+              finalRank: e.finalRank,
+              totalEntries,
+              prizeCents: e.prizeCents,
+              resultUrl: url,
+            },
+          });
+        }
       }
 
       return { paidCount, totalCents };

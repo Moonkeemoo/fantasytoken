@@ -37,6 +37,10 @@ export const entries = pgTable(
       .notNull()
       .default(sql`0`),
     status: varchar('status', { length: 16 }).notNull().default('submitted'),
+    // Set the first time the user fetches /contests/:id/result for this entry
+    // on a finalized contest. Suppresses the bot's "contest finalized" DM
+    // (we only nudge people who didn't come back to claim the result).
+    resultViewedAt: timestamp('result_viewed_at', { withTimezone: true }),
   },
   (t) => ({
     // One real entry per (user,contest). Bots (user_id=null) are excluded.

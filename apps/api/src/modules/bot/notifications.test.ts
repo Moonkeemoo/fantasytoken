@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatCommissionDM, type CommissionEvent } from './notifications.js';
+import {
+  formatCommissionDM,
+  formatContestFinalizedDM,
+  type CommissionEvent,
+  type ContestFinalizedEvent,
+} from './notifications.js';
 
 const e1: CommissionEvent = {
   sourceFirstName: 'Andriy',
@@ -70,5 +75,71 @@ describe('formatCommissionDM', () => {
 
   it('throws on empty events', () => {
     expect(() => formatCommissionDM([])).toThrow();
+  });
+});
+
+const URL = 'https://t.me/fantasytokenbot/fantasytoken?startapp=result_abc';
+const cf1: ContestFinalizedEvent = {
+  entryId: '11111111-1111-1111-1111-111111111111',
+  contestId: 'c-1',
+  contestName: 'Bear Trap',
+  finalRank: 3,
+  totalEntries: 20,
+  prizeCents: 1250,
+  resultUrl: URL,
+};
+const cf2: ContestFinalizedEvent = {
+  entryId: '22222222-2222-2222-2222-222222222222',
+  contestId: 'c-2',
+  contestName: 'Quick Match',
+  finalRank: 14,
+  totalEntries: 20,
+  prizeCents: 0,
+  resultUrl: URL,
+};
+
+describe('formatContestFinalizedDM', () => {
+  it('single winning event — names contest, rank, prize, link', () => {
+    const m = formatContestFinalizedDM([cf1]);
+    expect(m).toContain('Bear Trap');
+    expect(m).toContain('\\#3 of 20');
+    expect(m).toContain('$12\\.50');
+    expect(m).toContain('View result');
+    expect(m).toContain(URL);
+  });
+
+  it('single no-prize event still gets a friendly message + link', () => {
+    const m = formatContestFinalizedDM([cf2]);
+    expect(m).toContain('Quick Match');
+    expect(m).toContain('\\#14 of 20');
+    expect(m).toContain('No prize this round');
+    expect(m).toContain(URL);
+    expect(m).not.toContain('to your balance');
+  });
+
+  it('escapes MarkdownV2 reserved chars in contest names', () => {
+    const tricky: ContestFinalizedEvent = { ...cf1, contestName: 'Bear-Trap!' };
+    const m = formatContestFinalizedDM([tricky]);
+    expect(m).toContain('Bear\\-Trap\\!');
+  });
+
+  it('aggregates multiple events with per-contest lines + total', () => {
+    const m = formatContestFinalizedDM([cf1, cf2]);
+    expect(m).toContain('2 contests');
+    expect(m).toContain('Bear Trap');
+    expect(m).toContain('Quick Match');
+    // Only cf1 paid out — total = $12.50.
+    expect(m).toContain('$12\\.50');
+    expect(m).toContain('Open app');
+  });
+
+  it('aggregate with zero total prize omits the balance line', () => {
+    const m = formatContestFinalizedDM([cf2, { ...cf2, contestId: 'c-3' }]);
+    expect(m).toContain('2 contests');
+    expect(m).not.toContain('to your balance');
+  });
+
+  it('throws on empty events', () => {
+    expect(() => formatContestFinalizedDM([])).toThrow();
   });
 });

@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useMe } from '../me/useMe.js';
 import { useWelcomeStatus } from '../referrals/useReferrals.js';
+import { telegram } from '../../lib/telegram.js';
 import { LoadingSplash } from './LoadingSplash.js';
+
+// Matches `result_<uuid>` in the start_param. Used by bot finalize-DMs to
+// deep-link the user straight to the result page they were nudged about.
+const RESULT_DEEP_LINK = /^result_([0-9a-f-]{36})$/i;
 
 export const TUTORIAL_DONE_KEY = 'ft.tutorial.done';
 
@@ -22,6 +27,13 @@ export function Loading() {
 
   if (me.isLoading || !me.data || welcome.isLoading) return <LoadingSplash />;
   if (me.isError) return <LoadingSplash caption="connection issue · retrying…" />;
+
+  // Bot deep-link: ?startapp=result_<contestId> jumps the user straight to
+  // the result page (skips lobby). Takes precedence over tutorial/welcome
+  // routing — the user explicitly tapped the DM, they want their result.
+  const sp = telegram.startParam();
+  const m = sp ? RESULT_DEEP_LINK.exec(sp) : null;
+  if (m) return <Navigate to={`/contests/${m[1]}/result`} replace />;
 
   // Server is the source of truth — survives wipes and crosses devices, fixes
   // the bug where a wiped account skipped the tutorial because localStorage

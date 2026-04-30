@@ -52,6 +52,9 @@ function makeRepo(opts: {
     async getXpAwardForUser() {
       return null;
     },
+    async markResultViewed() {
+      // no-op fake; real impl is exercised by the bot drain integration.
+    },
   };
 }
 

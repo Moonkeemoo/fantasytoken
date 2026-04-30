@@ -1,33 +1,32 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { botDmQueue, users } from '../../db/schema/index.js';
-import type { CommissionDmPayload, DmQueueRepo } from './queue.service.js';
+import { botDmQueue, entries, users } from '../../db/schema/index.js';
+import type { DmPayload, DmQueueRepo } from './queue.service.js';
 
 /** Per-recipient cap from REFERRAL_SYSTEM.md §11.2: 1 DM per hour. */
 const PER_RECIPIENT_DEBOUNCE = sql`'1 hour'::interval`;
-/** Smallest debounce so a burst of commissions still groups within one tick. */
-const MIN_DEBOUNCE = sql`'1 minute'::interval`;
 
 export function createDmQueueRepo(db: Database): DmQueueRepo {
   return {
-    async enqueueCommission({ recipientUserId, payload }) {
-      // scheduled_at = max(NOW() + 1min, last_dm_sent_at + 1h). The 1-min floor
-      // gives the queue a chance to coalesce a burst of commissions for the
-      // same recipient into a single aggregated DM on the next cron tick.
+    async enqueue({ recipientUserId, payload, floorSeconds }) {
+      // scheduled_at = max(NOW() + floorSeconds, last_dm_sent_at + 1h).
+      // The floor differs by kind: commissions coalesce a burst (60s),
+      // contest_finalized waits 5 min so a user who opens the app on their
+      // own doesn't get a redundant DM.
       const result = await db.execute<{ id: string }>(sql`
         INSERT INTO ${botDmQueue} (recipient_user_id, payload, scheduled_at)
         SELECT
           ${recipientUserId},
           ${sql.raw(`'${JSON.stringify(payload).replace(/'/g, "''")}'::jsonb`)},
           GREATEST(
-            NOW() + ${MIN_DEBOUNCE},
+            NOW() + (${floorSeconds} || ' seconds')::interval,
             COALESCE(u.last_dm_sent_at, NOW()) + ${PER_RECIPIENT_DEBOUNCE}
           )
         FROM ${users} u WHERE u.id = ${recipientUserId}
         RETURNING id
       `);
       const rows = result as unknown as Array<{ id: string }>;
-      if (rows.length === 0) throw new Error('enqueueCommission: recipient not found');
+      if (rows.length === 0) throw new Error('dmQueue.enqueue: recipient not found');
       return { id: rows[0]!.id };
     },
 
@@ -38,7 +37,7 @@ export function createDmQueueRepo(db: Database): DmQueueRepo {
         id: string;
         recipient_user_id: string;
         recipient_telegram_id: string; // bigint comes back as string from postgres-js
-        payload: CommissionDmPayload;
+        payload: DmPayload;
         attempts: number;
       }>(sql`
         SELECT
@@ -59,14 +58,14 @@ export function createDmQueueRepo(db: Database): DmQueueRepo {
         {
           recipientUserId: string;
           recipientTelegramId: number;
-          rows: Array<{ id: string; payload: CommissionDmPayload; attempts: number }>;
+          rows: Array<{ id: string; payload: DmPayload; attempts: number }>;
         }
       >();
       const list = rows as unknown as Array<{
         id: string;
         recipient_user_id: string;
         recipient_telegram_id: string;
-        payload: CommissionDmPayload;
+        payload: DmPayload;
         attempts: number;
       }>;
       for (const r of list) {
@@ -83,6 +82,15 @@ export function createDmQueueRepo(db: Database): DmQueueRepo {
         g.rows.push({ id: r.id, payload: r.payload, attempts: r.attempts });
       }
       return [...groups.values()];
+    },
+
+    async findViewedEntryIds(entryIds) {
+      if (entryIds.length === 0) return new Set();
+      const rows = await db
+        .select({ id: entries.id })
+        .from(entries)
+        .where(and(inArray(entries.id, entryIds), isNotNull(entries.resultViewedAt)));
+      return new Set(rows.map((r) => r.id));
     },
 
     async markSent(rowIds, errorMessage) {

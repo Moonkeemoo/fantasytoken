@@ -169,6 +169,10 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     deps.config.RAKE_PCT,
     deps.logger,
     referrals,
+    {
+      ...(dmQueue ? { dmQueue } : {}),
+      ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
+    },
   );
   const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);

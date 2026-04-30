@@ -32,6 +32,10 @@ export interface ResultRepo {
     contestId: string,
     userId: string,
   ): Promise<{ total: number; breakdown: Array<{ reason: string; amount: number }> } | null>;
+  /** Idempotent: stamps result_viewed_at on the entry the first time the user
+   * lands on the result page for a finalized contest. Used to suppress the
+   * bot's "your contest finished" DM. */
+  markResultViewed(entryId: string): Promise<void>;
 }
 
 export interface ResultServiceDeps {
@@ -55,6 +59,14 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
 
       const myEntry = await deps.repo.findMyEntry(contestId, userId, entryId);
       if (!myEntry) return null;
+
+      // Stamp result_viewed_at the first time a real user lands on a finalized
+      // result. Idempotent (UPDATE … WHERE result_viewed_at IS NULL). Skipped
+      // for bot rows (no userId) and for cancelled contests, where there's no
+      // pending DM to suppress anyway.
+      if (myEntry.userId && contest.status === 'finalized') {
+        await deps.repo.markResultViewed(myEntry.entryId);
+      }
 
       const allEntries = await deps.repo.getEntries(contestId);
       const prices = await deps.repo.getPriceSnapshots(contestId);

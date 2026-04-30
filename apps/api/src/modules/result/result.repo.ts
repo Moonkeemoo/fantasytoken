@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import {
   contests,
@@ -152,6 +152,15 @@ export function createResultRepo(db: Database): ResultRepo {
         .from(tokens)
         .where(inArray(tokens.symbol, symbols));
       return new Map(rows.map((r) => [r.symbol, r.imageUrl]));
+    },
+
+    async markResultViewed(entryId) {
+      // First-write-wins via a partial UPDATE so re-fetches don't churn the
+      // value (and the bot drain's skip-if-viewed check stays accurate).
+      await db
+        .update(entries)
+        .set({ resultViewedAt: sql`NOW()` })
+        .where(and(eq(entries.id, entryId), isNull(entries.resultViewedAt)));
     },
 
     async getXpAwardForUser(contestId, userId) {
