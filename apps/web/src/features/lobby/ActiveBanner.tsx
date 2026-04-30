@@ -5,17 +5,23 @@ import { formatTimeLeft } from '../../lib/format.js';
 
 export interface ActiveBannerProps {
   inProgress: ContestListItem[];
+  /** Route handler for active/finalizing contests → /live. */
   onView: (id: string) => void;
+  /** Route handler for entered-but-pre-kickoff contests → /locked.
+   * Critical: without this branch the banner sent scheduled-entered contests
+   * to /live, where they rendered as a confused "PRE-START" empty state. */
+  onLocked: (id: string) => void;
 }
 
 /**
  * Shown for any contest where the user is entered AND not yet finalized.
  * Status-aware: scheduled → "STARTS IN", active → "● LIVE NOW", finalizing → "WRAPPING UP".
  */
-export function ActiveBanner({ inProgress, onView }: ActiveBannerProps) {
+export function ActiveBanner({ inProgress, onView, onLocked }: ActiveBannerProps) {
   if (inProgress.length === 0) return null;
   const c = inProgress[0]!;
   const more = inProgress.length - 1;
+  const target = c.status === 'scheduled' ? onLocked : onView;
 
   return (
     <div className="m-3 flex items-center justify-between rounded-[4px] border-[1.5px] border-ink bg-paper-dim px-3 py-2">
@@ -26,7 +32,7 @@ export function ActiveBanner({ inProgress, onView }: ActiveBannerProps) {
           {more > 0 && <span className="ml-1 text-[10px] text-muted">(+{more} more)</span>}
         </div>
       </div>
-      <Button size="sm" onClick={() => onView(c.id)}>
+      <Button size="sm" onClick={() => target(c.id)}>
         VIEW
       </Button>
     </div>

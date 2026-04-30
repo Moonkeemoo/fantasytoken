@@ -96,7 +96,7 @@ export function Lobby() {
         balanceCents={me.data.balanceCents}
         onTopUp={() => setTopUpOpen(true)}
       />
-      <ActiveBanner inProgress={myInProgress} onView={goLive} />
+      <ActiveBanner inProgress={myInProgress} onView={goLive} onLocked={goLocked} />
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
       {(() => {
         // Promo carousel = Featured contest + Invite slide. Invite slide only
