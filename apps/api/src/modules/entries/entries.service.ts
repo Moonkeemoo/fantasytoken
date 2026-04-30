@@ -121,20 +121,27 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
       void ALLOC_CENTS_TOTAL;
 
       const created = await deps.repo.create({ userId, contestId, picks });
-      try {
-        await deps.currency.transact({
-          userId,
-          deltaCents: -contest.entryFeeCents,
-          type: 'ENTRY_FEE',
-          refType: 'entry',
-          refId: created.id,
-        });
-      } catch {
-        // INV-7: race-loss between getBalance() check and currency.transact().
-        // We don't have the precise current balance at this point — use 0 as
-        // the conservative current amount; UX still shows the right "Need N
-        // more" once the user re-fetches balance.
-        throw errors.insufficientCoins(Number(contest.entryFeeCents), 0);
+      // Skip the currency tx for free contests — passing deltaCents=0n into
+      // currency.transact triggers an overdraft-guard rejection in the
+      // currency repo, which we'd then re-throw as INSUFFICIENT_COINS and
+      // the frontend would pop a Top-up modal on a Practice entry. Bug
+      // reported: "При кліку на фрі ентрі вилізла докупка коінів".
+      if (contest.entryFeeCents > 0n) {
+        try {
+          await deps.currency.transact({
+            userId,
+            deltaCents: -contest.entryFeeCents,
+            type: 'ENTRY_FEE',
+            refType: 'entry',
+            refId: created.id,
+          });
+        } catch {
+          // INV-7: race-loss between getBalance() check and currency.transact().
+          // We don't have the precise current balance at this point — use 0 as
+          // the conservative current amount; UX still shows the right "Need N
+          // more" once the user re-fetches balance.
+          throw errors.insufficientCoins(Number(contest.entryFeeCents), 0);
+        }
       }
 
       return {

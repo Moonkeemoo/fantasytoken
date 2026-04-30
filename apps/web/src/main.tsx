@@ -32,11 +32,12 @@ const tg = WebApp as TgWithSafeArea;
 
 function syncSafeArea(): void {
   const sdkValue = tg.contentSafeAreaInset?.top ?? 0;
-  // Heuristic: if the WebApp is in expanded/fullscreen mode the TG title bar
-  // lands ON TOP of our content. iOS Safari reports env(safe-area-inset-top)
-  // for the device notch (~44px) but NOT for the TG chrome above it
-  // (another ~16-24px). We add a 24px floor whenever we're expanded.
-  const expandedFloor = tg.isExpanded ? 24 : 0;
+  // Heuristic: TG fullscreen mode lands its Close/⋮/drag-handle chrome ON
+  // TOP of our content. env(safe-area-inset-top) covers the device notch
+  // (~44–54px) but NOT the TG chrome above. We force a 56px floor whenever
+  // we're expanded, which clears even the worst case (drag-handle + ⋮ on
+  // notched iPhones reported ducking the header at lower floors).
+  const expandedFloor = tg.isExpanded ? 56 : 0;
   const px = Math.max(sdkValue, expandedFloor);
   document.documentElement.style.setProperty('--tg-content-safe-area-inset-top', `${px}px`);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ContestListItem } from '@fantasytoken/shared';
@@ -94,8 +94,15 @@ export function TeamBuilder(): JSX.Element {
 
   // INV-10: lineups immutable after submit. If the user already entered this
   // contest, route them onward — never re-show the editable Build screen.
+  // Once-only: TeamBuilder's `useContest` polls every 10s to catch
+  // scheduled→active transitions, so without a fired-flag this effect
+  // re-navigates each tick and clobbers `location.state.picks` that the
+  // submit handler attaches (LockedScreen renders empty in that case).
+  const redirectFiredRef = useRef(false);
   useEffect(() => {
+    if (redirectFiredRef.current) return;
     if (!id || !contest.data?.userHasEntered) return;
+    redirectFiredRef.current = true;
     const next =
       contest.data.status === 'active'
         ? `/contests/${id}/live`

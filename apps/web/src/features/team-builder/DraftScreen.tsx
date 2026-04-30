@@ -200,7 +200,10 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     mode === 'bear' ? 'border-bear text-bear bg-bear/5' : 'border-bull text-bull bg-bull/5';
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <header className="relative border-b border-line px-3 pb-2 pt-3">
         <button
           onClick={onBack}
@@ -335,7 +338,12 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
         </div>
       )}
 
-      <div className="sticky bottom-14 border-t border-line bg-paper px-3 py-2">
+      <div
+        className="sticky border-t border-line bg-paper px-3 py-2"
+        // BottomNav (56px) + iPhone home-indicator inset. Without this the
+        // GO CTA slid under the tab bar and lost ~20px on notched devices.
+        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+      >
         <button
           type="button"
           onClick={onCtaClick}
