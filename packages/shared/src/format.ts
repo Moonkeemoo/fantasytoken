@@ -15,9 +15,12 @@ const ABS_LT_1M = 1_000_000;
 const ABS_LT_1B = 1_000_000_000;
 
 function compactBody(absValue: number): string {
-  // Sub-dollar precision so a $0.42 PnL doesn't render as "$0" and look like
-  // nothing happened. Anything ≥ $1 stays at whole-dollar precision.
+  // Sub-dollar precision so a tiny PnL doesn't render as "$0" and look
+  // dead. On low-budget contests (Practice $1, 5 picks → $0.20 each) a
+  // 1% gain is $0.002 — still meaningful to the player even though it's
+  // sub-cent. Tiered: <$0.01 → 4 decimals, <$1 → 2 decimals, ≥$1 → whole.
   if (absValue === 0) return '0';
+  if (absValue < 0.01) return absValue.toFixed(4);
   if (absValue < 1) return absValue.toFixed(2);
   if (absValue < ABS_LT_1K) return `${Math.round(absValue)}`;
   if (absValue < ABS_LT_1M) return `${trimTrailingZero(absValue / ABS_LT_1K)}K`;

@@ -40,8 +40,16 @@ export function Live(): JSX.Element {
     } else if (status === 'scheduled') {
       // User landed on /live for a contest that hasn't kicked off — bounce
       // them to the locked-room countdown where the pre-kickoff UX lives.
-      navFiredRef.current = true;
-      navigate(`/contests/${id}/locked`);
+      // BUT only if kickoff is meaningfully in the future. Within 5s we
+      // sit tight: the backend cron runs every 60s, so during the kickoff
+      // window /me/contests can still return scheduled while LockedScreen
+      // already redirected us here on `Date.now() >= startsAt`. Without
+      // this buffer the two screens ping-pong as fast as React can render.
+      const startsAt = new Date(live.data.startsAt).getTime();
+      if (startsAt - Date.now() > 5_000) {
+        navFiredRef.current = true;
+        navigate(`/contests/${id}/locked`);
+      }
     }
   }, [live.data, id, navigate]);
 

@@ -1,3 +1,4 @@
+import { useEffect as useReactEffect, useState as useReactState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fmtMoney } from '@fantasytoken/shared';
 import { useCountdown } from '../../lib/countdown.js';
@@ -65,9 +66,10 @@ export function LiveHeader({ contestName, mode, tier, startsAt, endsAt, status }
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-dashed border-line px-3 py-1.5">
         {status === 'active' && (
-          <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-accent">
+          <span className="flex items-center gap-2 rounded-full border-[1.5px] border-accent bg-accent/10 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-accent">
             <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
             LIVE
+            <PriceTickCountdown />
           </span>
         )}
         {isPreStart && !locking && (
@@ -95,5 +97,22 @@ export function LiveHeader({ contestName, mode, tier, startsAt, endsAt, status }
         </span>
       </div>
     </header>
+  );
+}
+
+/** 15s countdown that resets after each tick — visual signal that the
+ * board is alive. Aligned with `useLive`'s 15s refetchInterval; not
+ * synced to the actual fetch (would need a query-event subscription) but
+ * close enough to match what the player sees. Sits inside the LIVE pill. */
+function PriceTickCountdown(): JSX.Element {
+  const [n, setN] = useReactState(15);
+  useReactEffect(() => {
+    const id = setInterval(() => setN((v) => (v <= 1 ? 15 : v - 1)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="font-mono text-[10px] font-bold normal-case tracking-normal text-accent/70">
+      · refresh in {n}s
+    </span>
   );
 }
