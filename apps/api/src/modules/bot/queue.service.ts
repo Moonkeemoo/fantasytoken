@@ -238,28 +238,35 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           // last_dm_sent_at allows; in practice this happens only when
           // multiple kinds got enqueued in the same window for a user who
           // hadn't received a DM in the prior hour.
+          // Each format function returns { text, replyMarkup } — the
+          // inline keyboard ensures the user sees a tappable "Open app"
+          // CTA below every notification, not just an in-text link.
           if (commissionEvents.length > 0) {
-            const text = formatCommissionDM(commissionEvents);
-            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+            const msg = formatCommissionDM(commissionEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, msg.text, {
               parse_mode: 'MarkdownV2',
+              reply_markup: msg.replyMarkup,
             });
           }
           if (finalizedEvents.length > 0) {
-            const text = formatContestFinalizedDM(finalizedEvents);
-            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+            const msg = formatContestFinalizedDM(finalizedEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, msg.text, {
               parse_mode: 'MarkdownV2',
+              reply_markup: msg.replyMarkup,
             });
           }
           if (cancelledEvents.length > 0) {
-            const text = formatContestCancelledDM(cancelledEvents);
-            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+            const msg = formatContestCancelledDM(cancelledEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, msg.text, {
               parse_mode: 'MarkdownV2',
+              reply_markup: msg.replyMarkup,
             });
           }
           if (unlockEvents.length > 0) {
-            const text = formatReferralUnlockDM(unlockEvents);
-            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+            const msg = formatReferralUnlockDM(unlockEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, msg.text, {
               parse_mode: 'MarkdownV2',
+              reply_markup: msg.replyMarkup,
             });
           }
           await deps.repo.markSent(sendIds, null);

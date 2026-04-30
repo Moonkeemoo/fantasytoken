@@ -299,6 +299,10 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
                     level: link.level,
                     contestName: dmContext.contestName,
                     currency: args.currency,
+                    // The DM's "Open app" button takes the user back into
+                    // the mini-app — t.me deep-link by default so the
+                    // referrals view loads inside Telegram.
+                    appUrl: deps.miniAppUrl ?? 'https://t.me/fantasytokenbot/fantasytoken',
                   },
                 });
               }
