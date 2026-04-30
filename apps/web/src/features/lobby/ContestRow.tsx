@@ -24,8 +24,10 @@ export interface ContestRowProps {
   userRank?: number;
   /** Tap to enter — for not-yet-entered scheduled contests. Routes to Team Builder. */
   onJoin: (id: string) => void;
-  /** Tap to view live — for already-entered or active contests. Routes to Live page. */
+  /** Tap to view live — for already-entered active contests. Routes to Live. */
   onView: (id: string) => void;
+  /** Tap to view the locked-room countdown — for entered scheduled contests. */
+  onLocked: (id: string) => void;
   /** Tap to view finished result — for finalized/cancelled contests. */
   onResult: (id: string) => void;
   onTopUp: () => void;
@@ -37,6 +39,7 @@ export function ContestRow({
   userRank = 1,
   onJoin,
   onView,
+  onLocked,
   onResult,
   onTopUp,
 }: ContestRowProps) {
@@ -67,7 +70,11 @@ export function ContestRow({
     } else if (contest.status === 'active') {
       cta = { label: '● LIVE', onClick: () => onView(contest.id), variant: 'primary' };
     } else {
-      cta = { label: 'VIEW', onClick: () => onView(contest.id), variant: 'ghost' };
+      // Pre-kickoff: route back to the locked-room waiting screen, not the
+      // live screen (which would render an empty pre-start state and confuse
+      // the player). User reported re-entering a scheduled contest dropped
+      // them on the live page incorrectly.
+      cta = { label: 'VIEW', onClick: () => onLocked(contest.id), variant: 'ghost' };
     }
   } else if (contest.status !== 'scheduled') {
     cta = { label: 'CLOSED', onClick: () => {}, disabled: true, variant: 'ghost' };

@@ -85,6 +85,7 @@ export function Lobby() {
 
   const goTeamBuilder = (id: string) => navigate(`/contests/${id}/build`);
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
+  const goLocked = (id: string) => navigate(`/contests/${id}/locked`);
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
 
   return (
@@ -118,6 +119,7 @@ export function Lobby() {
         userRank={userRank}
         onJoin={goTeamBuilder}
         onView={goLive}
+        onLocked={goLocked}
         onResult={goResult}
         onTopUp={() => setTopUpOpen(true)}
         heading="All contests"

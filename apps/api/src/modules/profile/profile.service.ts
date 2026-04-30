@@ -2,7 +2,10 @@ export interface ProfileStats {
   contestsPlayed: number;
   /** wonContests / (wonContests + lostContests); even (cancelled-with-refund) excluded. */
   winRate: number | null;
-  /** Best single-contest net P&L in cents. */
+  /** Best single-contest net P&L in cents, split by mode. */
+  bestBullPnlCents: number | null;
+  bestBearPnlCents: number | null;
+  /** Legacy compound — max of bull/bear. Kept for back-compat with old clients. */
   bestPnlCents: number | null;
   allTimePnlCents: number;
 }

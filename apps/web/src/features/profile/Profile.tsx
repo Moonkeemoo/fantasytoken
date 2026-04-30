@@ -156,26 +156,47 @@ function BalanceCard({ balanceCents, onTopUp }: { balanceCents: number; onTopUp:
 
 function TrackRecord({ stats }: { stats: ProfileResponse['stats'] }) {
   const winRateText = stats.winRate === null ? '—' : `${Math.round(stats.winRate * 100)}%`;
-  const bestText = stats.bestPnlCents === null ? '—' : formatPnlCents(stats.bestPnlCents);
   const allPnlClass =
     stats.allTimePnlCents > 0 ? 'text-hl-green' : stats.allTimePnlCents < 0 ? 'text-hl-red' : '';
-  const bestClass =
-    stats.bestPnlCents !== null && stats.bestPnlCents > 0
+
+  // Best Bull / Best Bear — split per-mode so a Bear win doesn't get drowned
+  // by a bigger Bull win (or vice versa). PnL math is mode-neutral (INV-4),
+  // but the emotional metric "where I crushed it" reads better when the
+  // comparison stays within the mode the player picked.
+  const bestBullText =
+    stats.bestBullPnlCents === null ? '—' : formatPnlCents(stats.bestBullPnlCents);
+  const bestBullClass =
+    stats.bestBullPnlCents !== null && stats.bestBullPnlCents > 0
       ? 'text-hl-green'
-      : stats.bestPnlCents !== null && stats.bestPnlCents < 0
+      : stats.bestBullPnlCents !== null && stats.bestBullPnlCents < 0
+        ? 'text-hl-red'
+        : '';
+  const bestBearText =
+    stats.bestBearPnlCents === null ? '—' : formatPnlCents(stats.bestBearPnlCents);
+  const bestBearClass =
+    stats.bestBearPnlCents !== null && stats.bestBearPnlCents > 0
+      ? 'text-hl-green'
+      : stats.bestBearPnlCents !== null && stats.bestBearPnlCents < 0
         ? 'text-hl-red'
         : '';
   return (
     <div className="mt-1 grid grid-cols-2 overflow-hidden rounded-[6px] border-[1.5px] border-ink">
       <Stat label="contests" value={String(stats.contestsPlayed)} />
       <Stat label="win rate" value={winRateText} borderLeft />
-      <Stat label="best contest" value={bestText} valueClass={bestClass} borderTop />
+      <Stat label="best bull" value={bestBullText} valueClass={bestBullClass} borderTop />
+      <Stat
+        label="best bear"
+        value={bestBearText}
+        valueClass={bestBearClass}
+        borderLeft
+        borderTop
+      />
       <Stat
         label="all-time P&L"
         value={formatPnlCents(stats.allTimePnlCents)}
         valueClass={allPnlClass}
-        borderLeft
         borderTop
+        spanFull
       />
     </div>
   );
@@ -187,16 +208,18 @@ function Stat({
   valueClass = '',
   borderLeft = false,
   borderTop = false,
+  spanFull = false,
 }: {
   label: string;
   value: string;
   valueClass?: string;
   borderLeft?: boolean;
   borderTop?: boolean;
+  spanFull?: boolean;
 }) {
   return (
     <div
-      className={`px-[14px] py-3 ${borderLeft ? 'border-l-[1.5px] border-ink' : ''} ${borderTop ? 'border-t-[1.5px] border-ink' : ''}`}
+      className={`px-[14px] py-3 ${borderLeft ? 'border-l-[1.5px] border-ink' : ''} ${borderTop ? 'border-t-[1.5px] border-ink' : ''} ${spanFull ? 'col-span-2' : ''}`}
     >
       <Label>{label}</Label>
       <div className={`mt-1 text-[26px] font-extrabold leading-none ${valueClass}`}>{value}</div>

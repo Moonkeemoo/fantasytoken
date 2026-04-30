@@ -4,7 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { ContestListItem, LineupsListResponse, type LineupsFilter } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 import { Label } from '../../components/ui/Label.js';
+import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { useCountdown } from '../../lib/countdown.js';
+import { useTokenList } from '../team-builder/useTokenList.js';
 
 const FILTERS: ReadonlyArray<{ id: LineupsFilter; label: string; enabled: boolean }> = [
   { id: 'all', label: 'All', enabled: true },
@@ -55,6 +57,16 @@ export function BrowseScreen(): JSX.Element {
 
   const now = Date.now();
   const lineups = useMemo(() => lineupsQ.data?.lineups ?? [], [lineupsQ.data]);
+
+  // Symbol → imageUrl map so the mini token-pill row renders real icons
+  // instead of the letter fallback. Lineups response itself only carries
+  // symbols (privacy contract); we resolve display metadata client-side.
+  const tokensQ = useTokenList(250);
+  const imageBySymbol = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
+    return map;
+  }, [tokensQ.data]);
 
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
   if (contestQ.isLoading) return <div className="p-6 text-muted">loading…</div>;
@@ -125,13 +137,12 @@ export function BrowseScreen(): JSX.Element {
               </div>
               <div className="flex shrink-0 gap-1">
                 {l.picks.slice(0, 5).map((sym) => (
-                  <span
+                  <TokenIcon
                     key={sym}
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-line bg-paper-dim text-[9px] font-bold text-ink-soft"
-                    title={sym}
-                  >
-                    {sym.slice(0, 3)}
-                  </span>
+                    symbol={sym}
+                    imageUrl={imageBySymbol.get(sym) ?? null}
+                    size={24}
+                  />
                 ))}
               </div>
             </li>

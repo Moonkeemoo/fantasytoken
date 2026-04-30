@@ -51,50 +51,46 @@ export function StartFromStrip({ presets, onApply }: StartFromStripProps): JSX.E
   );
 }
 
-/** Three system presets — wired by DraftScreen until personal recents land. */
-export function defaultPresets(symbols: readonly string[]): StartFromPreset[] {
-  if (symbols.length < 5) return [];
-  const [a, b, c, d, e] = symbols;
+interface PresetSeedToken {
+  symbol: string;
+  name?: string;
+  imageUrl?: string | null;
+}
+
+/** Three system presets — wired by DraftScreen until personal recents land.
+ * Takes the full token object (not just symbol) so the resulting picks
+ * carry imageUrl through `applyPreset` → LineupSlot can render real icons. */
+export function defaultPresets(tokens: readonly PresetSeedToken[]): StartFromPreset[] {
+  if (tokens.length < 5) return [];
+  const [a, b, c, d, e] = tokens;
   if (!a || !b || !c || !d || !e) return [];
+  const pick = (t: PresetSeedToken, alloc: number): LineupPick => ({
+    symbol: t.symbol,
+    alloc,
+    ...(t.name !== undefined && { name: t.name }),
+    ...(t.imageUrl !== undefined && { imageUrl: t.imageUrl }),
+  });
   return [
     {
       id: 'balanced',
       label: '⚖️ Balanced',
       sub: '20 / 20 / 20 / 20 / 20',
       isSystem: true,
-      picks: [
-        { symbol: a, alloc: 20 },
-        { symbol: b, alloc: 20 },
-        { symbol: c, alloc: 20 },
-        { symbol: d, alloc: 20 },
-        { symbol: e, alloc: 20 },
-      ],
+      picks: [pick(a, 20), pick(b, 20), pick(c, 20), pick(d, 20), pick(e, 20)],
     },
     {
       id: 'top-heavy',
       label: '🦏 Top-heavy',
       sub: '50 / 20 / 15 / 10 / 5',
       isSystem: true,
-      picks: [
-        { symbol: a, alloc: 50 },
-        { symbol: b, alloc: 20 },
-        { symbol: c, alloc: 15 },
-        { symbol: d, alloc: 10 },
-        { symbol: e, alloc: 5 },
-      ],
+      picks: [pick(a, 50), pick(b, 20), pick(c, 15), pick(d, 10), pick(e, 5)],
     },
     {
       id: 'long-tail',
       label: '🎲 Long-tail',
       sub: '30 / 25 / 20 / 15 / 10',
       isSystem: true,
-      picks: [
-        { symbol: a, alloc: 30 },
-        { symbol: b, alloc: 25 },
-        { symbol: c, alloc: 20 },
-        { symbol: d, alloc: 15 },
-        { symbol: e, alloc: 10 },
-      ],
+      picks: [pick(a, 30), pick(b, 25), pick(c, 20), pick(d, 15), pick(e, 10)],
     },
   ];
 }

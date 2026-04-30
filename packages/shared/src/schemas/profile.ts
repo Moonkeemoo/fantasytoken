@@ -6,7 +6,14 @@ export const ProfileStats = z.object({
   /** 0..1 — wonContests / (wonContests + lostContests). Even (cancelled with refund) excluded.
    * null if user has no decided contests yet. */
   winRate: z.number().min(0).max(1).nullable(),
-  /** Largest single-contest P&L cents (best contest result). null if none played. */
+  /** Best single-contest P&L cents in a Bull contest. null if user hasn't played any.
+   * Split by mode so the player sees "best Bull" and "best Bear" as separate
+   * achievements — PnL math is mode-neutral (INV-4) but the emotional metric
+   * "where I crushed it" reads better when the comparison is within mode. */
+  bestBullPnlCents: z.number().int().nullable(),
+  bestBearPnlCents: z.number().int().nullable(),
+  /** Legacy single-best across all modes — kept for back-compat with older clients
+   * that haven't picked up the bull/bear split yet. Equals max(bestBull, bestBear). */
   bestPnlCents: z.number().int().nullable(),
   allTimePnlCents: z.number().int(),
 });

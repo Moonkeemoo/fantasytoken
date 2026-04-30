@@ -8,6 +8,7 @@ export interface ContestListProps {
   userRank?: number;
   onJoin: (id: string) => void;
   onView: (id: string) => void;
+  onLocked: (id: string) => void;
   onResult: (id: string) => void;
   onTopUp: () => void;
   heading?: string;
@@ -19,6 +20,7 @@ export function ContestList({
   userRank,
   onJoin,
   onView,
+  onLocked,
   onResult,
   onTopUp,
   heading = 'All contests',
@@ -41,6 +43,7 @@ export function ContestList({
           {...(userRank !== undefined && { userRank })}
           onJoin={onJoin}
           onView={onView}
+          onLocked={onLocked}
           onResult={onResult}
           onTopUp={onTopUp}
         />

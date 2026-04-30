@@ -34,6 +34,7 @@ export function createProfileRepo(db: Database): ProfileRepo {
         .select({
           entryId: entries.id,
           contestStatus: contests.status,
+          contestType: contests.type,
           netCents: sql<string>`COALESCE((
             SELECT SUM(${transactions.deltaCents})
             FROM ${transactions}
@@ -50,15 +51,30 @@ export function createProfileRepo(db: Database): ProfileRepo {
       const contestsPlayed = perEntryRows.length;
       let wonCount = 0;
       let lostCount = 0;
-      let bestPnlCents: number | null = null;
+      // Mode-split "best contest" — INV-4 makes PnL math mode-neutral but the
+      // emotional metric "where I crushed it" reads better when the comparison
+      // is within mode. Player sees Best Bull / Best Bear side by side.
+      let bestBullPnlCents: number | null = null;
+      let bestBearPnlCents: number | null = null;
       for (const row of perEntryRows) {
         if (row.contestStatus !== 'finalized' && row.contestStatus !== 'cancelled') continue;
         const net = Number(row.netCents);
-        if (bestPnlCents === null || net > bestPnlCents) bestPnlCents = net;
+        if (row.contestType === 'bear') {
+          if (bestBearPnlCents === null || net > bestBearPnlCents) bestBearPnlCents = net;
+        } else {
+          if (bestBullPnlCents === null || net > bestBullPnlCents) bestBullPnlCents = net;
+        }
         if (net > 0) wonCount += 1;
         else if (net < 0) lostCount += 1;
         // net === 0 → even, doesn't count toward win/loss
       }
+      // Legacy compound — max of the two for back-compat with old clients.
+      const bestPnlCents =
+        bestBullPnlCents === null
+          ? bestBearPnlCents
+          : bestBearPnlCents === null
+            ? bestBullPnlCents
+            : Math.max(bestBullPnlCents, bestBearPnlCents);
       const decidedCount = wonCount + lostCount;
       const winRate = decidedCount > 0 ? wonCount / decidedCount : null;
 
@@ -139,6 +155,8 @@ export function createProfileRepo(db: Database): ProfileRepo {
         stats: {
           contestsPlayed,
           winRate,
+          bestBullPnlCents,
+          bestBearPnlCents,
           bestPnlCents,
           allTimePnlCents,
         },

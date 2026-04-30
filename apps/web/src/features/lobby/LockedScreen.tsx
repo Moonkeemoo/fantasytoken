@@ -6,6 +6,7 @@ import { Label } from '../../components/ui/Label.js';
 import { useCountdown } from '../../lib/countdown.js';
 import { formatCents } from '../../lib/format.js';
 import type { LineupPick } from '../team-builder/lineupReducer.js';
+import { useTokenList } from '../team-builder/useTokenList.js';
 import { useActivity } from './useActivity.js';
 import { useLockedState } from './useLockedState.js';
 
@@ -49,7 +50,25 @@ export function LockedScreen(): JSX.Element {
   const navState = (location.state ?? {}) as LockedNavState;
 
   const tier = stateQuery.data ? Math.round(stateQuery.data.virtualBudgetCents / 100) : 100_000;
-  const picks = useMemo(() => navState.picks ?? [], [navState.picks]);
+
+  // Enrich picks with imageUrl from the token catalog so YOUR-TEAM rows show
+  // real icons even when navState.picks came from a preset that didn't carry
+  // image metadata (system presets pre-fix, legacy submits, etc.).
+  const tokensQ = useTokenList(250);
+  const imageBySymbol = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
+    return map;
+  }, [tokensQ.data]);
+
+  const picks = useMemo<LineupPick[]>(() => {
+    const raw = navState.picks ?? [];
+    return raw.map((p) => {
+      if (p.imageUrl !== undefined && p.imageUrl !== null) return p;
+      const fallback = imageBySymbol.get(p.symbol);
+      return fallback === undefined ? p : { ...p, imageUrl: fallback };
+    });
+  }, [navState.picks, imageBySymbol]);
 
   const activityQ = useActivity(id);
   const activity = useMemo(() => activityQ.data?.items ?? [], [activityQ.data]);

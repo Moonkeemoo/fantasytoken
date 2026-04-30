@@ -40,6 +40,7 @@ export function LiveList() {
 
   const goTeamBuilder = (id: string) => navigate(`/contests/${id}/build`);
   const goLive = (id: string) => navigate(`/contests/${id}/live`);
+  const goLocked = (id: string) => navigate(`/contests/${id}/locked`);
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
 
   return (
@@ -65,6 +66,7 @@ export function LiveList() {
               balanceCents={me.data.balanceCents}
               onJoin={goTeamBuilder}
               onView={goLive}
+              onLocked={goLocked}
               onResult={goResult}
               onTopUp={() => setTopUpOpen(true)}
               heading="Live now"
@@ -76,6 +78,7 @@ export function LiveList() {
               balanceCents={me.data.balanceCents}
               onJoin={goTeamBuilder}
               onView={goLive}
+              onLocked={goLocked}
               onResult={goResult}
               onTopUp={() => setTopUpOpen(true)}
               heading="History"

@@ -83,15 +83,25 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
 
   const lastLineupQ = useLastLineup();
 
-  // Presets always need symbols — pull from the full token universe (default
-  // list), not from the search results (which can be empty).
-  const presetSymbols = useMemo(
-    () => (defaultTokens.data?.items ?? []).slice(0, 5).map((t) => t.symbol),
+  // Symbol → display metadata map so any preset (system or personal) can
+  // carry imageUrl into the resulting picks. LineupSlot renders the icon
+  // straight from pick.imageUrl; without this map we'd fall back to the
+  // letter avatar even for top-50 mainstream tokens.
+  const tokenLookup = useMemo(() => {
+    const map = new Map<string, { name: string; imageUrl: string | null }>();
+    for (const t of defaultTokens.data?.items ?? []) {
+      map.set(t.symbol, { name: t.name, imageUrl: t.imageUrl });
+    }
+    return map;
+  }, [defaultTokens.data]);
+
+  const presetSeedTokens = useMemo(
+    () => (defaultTokens.data?.items ?? []).slice(0, 5),
     [defaultTokens.data],
   );
 
   const presets = useMemo<StartFromPreset[]>(() => {
-    const base = defaultPresets(presetSymbols);
+    const base = defaultPresets(presetSeedTokens);
     const last = lastLineupQ.data?.lineup;
     if (!last || last.picks.length !== 5) return base;
     const pnl = last.pnlPct;
@@ -101,10 +111,18 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
       label: `Last team${pnlLabel}`,
       sub: last.contestName,
       isSystem: false,
-      picks: last.picks,
+      picks: last.picks.map((p) => {
+        const meta = tokenLookup.get(p.symbol);
+        return {
+          symbol: p.symbol,
+          alloc: p.alloc,
+          ...(meta?.name !== undefined && { name: meta.name }),
+          ...(meta?.imageUrl !== undefined && { imageUrl: meta.imageUrl }),
+        };
+      }),
     };
     return [personal, ...base];
-  }, [presetSymbols, lastLineupQ.data]);
+  }, [presetSeedTokens, lastLineupQ.data, tokenLookup]);
 
   const onTokenSelect = (token: Token): void => {
     openSheet({
