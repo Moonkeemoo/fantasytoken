@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
@@ -20,17 +19,11 @@ export function Spectator(): JSX.Element {
   const navigate = useNavigate();
   const live = useLive(id);
 
-  // If the contest finalizes while we're watching, jump to the result page
-  // (unauthenticated viewers fall through to a public-result render there).
-  const navFiredRef = useRef(false);
-  useEffect(() => {
-    if (navFiredRef.current || !live.data) return;
-    const status = live.data.status;
-    if (status === 'finalizing' || status === 'finalized' || status === 'cancelled') {
-      navFiredRef.current = true;
-      navigate(`/contests/${id}/result`);
-    }
-  }, [live.data, id, navigate]);
+  // Earlier we redirected to /contests/:id/result on finalize, but that page
+  // requires the caller to have an entry — spectators don't, so the redirect
+  // produced a hostile "result not ready" wall. Stay on Spectator and let
+  // the leaderboard render the final standings; the LiveHeader switches to
+  // "Finalized" caption automatically based on `status`.
 
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
   if (live.isLoading) return <LoadingSplash />;
@@ -49,7 +42,8 @@ export function Spectator(): JSX.Element {
       <LiveHeader
         contestName={data.contestName}
         mode={data.type}
-        tier={Math.round(data.virtualBudgetCents / 100)}
+        // virtual_budget_cents stores whole coins post TZ-002 (1 coin = $1).
+        tier={data.virtualBudgetCents}
         startsAt={data.startsAt}
         endsAt={data.endsAt}
         status={data.status}
@@ -57,12 +51,16 @@ export function Spectator(): JSX.Element {
 
       {/* Spectate banner — explicit "you're watching" so UX is unambiguous. */}
       <div className="mx-3 mt-3 rounded-[6px] border-[1.5px] border-dashed border-ink/40 bg-paper-dim px-4 py-3 text-center font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
-        👀 watch-only · you didn't enter this contest
+        {data.status === 'finalized' || data.status === 'finalizing'
+          ? '🏁 contest finished — final standings below'
+          : data.status === 'cancelled'
+            ? '⛔ contest cancelled'
+            : '👀 watch-only · live leaderboard updates every 15s'}
       </div>
 
       {/* Top 10 leaderboard. */}
       <div className="px-3 py-2">
-        <Label>top 10 · live</Label>
+        <Label>{data.status === 'active' ? 'top 10 · live' : 'top 10 · final'}</Label>
         <Card className="mt-2 flex flex-col gap-[6px] !px-[10px] !py-[10px]">
           {top10.length === 0 && (
             <div className="text-center text-[11px] text-muted">no entries yet</div>

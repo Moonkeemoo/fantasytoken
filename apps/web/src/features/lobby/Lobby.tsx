@@ -11,6 +11,7 @@ import { NextRankTeaser } from '../rank/NextRankTeaser.js';
 import { useRank, useTeaser } from '../rank/useRank.js';
 import { PromoCarousel } from './PromoCarousel.js';
 import { InviteSlide } from './InviteSlide.js';
+import { NewbieHero } from './NewbieHero.js';
 import { zoneContests } from './zones.js';
 import { applyOnboardingGate } from './onboarding-gate.js';
 
@@ -89,10 +90,23 @@ export function Lobby() {
 
       {rank.data && teaser.data && <NextRankTeaser rank={rank.data} teaser={teaser.data} />}
 
-      {/* Invite promo only after the user has played a few contests (DESIGN.md
-          §8 R3 — once they've done 3 finals they have something to share).
-          Earlier than that the "Earn 5%" pitch reads as noise. */}
-      {finalizedContests >= 3 && <PromoCarousel slides={[<InviteSlide key="invite" />]} />}
+      {/* Invite promo gates on rank ≥ 2 — players need to have actually
+          experienced a contest cycle before we ask them to invite friends.
+          Earlier (per-finalized count) made the pitch land too late for
+          power players who burned through R1 in two minutes; later (R3)
+          missed the natural hand-off moment right after first rank-up. */}
+      {userRank >= 2 && <PromoCarousel slides={[<InviteSlide key="invite" />]} />}
+
+      {/* Newbie hero: only for first-launch (0 finalized) and only when
+          Practice is actually in their soon zone. Once a player finishes
+          their first contest the hero quietly disappears — the regular
+          Soon list is enough orientation by then. */}
+      {(() => {
+        if (finalizedContests !== 0) return null;
+        const practice = zones.soon.find((c) => c.payAll && c.entryFeeCents === 0);
+        if (!practice) return null;
+        return <NewbieHero contest={practice} onJoin={goTeamBuilder} />;
+      })()}
 
       {zones.my.length > 0 && (
         <ContestList
@@ -108,19 +122,28 @@ export function Lobby() {
         />
       )}
 
-      {zones.soon.length > 0 && (
-        <ContestList
-          items={zones.soon}
-          balanceCents={me.data.balanceCents}
-          userRank={userRank}
-          onJoin={goTeamBuilder}
-          onView={goLive}
-          onLocked={goLocked}
-          onResult={goResult}
-          onTopUp={() => setTopUpOpen(true)}
-          heading="starting soon · join now"
-        />
-      )}
+      {(() => {
+        // Drop Practice from Soon when the NewbieHero already promotes it
+        // — otherwise it shows up twice (hero card + plain row).
+        const soonItems =
+          finalizedContests === 0
+            ? zones.soon.filter((c) => !(c.payAll && c.entryFeeCents === 0))
+            : zones.soon;
+        if (soonItems.length === 0) return null;
+        return (
+          <ContestList
+            items={soonItems}
+            balanceCents={me.data.balanceCents}
+            userRank={userRank}
+            onJoin={goTeamBuilder}
+            onView={goLive}
+            onLocked={goLocked}
+            onResult={goResult}
+            onTopUp={() => setTopUpOpen(true)}
+            heading="starting soon · join now"
+          />
+        );
+      })()}
 
       {zones.watch.length > 0 && (
         <ContestList
@@ -138,9 +161,11 @@ export function Lobby() {
 
       {zones.locked.length > 0 && (
         <ContestList
-          // Show only the next 3 locked tiers — anything further is buried as
-          // a long-tail wall. The full list is implied by the rank teaser.
-          items={zones.locked.slice(0, 3)}
+          // Show only ONE locked card — the closest unlock. Anything more
+          // reads as a wall of "you can't play this" for newcomers (user
+          // feedback: "висипалось дуже багато івентів"). The full ladder
+          // is implied by NextRankTeaser above.
+          items={zones.locked.slice(0, 1)}
           balanceCents={me.data.balanceCents}
           userRank={userRank}
           onJoin={goTeamBuilder}
