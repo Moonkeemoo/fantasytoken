@@ -1,15 +1,20 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
+import { fmtPnL } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
 import { Avatar } from '../../components/ui/Avatar.js';
-import { formatPnl } from '../../lib/format.js';
 
 export interface LeaderboardModalProps {
   open: boolean;
   onClose: () => void;
   entries: LeaderboardEntry[];
+  /** Contest virtual budget in dollars — converts each row's `scorePct`
+   * (a 0..1 ratio) into a comparable $ value matching the YOUR PORTFOLIO
+   * card above. Without this rows displayed as `🪙 0` because formatPnl
+   * was being given a percentage and treating it as a coin amount. */
+  budgetUsd: number;
 }
 
-export function LeaderboardModal({ open, onClose, entries }: LeaderboardModalProps) {
+export function LeaderboardModal({ open, onClose, entries, budgetUsd }: LeaderboardModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink/40" onClick={onClose}>
@@ -42,7 +47,7 @@ export function LeaderboardModal({ open, onClose, entries }: LeaderboardModalPro
                   </span>
                 </span>
                 <span className={`font-bold ${e.scorePct >= 0 ? 'text-hl-green' : 'text-hl-red'}`}>
-                  {formatPnl(e.scorePct)}
+                  {fmtPnL(e.scorePct * budgetUsd)}
                 </span>
               </div>
             ))}

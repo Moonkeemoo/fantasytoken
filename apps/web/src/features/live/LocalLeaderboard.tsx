@@ -1,7 +1,7 @@
 import type { LeaderboardEntry } from '@fantasytoken/shared';
+import { fmtPnL } from '@fantasytoken/shared';
 import { Label } from '../../components/ui/Label.js';
 import { Avatar } from '../../components/ui/Avatar.js';
-import { formatPnl } from '../../lib/format.js';
 
 export interface LocalLeaderboardProps {
   top: LeaderboardEntry[];
@@ -10,6 +10,11 @@ export interface LocalLeaderboardProps {
   /** Whole table — used to compute the window and to enable "view all". */
   all: LeaderboardEntry[];
   onViewAll: () => void;
+  /** Contest virtual budget in dollars — for converting per-row scorePct
+   * to $ PnL so the leaderboard reads in the same currency as the hero
+   * card (`+$0.12`). Without this rows showed `🪙 0` because formatPnl
+   * was treating a 0..1 ratio as a coin amount. */
+  budgetUsd: number;
 }
 
 /**
@@ -22,6 +27,7 @@ export function LocalLeaderboard({
   around,
   all,
   onViewAll,
+  budgetUsd,
 }: LocalLeaderboardProps): JSX.Element {
   const topThree = top.slice(0, 3);
   const me = around.find((e) => e.isMe) ?? null;
@@ -59,7 +65,7 @@ export function LocalLeaderboard({
       </div>
       <ul className="mt-2 space-y-0.5">
         {topThree.map((e) => (
-          <Row key={e.entryId} entry={e} />
+          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} />
         ))}
         {showDivider && (
           <li className="flex items-center justify-center py-1 text-[10px] text-muted">
@@ -67,14 +73,14 @@ export function LocalLeaderboard({
           </li>
         )}
         {aroundFiltered.map((e) => (
-          <Row key={e.entryId} entry={e} />
+          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} />
         ))}
       </ul>
     </section>
   );
 }
 
-function Row({ entry }: { entry: LeaderboardEntry }): JSX.Element {
+function Row({ entry, budgetUsd }: { entry: LeaderboardEntry; budgetUsd: number }): JSX.Element {
   const pnlColor = entry.scorePct > 0 ? 'text-bull' : entry.scorePct < 0 ? 'text-bear' : 'text-ink';
   return (
     <li
@@ -87,7 +93,9 @@ function Row({ entry }: { entry: LeaderboardEntry }): JSX.Element {
         <Avatar name={entry.displayName} url={entry.avatarUrl} size={20} bot={entry.isBot} />
         <span className="truncate">{entry.isMe ? <b>You</b> : entry.displayName}</span>
       </span>
-      <span className={`font-mono font-bold ${pnlColor}`}>{formatPnl(entry.scorePct)}</span>
+      <span className={`font-mono font-bold ${pnlColor}`}>
+        {fmtPnL(entry.scorePct * budgetUsd)}
+      </span>
     </li>
   );
 }

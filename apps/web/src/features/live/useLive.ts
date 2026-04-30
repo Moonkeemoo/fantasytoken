@@ -12,6 +12,13 @@ export function useLive(contestId: string | undefined) {
     // sharpest tick that still sees fresh data on every cycle. Tighter than
     // that is wasted bandwidth.
     refetchInterval: 15_000,
+    // Telegram WebView often reports document.hidden=true / no focus events
+    // when the user is technically looking at the screen; without this flag
+    // TanStack Query pauses polling and prices appear "frozen" until the
+    // user manually pull-to-refreshes (reproduced on iOS — see lobby thread
+    // 2026-04-30). Forcing background polling keeps Live in sync.
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: 'always',
     staleTime: 7_500,
   });
 }
