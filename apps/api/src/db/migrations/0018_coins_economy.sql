@@ -9,13 +9,11 @@
 -- `prize_cents`, `delta_cents`) to avoid a 100-file rename; their VALUES are
 -- now whole coins. A follow-up renaming pass is on the roadmap.
 
--- 1. Wipe ledger + balances.
-TRUNCATE TABLE transactions RESTART IDENTITY;
-TRUNCATE TABLE balances RESTART IDENTITY;
-
--- 2. Wipe related side-tables that referenced cents amounts.
-TRUNCATE TABLE referral_payouts RESTART IDENTITY;
-TRUNCATE TABLE referral_signup_bonuses RESTART IDENTITY;
+-- 1. Wipe ledger + balances + dependent FK tables. CASCADE picks up
+--    referral_payouts.tx_id and referral_signup_bonuses.tx_id which
+--    reference transactions(id). Authorized on a fresh-launch dataset.
+TRUNCATE TABLE transactions RESTART IDENTITY CASCADE;
+TRUNCATE TABLE balances RESTART IDENTITY CASCADE;
 
 -- 3. Scale stored "cents" values to "coins" by /100. Floor is fine — all
 --    contest fees and prize floors were whole-dollar values to begin with.
