@@ -1,17 +1,20 @@
-import {
-  ALLOCATION_MAX_PCT,
-  ALLOCATION_MIN_PCT,
-  ALLOCATION_STEP_PCT,
-  PORTFOLIO_PCT_TOTAL,
-  PORTFOLIO_TOKEN_COUNT,
-  dollarsFor,
-} from '@fantasytoken/shared';
+import { PORTFOLIO_TOKEN_COUNT, dollarsFor } from '@fantasytoken/shared';
 
-// Display metadata is attached on add so LineupSlot can render real
-// icons + names without a separate symbol→token lookup. Only `symbol` and
-// `alloc` go on the wire (extra fields are stripped at submission).
+/**
+ * TZ-003: Equal-split allocation. The reducer no longer manages per-pick
+ * allocations — they're derived from `lineup.length` (1 → 100%, 2 → 50/50,
+ * 3 → ~33% each, 5 → 20% each). The reducer just maintains a 0–5 ordered
+ * list of unique symbols + their display metadata.
+ *
+ * Display metadata is attached on add so LineupSummary can render real
+ * icons + names without a separate symbol→token lookup.
+ */
 export interface LineupPick {
   symbol: string;
+  /** Implicit equal-split alloc in % (computed; written here for
+   * convenience by selectors). 100 / lineup.length, integer-rounded.
+   * Single source of truth for accurate basis points lives server-side
+   * (entries.service · evenAllocCents). */
   alloc: number;
   name?: string;
   imageUrl?: string | null;
@@ -23,121 +26,96 @@ export interface AddTokenInput {
   imageUrl?: string | null;
 }
 
-const STEP = ALLOCATION_STEP_PCT;
-const MIN = ALLOCATION_MIN_PCT;
-const MAX = ALLOCATION_MAX_PCT;
-const TOTAL = PORTFOLIO_PCT_TOTAL;
-const N = PORTFOLIO_TOKEN_COUNT;
+const N_MAX = PORTFOLIO_TOKEN_COUNT; // 5
 
-/**
- * Add a token; rebalances all picks to equal split rounded to multiples of STEP,
- * with remainder going to the first pick. Caps at TOTAL and N picks.
- *
- * Accepts either a bare symbol string (legacy / tests) or a token-shaped
- * object so display metadata (name, imageUrl) can ride along.
- */
+/** Pure: equal-split alloc% (rounded to nearest integer). Backend stores
+ * the precise basis-point split; this is for UI display only. */
+export function evenAllocPct(count: number): number {
+  if (count <= 0) return 0;
+  return Math.round(100 / count);
+}
+
+/** Stamp the implicit equal-split alloc on each pick so LineupSummary can
+ * read it directly without recomputing. Pure. */
+function stamp(picks: Omit<LineupPick, 'alloc'>[]): LineupPick[] {
+  const pct = evenAllocPct(picks.length);
+  return picks.map((p) => ({ ...p, alloc: pct }));
+}
+
+/** Add a token. Idempotent on duplicate symbol. Caps at N_MAX. */
 export function addToken(lineup: LineupPick[], input: string | AddTokenInput): LineupPick[] {
   const meta: AddTokenInput = typeof input === 'string' ? { symbol: input } : input;
   if (lineup.some((p) => p.symbol === meta.symbol)) return lineup;
-  if (lineup.length >= N) return lineup;
-  const added: LineupPick = {
+  if (lineup.length >= N_MAX) return lineup;
+  const added = {
     symbol: meta.symbol,
-    alloc: 0,
     ...(meta.name !== undefined && { name: meta.name }),
     ...(meta.imageUrl !== undefined && { imageUrl: meta.imageUrl }),
   };
-  return rebalanceEqual([...lineup, added]);
+  return stamp([...lineup, added]);
 }
 
+/** Remove a token. Idempotent if the symbol isn't in the lineup. */
 export function removeToken(lineup: LineupPick[], symbol: string): LineupPick[] {
-  return lineup.filter((p) => p.symbol !== symbol);
+  const next = lineup.filter((p) => p.symbol !== symbol);
+  if (next.length === lineup.length) return lineup;
+  return stamp(next);
 }
 
-/**
- * Bump a single token's alloc by delta (typically ±STEP). Clamps to [MIN, MAX].
- * Does NOT auto-balance other picks — user must manually keep sum=100.
- */
-export function bumpAlloc(lineup: LineupPick[], symbol: string, delta: number): LineupPick[] {
-  return lineup.map((p) => {
-    if (p.symbol !== symbol) return p;
-    const next = Math.max(MIN, Math.min(MAX, p.alloc + delta));
-    return { ...p, alloc: next };
-  });
+/** Toggle: add if absent, remove if present. The single binding the FE
+ * uses for both slot taps and token-row taps. */
+export function toggleToken(lineup: LineupPick[], input: string | AddTokenInput): LineupPick[] {
+  const sym = typeof input === 'string' ? input : input.symbol;
+  if (lineup.some((p) => p.symbol === sym)) return removeToken(lineup, sym);
+  return addToken(lineup, input);
 }
 
-/**
- * Set a token's alloc to an explicit integer percent. The AllocSheet's primary
- * mutator: it has already clamped to remaining cap, so this just writes through.
- * If `symbol` isn't in the lineup, it's appended (subject to the 5-slot cap).
- * Display metadata (name, imageUrl) can ride along on append; ignored on update.
- */
-export function setAlloc(
-  lineup: LineupPick[],
-  input: AddTokenInput | string,
-  alloc: number,
-): LineupPick[] {
-  const meta: AddTokenInput = typeof input === 'string' ? { symbol: input } : input;
-  const clamped = Math.max(MIN, Math.min(MAX, Math.round(alloc)));
-  const idx = lineup.findIndex((p) => p.symbol === meta.symbol);
-  if (idx >= 0) {
-    return lineup.map((p, i) => (i === idx ? { ...p, alloc: clamped } : p));
+/** Apply a "Last team" / preset — list of symbols (with optional metadata).
+ * Allocations are recomputed evenly. */
+export function applyPreset(picks: AddTokenInput[]): LineupPick[] {
+  if (picks.length === 0) return [];
+  if (picks.length > N_MAX) {
+    throw new Error(`applyPreset: max ${N_MAX} picks, got ${picks.length}`);
   }
-  if (lineup.length >= N) return lineup;
-  const added: LineupPick = {
-    symbol: meta.symbol,
-    alloc: clamped,
-    ...(meta.name !== undefined && { name: meta.name }),
-    ...(meta.imageUrl !== undefined && { imageUrl: meta.imageUrl }),
-  };
-  return [...lineup, added];
-}
-
-/**
- * Replace the entire lineup with a preset (e.g. "Last team", "Balanced").
- * Validates count and sum; throws on bad presets so callers see the bug
- * during development instead of submitting a silently-broken lineup.
- */
-export function applyPreset(picks: LineupPick[]): LineupPick[] {
-  if (picks.length !== N) {
-    throw new Error(`applyPreset: expected ${N} picks, got ${picks.length}`);
-  }
-  const sum = picks.reduce((s, p) => s + p.alloc, 0);
-  if (sum !== TOTAL) {
-    throw new Error(`applyPreset: picks sum ${sum} ≠ ${TOTAL}`);
-  }
-  return picks.map((p) => ({ ...p }));
+  return stamp(picks.map((p) => ({ ...p })));
 }
 
 export function reset(): LineupPick[] {
   return [];
 }
 
+/** A lineup is valid for submission with 1..5 unique symbols. */
 export function isValid(lineup: LineupPick[]): boolean {
-  if (lineup.length !== N) return false;
-  if (lineup.reduce((s, p) => s + p.alloc, 0) !== TOTAL) return false;
-  return lineup.every((p) => p.alloc >= MIN && p.alloc <= MAX && p.alloc % STEP === 0);
+  if (lineup.length < 1 || lineup.length > N_MAX) return false;
+  const syms = new Set(lineup.map((p) => p.symbol));
+  return syms.size === lineup.length;
 }
 
 // ---------- Selectors (pure, used by DraftScreen sticky CTA) ----------
 
-export function totalAlloc(lineup: LineupPick[]): number {
-  return lineup.reduce((s, p) => s + p.alloc, 0);
-}
-
-export function remainingPct(lineup: LineupPick[]): number {
-  return Math.max(0, TOTAL - totalAlloc(lineup));
-}
-
 export function dollarsTotal(lineup: LineupPick[], tier: number): number {
-  return dollarsFor(totalAlloc(lineup), tier);
+  // With equal split, total committed always equals tier when length>=1.
+  return lineup.length === 0 ? 0 : tier;
+}
+
+/** $ value of one pick (tier × 1/length, rounded). For UI display in slot. */
+export function dollarsPerPick(lineup: LineupPick[], tier: number): number {
+  if (lineup.length === 0) return 0;
+  return Math.round(dollarsFor(evenAllocPct(lineup.length), tier));
 }
 
 export type ContestModeForCta = 'bull' | 'bear';
+/** Re-exported for the rest of team-builder (was previously declared in
+ * AllocSheet, which TZ-003 deletes). */
+export type ContestMode = ContestModeForCta;
 
-/** GO button state derived from the lineup. Mirrors TZ-001 §05.2 */
+/** GO button state derived from the lineup. TZ-003 simplified state machine:
+ *   `pick`  — empty lineup, prompt to pick
+ *   `ready` — 1..5 picks, ready to lock in
+ * The legacy `alloc` / `over` states are gone — equal-split makes them
+ * impossible. */
 export interface CtaState {
-  kind: 'pick' | 'alloc' | 'over' | 'ready';
-  /** UI label, no translation layer in v1 */
+  kind: 'pick' | 'ready';
   label: string;
 }
 
@@ -152,27 +130,5 @@ export function ctaState(
       label: `GO ${mode.toUpperCase()} · ${entryLabel}`,
     };
   }
-  if (lineup.length < N) {
-    return { kind: 'pick', label: `PICK ${N - lineup.length} MORE` };
-  }
-  const sum = totalAlloc(lineup);
-  if (sum < TOTAL) {
-    return { kind: 'alloc', label: `ALLOCATE ${TOTAL - sum}% MORE` };
-  }
-  return { kind: 'over', label: `OVER BUDGET BY ${sum - TOTAL}%` };
-}
-
-function rebalanceEqual(lineup: LineupPick[]): LineupPick[] {
-  if (lineup.length === 0) return [];
-  const equal = Math.floor(TOTAL / lineup.length / STEP) * STEP;
-  const clampedEqual = Math.max(MIN, Math.min(MAX, equal));
-  let remainder = TOTAL - clampedEqual * lineup.length;
-  return lineup.map((p, i) => {
-    if (i === 0) {
-      const target = Math.min(MAX, clampedEqual + remainder);
-      remainder -= target - clampedEqual;
-      return { ...p, alloc: target };
-    }
-    return { ...p, alloc: clampedEqual };
-  });
+  return { kind: 'pick', label: 'PICK 1+ TOKENS' };
 }

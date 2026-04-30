@@ -36,6 +36,7 @@ export function makeEntriesRoutes(deps: EntriesRoutesDeps): FastifyPluginAsync {
       const result = await deps.entries.submit({
         userId: upsert.userId,
         contestId,
+        // TZ-003: body.picks is now `string[]` (symbols only).
         picks: body.picks,
       });
 

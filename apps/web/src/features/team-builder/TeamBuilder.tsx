@@ -38,9 +38,9 @@ export function TeamBuilder(): JSX.Element {
   const onSubmit = (picks: LineupPick[]): void => {
     if (!id) return;
     setErrMsg(null);
-    // Strip display-only metadata before posting — backend zod schema only
-    // accepts { symbol, alloc } and would reject the enriched LineupPick.
-    const wirePicks = picks.map((p) => ({ symbol: p.symbol, alloc: p.alloc }));
+    // TZ-003: wire payload is just the symbol list. Backend computes
+    // equal-split allocations.
+    const wirePicks = picks.map((p) => p.symbol);
     submit.mutate(
       { contestId: id, picks: wirePicks },
       {

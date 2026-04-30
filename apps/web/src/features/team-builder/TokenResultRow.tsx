@@ -1,7 +1,7 @@
 import type { Token } from '@fantasytoken/shared';
 import { fmtMoney } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
-import type { ContestMode } from './AllocSheet.js';
+import type { ContestMode } from './lineupReducer.js';
 
 export interface TokenResultRowProps {
   token: Token;

@@ -78,13 +78,8 @@ function makeFakeCurrency(opts: { balance?: bigint } = {}): CurrencyService {
   };
 }
 
-const VALID_PICKS = [
-  { symbol: 'BTC', alloc: 40 },
-  { symbol: 'ETH', alloc: 25 },
-  { symbol: 'PEPE', alloc: 15 },
-  { symbol: 'WIF', alloc: 10 },
-  { symbol: 'BONK', alloc: 10 },
-];
+// TZ-003: payload is a plain symbol list. Server computes the equal split.
+const VALID_PICKS = ['BTC', 'ETH', 'PEPE', 'WIF', 'BONK'];
 
 describe('EntriesService.submit', () => {
   it('creates entry + debits ENTRY_FEE on first submit', async () => {

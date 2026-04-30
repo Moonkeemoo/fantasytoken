@@ -1,20 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { Token } from '@fantasytoken/shared';
-import { fmtMoney, fmtMoneyExact } from '@fantasytoken/shared';
+import { fmtMoney } from '@fantasytoken/shared';
 import { formatCents, formatTimeLeft } from '../../lib/format.js';
 import { useCountdown } from '../../lib/countdown.js';
 import { Label } from '../../components/ui/Label.js';
-import { AllocSheet, type AllocSheetAction, type ContestMode } from './AllocSheet.js';
 import { LineupSlot } from './LineupSlot.js';
 import { StartFromStrip, defaultPresets, type StartFromPreset } from './StartFromStrip.js';
 import { TokenResultRow } from './TokenResultRow.js';
-import {
-  applyPreset,
-  removeToken,
-  setAlloc,
-  type AddTokenInput,
-  type LineupPick,
-} from './lineupReducer.js';
+import { applyPreset, type ContestMode, type LineupPick } from './lineupReducer.js';
 import { useDraft } from './useDraft.js';
 import { useLastLineup } from './useLastLineup.js';
 import { useTokenList } from './useTokenList.js';
@@ -65,8 +58,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
   // currency stays unambiguous next to the GO/Top-up flow.
   const entryLabel = entryFeeCents === 0 ? 'free entry' : `🪙 ${entryFeeCents} entry`;
   const draftCtx = useDraft(contestId, { mode, tier, entryLabel });
-  const { draft, setDraft, cta, dollarsCommitted, sheetToken, sheetOpen, openSheet, closeSheet } =
-    draftCtx;
+  const { draft, setDraft, cta, dollarsPerPick, toggleToken, removeToken } = draftCtx;
 
   const [q, setQ] = useState('');
   const search = useTokenSearch(q, contestId);
@@ -105,9 +97,11 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
   const presets = useMemo<StartFromPreset[]>(() => {
     const base = defaultPresets(presetSeedTokens);
     const last = lastLineupQ.data?.lineup;
-    if (!last || last.picks.length !== 5) return base;
+    if (!last || last.picks.length === 0) return base;
     const pnl = last.pnlPct;
     const pnlLabel = pnl === null ? '' : ` ${pnl > 0 ? '+' : ''}${pnl.toFixed(1)}%`;
+    // TZ-003: personal preset carries the symbol list; equal-split is applied
+    // on use. Historical per-pick alloc is intentionally dropped.
     const personal: StartFromPreset = {
       id: 'last-team',
       label: `Last team${pnlLabel}`,
@@ -117,7 +111,6 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
         const meta = tokenLookup.get(p.symbol);
         return {
           symbol: p.symbol,
-          alloc: p.alloc,
           ...(meta?.name !== undefined && { name: meta.name }),
           ...(meta?.imageUrl !== undefined && { imageUrl: meta.imageUrl }),
         };
@@ -126,38 +119,18 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     return [personal, ...base];
   }, [presetSeedTokens, lastLineupQ.data, tokenLookup]);
 
+  // TZ-003: token-row tap toggles add/remove. No modal.
   const onTokenSelect = (token: Token): void => {
-    openSheet({
+    toggleToken({
       symbol: token.symbol,
       name: token.name,
       imageUrl: token.imageUrl,
-      pctChange24h: token.pctChange24h !== null ? Number.parseFloat(token.pctChange24h) : null,
-      priceDisplay: token.currentPriceUsd ? `$${Number.parseFloat(token.currentPriceUsd)}` : null,
-      ...(token.pickedByPct !== undefined && { pickedByPct: token.pickedByPct }),
     });
   };
 
+  // TZ-003: slot tap removes the pick. Empty slot is a no-op.
   const onSlotSelect = (pick: LineupPick): void => {
-    openSheet({
-      symbol: pick.symbol,
-      name: pick.name ?? pick.symbol,
-      imageUrl: pick.imageUrl ?? null,
-      pctChange24h: null,
-    });
-  };
-
-  const onSheetConfirm = (action: AllocSheetAction): void => {
-    if (action.kind === 'remove') {
-      setDraft(removeToken(draft, action.symbol));
-    } else {
-      const input: AddTokenInput = {
-        symbol: action.symbol,
-        ...(action.name !== undefined && { name: action.name }),
-        ...(action.imageUrl !== undefined && { imageUrl: action.imageUrl }),
-      };
-      setDraft(setAlloc(draft, input, action.alloc));
-    }
-    closeSheet();
+    removeToken(pick.symbol);
   };
 
   const onPresetApply = (preset: StartFromPreset): void => {
@@ -186,9 +159,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
       ? mode === 'bear'
         ? 'bg-bear text-paper'
         : 'bg-bull text-paper'
-      : cta.kind === 'over'
-        ? 'bg-bear/30 text-bear'
-        : 'bg-paper-deep text-muted';
+      : 'bg-paper-deep text-muted';
 
   const ctaLabel = showTopUp
     ? `Top up — need 🪙 ${entryFeeCents - balanceCents} more`
@@ -273,14 +244,14 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
             <span className="text-[10px] text-muted">budget {fmtMoney(tier)}</span>
           </div>
           <div className="text-[10px] text-muted">
-            <span className={draft.length === N_SLOTS ? 'font-bold text-ink' : ''}>
-              {draft.length}
-            </span>
-            /{N_SLOTS} ·{' '}
-            <span className={draftCtx.totalAlloc === 100 ? 'font-bold text-ink' : ''}>
-              {fmtMoneyExact(dollarsCommitted)}
-            </span>{' '}
-            · {draftCtx.totalAlloc}%
+            {draft.length === 0 ? (
+              <span>0 picks · up to {N_SLOTS}</span>
+            ) : (
+              <>
+                <span className="font-bold text-ink">{draft.length}</span> picks ·{' '}
+                <span className="font-bold text-ink">{fmtMoney(dollarsPerPick)}</span> each
+              </>
+            )}
           </div>
         </div>
         <div className="mt-2 flex gap-1.5">
@@ -293,14 +264,14 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
             />
           ))}
         </div>
-        <div className="mt-2 h-1 w-full rounded-full bg-paper-deep">
-          <div
-            className={`h-full rounded-full transition-all ${
-              draftCtx.totalAlloc > 100 ? 'bg-bear' : 'bg-ink'
-            }`}
-            style={{ width: `${Math.min(100, draftCtx.totalAlloc)}%` }}
-          />
-        </div>
+        {/* Onboarding hint — first-launch only. Equal-split removes the
+            allocation lever, so newcomers need a one-line nudge that fewer
+            picks = higher conviction (TZ-003 §6). */}
+        {draft.length === 0 && (
+          <p className="mt-2 text-center text-[11px] text-muted">
+            Tip: 1 token = all-in conviction · 5 = max spread
+          </p>
+        )}
       </section>
 
       <section className="flex flex-1 flex-col gap-2 px-3 py-2">
@@ -374,16 +345,6 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
           {ctaLabel}
         </button>
       </div>
-
-      <AllocSheet
-        open={sheetOpen}
-        mode={mode}
-        tier={tier}
-        lineup={draft}
-        token={sheetToken}
-        onClose={closeSheet}
-        onConfirm={onSheetConfirm}
-      />
     </div>
   );
 }

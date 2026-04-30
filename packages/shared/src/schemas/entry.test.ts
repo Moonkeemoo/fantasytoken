@@ -1,151 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { entrySubmissionSchema } from './entry.js';
+import { entrySubmissionSchema, evenAllocCents, ALLOC_CENTS_TOTAL } from './entry.js';
 
-const VALID = {
-  picks: [
-    { symbol: 'BTC', alloc: 40 },
-    { symbol: 'ETH', alloc: 25 },
-    { symbol: 'PEPE', alloc: 15 },
-    { symbol: 'WIF', alloc: 10 },
-    { symbol: 'BONK', alloc: 10 },
-  ],
-};
-
-// INV-3 (ADR-0003): step=1, range [0,100], sum=100, count=5.
-describe('entrySubmissionSchema', () => {
-  it('accepts a valid lineup (5 tokens, sum=100, integer allocs in [0,100])', () => {
-    expect(entrySubmissionSchema.safeParse(VALID).success).toBe(true);
+// TZ-003: payload is just the symbol list (1–5 unique). Allocations are
+// computed server-side via evenAllocCents.
+describe('entrySubmissionSchema (TZ-003)', () => {
+  it('accepts a 1-token lineup (all-in)', () => {
+    expect(entrySubmissionSchema.safeParse({ picks: ['BTC'] }).success).toBe(true);
   });
 
-  it('rejects fewer than 5 picks', () => {
-    expect(entrySubmissionSchema.safeParse({ picks: VALID.picks.slice(0, 4) }).success).toBe(false);
+  it('accepts a 5-token lineup', () => {
+    expect(
+      entrySubmissionSchema.safeParse({ picks: ['BTC', 'ETH', 'SOL', 'PEPE', 'WIF'] }).success,
+    ).toBe(true);
+  });
+
+  it('rejects empty lineup', () => {
+    expect(entrySubmissionSchema.safeParse({ picks: [] }).success).toBe(false);
   });
 
   it('rejects more than 5 picks', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [...VALID.picks, { symbol: 'DOGE', alloc: 5 }],
-      }).success,
-    ).toBe(false);
-  });
-
-  it('rejects sum != 100', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: VALID.picks.map((p, i) => (i === 0 ? { ...p, alloc: 35 } : p)),
-      }).success,
-    ).toBe(false);
-  });
-
-  it('accepts non-multiple-of-5 allocs (ADR-0003: step=1)', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 42 },
-          { symbol: 'ETH', alloc: 23 },
-          { symbol: 'PEPE', alloc: 15 },
-          { symbol: 'WIF', alloc: 10 },
-          { symbol: 'BONK', alloc: 10 },
-        ],
-      }).success,
-    ).toBe(true);
-  });
-
-  it('accepts 0% alloc on a slot (ADR-0003: min=0)', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 0 },
-          { symbol: 'ETH', alloc: 25 },
-          { symbol: 'PEPE', alloc: 25 },
-          { symbol: 'WIF', alloc: 25 },
-          { symbol: 'BONK', alloc: 25 },
-        ],
-      }).success,
-    ).toBe(true);
-  });
-
-  it('accepts 100% on a single slot when others are 0% (ADR-0003: max=100)', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 100 },
-          { symbol: 'ETH', alloc: 0 },
-          { symbol: 'PEPE', alloc: 0 },
-          { symbol: 'WIF', alloc: 0 },
-          { symbol: 'BONK', alloc: 0 },
-        ],
-      }).success,
-    ).toBe(true);
-  });
-
-  it('rejects negative alloc', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: -5 },
-          { symbol: 'ETH', alloc: 35 },
-          { symbol: 'PEPE', alloc: 25 },
-          { symbol: 'WIF', alloc: 25 },
-          { symbol: 'BONK', alloc: 20 },
-        ],
-      }).success,
-    ).toBe(false);
-  });
-
-  it('rejects alloc > 100', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 101 },
-          { symbol: 'ETH', alloc: -1 },
-          { symbol: 'PEPE', alloc: 0 },
-          { symbol: 'WIF', alloc: 0 },
-          { symbol: 'BONK', alloc: 0 },
-        ],
-      }).success,
-    ).toBe(false);
-  });
-
-  it('rejects non-integer alloc', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 33.3 },
-          { symbol: 'ETH', alloc: 33.3 },
-          { symbol: 'PEPE', alloc: 13.4 },
-          { symbol: 'WIF', alloc: 10 },
-          { symbol: 'BONK', alloc: 10 },
-        ],
-      }).success,
-    ).toBe(false);
+    expect(entrySubmissionSchema.safeParse({ picks: ['A', 'B', 'C', 'D', 'E', 'F'] }).success).toBe(
+      false,
+    );
   });
 
   it('rejects duplicate symbols', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: 'BTC', alloc: 40 },
-          { symbol: 'BTC', alloc: 25 },
-          { symbol: 'PEPE', alloc: 15 },
-          { symbol: 'WIF', alloc: 10 },
-          { symbol: 'BONK', alloc: 10 },
-        ],
-      }).success,
-    ).toBe(false);
+    expect(entrySubmissionSchema.safeParse({ picks: ['BTC', 'BTC'] }).success).toBe(false);
+  });
+});
+
+describe('evenAllocCents (basis points)', () => {
+  it('1 token → [10000]', () => {
+    expect(evenAllocCents(['A'])).toEqual([10000]);
   });
 
-  it('rejects empty/non-string symbols', () => {
-    expect(
-      entrySubmissionSchema.safeParse({
-        picks: [
-          { symbol: '', alloc: 40 },
-          { symbol: 'ETH', alloc: 25 },
-          { symbol: 'PEPE', alloc: 15 },
-          { symbol: 'WIF', alloc: 10 },
-          { symbol: 'BONK', alloc: 10 },
-        ],
-      }).success,
-    ).toBe(false);
+  it('2 tokens → [5000, 5000]', () => {
+    expect(evenAllocCents(['A', 'B'])).toEqual([5000, 5000]);
+  });
+
+  it('3 tokens → [3334, 3333, 3333] (round-off to picks[0])', () => {
+    expect(evenAllocCents(['A', 'B', 'C'])).toEqual([3334, 3333, 3333]);
+  });
+
+  it('4 tokens → [2500, 2500, 2500, 2500]', () => {
+    expect(evenAllocCents(['A', 'B', 'C', 'D'])).toEqual([2500, 2500, 2500, 2500]);
+  });
+
+  it('5 tokens → [2000, 2000, 2000, 2000, 2000]', () => {
+    expect(evenAllocCents(['A', 'B', 'C', 'D', 'E'])).toEqual([2000, 2000, 2000, 2000, 2000]);
+  });
+
+  it('always sums to 10000', () => {
+    for (let n = 1; n <= 5; n++) {
+      const arr = Array.from({ length: n }, (_, i) => `T${i}`);
+      const allocs = evenAllocCents(arr);
+      expect(allocs.reduce((a, b) => a + b, 0)).toBe(ALLOC_CENTS_TOTAL);
+    }
   });
 });

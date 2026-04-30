@@ -1,15 +1,17 @@
 import { Label } from '../../components/ui/Label.js';
-import type { LineupPick } from './lineupReducer.js';
+import type { AddTokenInput } from './lineupReducer.js';
 
 export interface StartFromPreset {
   id: string;
-  /** Headline shown on the card (`⚖️ Balanced` / `Last team +12.4%`). */
+  /** Headline shown on the card (`⚖️ Balanced 5` / `Last team +12.4%`). */
   label: string;
-  /** Secondary line (`Sprint #283 · 2d ago` / `Equal split — 20/20/20/20/20`). */
+  /** Secondary line (`Sprint #283 · 2d ago` / `5 picks · 20% each`). */
   sub: string;
   /** When `true`, render as dashed (system preset); else solid (personal). */
   isSystem: boolean;
-  picks: LineupPick[];
+  /** TZ-003: presets are token lists. Allocations are equal-split, so the
+   * preset only carries WHICH tokens. Strategy is encoded in count. */
+  picks: AddTokenInput[];
 }
 
 export interface StartFromStripProps {
@@ -18,12 +20,14 @@ export interface StartFromStripProps {
 }
 
 /**
- * Horizontal strip of "Start From" cards (TZ-001 §05.3). Personal cards (recent
- * lineups) come first with a solid border; system presets after with a dashed
- * border. Tap → reducer.applyPreset.
+ * Horizontal strip of "Start From" cards. Personal cards (recent lineups)
+ * come first with a solid border; system presets after with a dashed border.
+ * Tap → reducer.applyPreset.
  *
- * v1 ships with system-preset stubs only (Balanced / Long-tail / Major-heavy).
- * Personal recents wire in once the API exposes a "last lineup" endpoint.
+ * TZ-003: presets express "strategy through count":
+ *   1 token  → All-in conviction
+ *   2 tokens → Hedge (50/50)
+ *   5 tokens → Spread (20% each)
  */
 export function StartFromStrip({ presets, onApply }: StartFromStripProps): JSX.Element | null {
   if (presets.length === 0) return null;
@@ -57,40 +61,39 @@ interface PresetSeedToken {
   imageUrl?: string | null;
 }
 
-/** Three system presets — wired by DraftScreen until personal recents land.
- * Takes the full token object (not just symbol) so the resulting picks
- * carry imageUrl through `applyPreset` → LineupSlot can render real icons. */
+/** TZ-003 strategy presets — distinct count = distinct game. Takes top-N
+ * tokens (caller passes top by mcap or trending) and returns three "shapes":
+ * conviction (1 pick), hedge (2 picks), spread (5 picks). */
 export function defaultPresets(tokens: readonly PresetSeedToken[]): StartFromPreset[] {
   if (tokens.length < 5) return [];
   const [a, b, c, d, e] = tokens;
   if (!a || !b || !c || !d || !e) return [];
-  const pick = (t: PresetSeedToken, alloc: number): LineupPick => ({
+  const meta = (t: PresetSeedToken): AddTokenInput => ({
     symbol: t.symbol,
-    alloc,
     ...(t.name !== undefined && { name: t.name }),
     ...(t.imageUrl !== undefined && { imageUrl: t.imageUrl }),
   });
   return [
     {
-      id: 'balanced',
-      label: '⚖️ Balanced',
-      sub: '20 / 20 / 20 / 20 / 20',
+      id: 'spread',
+      label: '⚖️ Spread 5',
+      sub: '5 picks · 20% each',
       isSystem: true,
-      picks: [pick(a, 20), pick(b, 20), pick(c, 20), pick(d, 20), pick(e, 20)],
+      picks: [meta(a), meta(b), meta(c), meta(d), meta(e)],
     },
     {
-      id: 'top-heavy',
-      label: '🦏 Top-heavy',
-      sub: '50 / 20 / 15 / 10 / 5',
+      id: 'hedge',
+      label: '🪙 Hedge 2',
+      sub: '2 picks · 50/50',
       isSystem: true,
-      picks: [pick(a, 50), pick(b, 20), pick(c, 15), pick(d, 10), pick(e, 5)],
+      picks: [meta(a), meta(b)],
     },
     {
-      id: 'long-tail',
-      label: '🎲 Long-tail',
-      sub: '30 / 25 / 20 / 15 / 10',
+      id: 'conviction',
+      label: '🎯 All-in',
+      sub: '1 pick · 100%',
       isSystem: true,
-      picks: [pick(a, 30), pick(b, 25), pick(c, 20), pick(d, 15), pick(e, 10)],
+      picks: [meta(a)],
     },
   ];
 }

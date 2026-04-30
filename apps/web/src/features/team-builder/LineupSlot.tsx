@@ -10,10 +10,10 @@ export interface LineupSlotProps {
 }
 
 /**
- * One of the 5 portfolio slots. $-amount is the headline; alloc% is the
- * secondary line. Tap on a filled slot opens AllocSheet in edit mode; tap on
- * an empty slot is a no-op in v1 (handoff §5.2 "залишимо empty state кліком
- * на token у списку").
+ * One of the 5 portfolio slots. TZ-003: tap on a filled slot REMOVES the
+ * pick (no allocation modal — equal-split is computed by the reducer).
+ * Empty slots are placeholders only; new picks come from the token list
+ * below.
  */
 export function LineupSlot({ pick, tier, onClick }: LineupSlotProps): JSX.Element {
   if (pick === null) {
@@ -34,13 +34,11 @@ export function LineupSlot({ pick, tier, onClick }: LineupSlotProps): JSX.Elemen
       type="button"
       onClick={onClick}
       className="flex h-[68px] flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-line bg-paper px-2 text-center transition-colors hover:bg-paper-dim"
-      aria-label={`${pick.symbol} ${pick.alloc}% — tap to edit`}
+      aria-label={`${pick.symbol} — tap to remove`}
     >
       <TokenIcon symbol={pick.symbol} imageUrl={pick.imageUrl ?? null} size={20} />
-      <span className="font-mono text-[11px] font-bold leading-tight text-ink">
-        {fmtMoney(dollarsFor(pick.alloc, tier))}
-      </span>
-      <span className="text-[9px] text-muted">{pick.alloc}%</span>
+      <span className="font-mono text-[11px] font-bold leading-tight text-ink">{pick.symbol}</span>
+      <span className="text-[9px] text-muted">{fmtMoney(dollarsFor(pick.alloc, tier))}</span>
     </button>
   );
 }

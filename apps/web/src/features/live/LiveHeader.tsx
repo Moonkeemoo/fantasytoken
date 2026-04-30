@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { fmtMoney } from '@fantasytoken/shared';
 import { useCountdown } from '../../lib/countdown.js';
 import { formatTimeLeft } from '../../lib/format.js';
-import type { ContestMode } from '../team-builder/AllocSheet.js';
+import type { ContestMode } from '../team-builder/lineupReducer.js';
 
 export interface LiveHeaderProps {
   contestName: string;

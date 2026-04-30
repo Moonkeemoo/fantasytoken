@@ -4,13 +4,17 @@ import type {
   LastLineupResponse,
   LineupSummary,
 } from '@fantasytoken/shared';
+import { evenAllocCents, ALLOC_CENTS_TOTAL } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
 export interface SubmitArgs {
   userId: string;
   contestId: string;
-  picks: EntryPick[];
+  /** TZ-003: wire payload is symbols only; allocations computed evenly
+   * server-side. Keeping the array order is meaningful — round-off goes
+   * to picks[0] per ADR-0005. */
+  picks: string[];
 }
 
 export interface SubmitResult {
@@ -77,7 +81,7 @@ export interface EntriesService {
 
 export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
   return {
-    async submit({ userId, contestId, picks }) {
+    async submit({ userId, contestId, picks: symbols }) {
       const existing = await deps.repo.findExisting({ userId, contestId });
       if (existing) {
         return {
@@ -91,7 +95,6 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
       const contest = await deps.repo.getOpenContest(contestId);
       if (!contest) throw errors.contestClosed();
 
-      const symbols = picks.map((p) => p.symbol);
       const unknown = await deps.repo.unknownSymbols(symbols);
       if (unknown.length > 0) {
         throw errors.invalidLineup({ unknownSymbols: unknown });
@@ -101,6 +104,21 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
       if (balance < contest.entryFeeCents) {
         throw errors.insufficientCoins(Number(contest.entryFeeCents), Number(balance));
       }
+
+      // TZ-003 §4: evenly distribute alloc cents (basis points; 10000 = 100%).
+      // Round-off (when 10000 % length ≠ 0) goes to picks[0..remainder-1] per
+      // ADR-0005. Convert to integer pct here for legacy `entries.picks.alloc`
+      // storage — the JSON column still uses `alloc` ints, but they're now
+      // derived rather than user-set. EntryPick stays compatible because
+      // `alloc` is just `Math.round(allocCents / 100)` for these.
+      const allocCents = evenAllocCents(symbols);
+      const picks: EntryPick[] = symbols.map((symbol, i) => ({
+        symbol,
+        alloc: Math.round((allocCents[i] ?? 0) / 100),
+      }));
+      // Sanity: pct sum must round to 100 (only fails for >100 picks, which
+      // schema already blocks).
+      void ALLOC_CENTS_TOTAL;
 
       const created = await deps.repo.create({ userId, contestId, picks });
       try {

@@ -15,7 +15,7 @@
 
 **INV-2** — Snapshot цін на старті та фініші контесту immutable після запису в `price_snapshots`. Якщо API повернув ціну — вона зафіксована, навіть якщо джерело потім "виправило". Consequence: disputed payouts, гравці не довіряють результатам.
 
-**INV-3** — Allocation портфеля: рівно 5 токенів, кожен alloc — ціле число (`step=1`), `0 ≤ alloc ≤ 100`, сума всіх часток рівно 100%. Frontend валідує UX, backend є source of truth. Consequence: гравець з 110% портфелем виграє нечесно, leaderboard ламається. Revisions: ADR-0003 (2026-04-30, поточна — step=1, range [0,100]), ADR-0002 (2026-04-28, step=5, range [5,80]), 2026-04-27 версія ($100K budget).
+**INV-3** — Lineup portfolio: 1–5 unique tokens. Allocations are auto-distributed evenly server-side — there is no user input on per-pick allocation. Stored as integer "alloc cents" / basis points (10000 = 100%); when 10000 % length ≠ 0, the round-off goes to picks in input order (`picks[0..remainder-1]` get +1 basis point). Sum of alloc cents always equals 10000. Frontend wire payload is `{ picks: string[] }` (1–5 unique symbols); backend computes the split via `evenAllocCents`. Consequence: drift between submitted intent and stored portfolio, leaderboard scoring math wrong. Revisions: ADR-0005 (TZ-003, 2026-04-30, поточна — equal-split, 1–5 picks), ADR-0003 (2026-04-30, step=1, range [0,100], 5 picks), ADR-0002 (2026-04-28, step=5, range [5,80]), 2026-04-27 версія ($100K budget).
 
 **INV-4** _(FROZEN for MVP — Bull-only; код preserved)_ — Bear league score = `-1 × pct_change × weight`. Не `abs(pct_change)`, не `1 / pct_change`. Падіння −50% = +50 × weight, зростання +10% = −10 × weight. Consequence: поламана ключова диференціююча механіка продукту.
 

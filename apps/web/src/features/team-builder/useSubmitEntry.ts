@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { EntrySubmissionResult, type EntryPick } from '@fantasytoken/shared';
+import { EntrySubmissionResult } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 
 export interface SubmitArgs {
   contestId: string;
-  picks: EntryPick[];
+  /** TZ-003: wire format is just the symbol list (1–5 unique). Backend
+   * computes the equal allocation. */
+  picks: string[];
 }
 
 export function useSubmitEntry() {
