@@ -1,20 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { LiveHeader } from './LiveHeader.js';
-import { Scoreboard } from './Scoreboard.js';
-import { LineupPerf } from './LineupPerf.js';
-import { MiniLeaderboard } from './MiniLeaderboard.js';
 import { LeaderboardModal } from './LeaderboardModal.js';
+import { LiveHeader } from './LiveHeader.js';
+import { LiveHero } from './LiveHero.js';
+import { LiveTeam } from './LiveTeam.js';
+import { LocalLeaderboard } from './LocalLeaderboard.js';
 import { useLive } from './useLive.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
+import type { ContestMode } from '../team-builder/AllocSheet.js';
 
-export function Live() {
+function inferMode(name: string): ContestMode {
+  return /\bbear\b/i.test(name) ? 'bear' : 'bull';
+}
+
+/**
+ * Live screen — $-first redesign (TZ-001 §08).
+ * Split hero (rank/PnL equal weight), per-token PnL with helping/hurting
+ * borders, top-3 + around-me leaderboard with skip divider.
+ *
+ * Polling stays at 5s (existing useLive hook) since the prior team felt that
+ * cadence was right for the price-refresh window. Handoff §13 Q2 calls for
+ * 30s in v1; we keep 5s as a known divergence — the screen behaves correctly
+ * at any interval.
+ */
+export function Live(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const live = useLive(id);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Auto-redirect to /result on endsAt or when contest is finalizing/finalized
   useEffect(() => {
     if (!live.data) return;
     const status = live.data.status;
@@ -23,11 +37,29 @@ export function Live() {
     }
   }, [live.data, id, navigate]);
 
+  const mode = useMemo<ContestMode>(
+    () => (live.data ? inferMode(live.data.contestName) : 'bull'),
+    [live.data],
+  );
+
+  // Slice the full leaderboard to a "[me−2 … me+2]" window for around-me.
+  const aroundMe = useMemo(() => {
+    if (!live.data) return [];
+    const all = live.data.leaderboardAll;
+    const meIdx = all.findIndex((e) => e.isMe);
+    if (meIdx === -1) return [];
+    const start = Math.max(0, meIdx - 2);
+    const end = Math.min(all.length, meIdx + 3);
+    return all.slice(start, end);
+  }, [live.data]);
+
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
   if (live.isLoading) return <LoadingSplash />;
   if (live.isError || !live.data) return <div className="p-6 text-hl-red">contest not found</div>;
 
   const data = live.data;
+  const prizeEstCents = data.projectedPrizeCents > 0 ? data.projectedPrizeCents : null;
+  const pnlUsd = data.portfolio.currentUsd - data.portfolio.startUsd;
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
@@ -37,23 +69,18 @@ export function Live() {
         endsAt={data.endsAt}
         status={data.status}
       />
-      <Scoreboard
-        plPct={data.portfolio.plPct}
-        startUsd={data.portfolio.startUsd}
-        currentUsd={data.portfolio.currentUsd}
+      <LiveHero
         rank={data.rank}
         totalEntries={data.totalEntries}
-        projectedPrizeCents={data.projectedPrizeCents}
-        topPrizeCents={data.topPrizeCents}
-        startsAt={data.startsAt}
-        endsAt={data.endsAt}
-        status={data.status}
-        payAll={data.payAll}
+        pnlUsd={pnlUsd}
+        pctChange={data.portfolio.plPct}
+        prizeEstCents={prizeEstCents}
       />
-      <LineupPerf rows={data.lineup} />
-      <MiniLeaderboard
+      <LiveTeam rows={data.lineup} mode={mode} />
+      <LocalLeaderboard
         top={data.leaderboardTop}
-        userRow={data.userRow}
+        around={aroundMe}
+        all={data.leaderboardAll}
         onViewAll={() => setModalOpen(true)}
       />
       <LeaderboardModal
