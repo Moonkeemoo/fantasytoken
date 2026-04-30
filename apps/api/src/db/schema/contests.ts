@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -30,6 +31,13 @@ export const contests = pgTable('contests', {
   // curve. `true` makes every entry payable (used by Practice — "all 10
   // positions get a slice"). Curve shape stays geometric either way.
   payAll: boolean('pay_all').notNull().default(false),
+  // ADR-0003: $-first UX layer. Display-only — backend score / payout
+  // continues to operate in pure % space. Default 10_000_000 cents = $100,000
+  // (matches the legacy "fixed budget" concept). drizzle-kit 0.28 cannot
+  // serialize BigInt literal defaults, so the SQL is written manually.
+  virtualBudgetCents: bigint('virtual_budget_cents', { mode: 'bigint' })
+    .notNull()
+    .default(sql`10000000`),
   createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

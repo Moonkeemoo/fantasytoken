@@ -58,6 +58,7 @@ function makeRepo(opts: {
         entryFeeCents: opts.entryFeeCents ?? 0,
         type: opts.contestType ?? 'bull',
         payAll: false,
+        virtualBudgetCents: 10_000_000,
       };
     },
     async getEntries() {

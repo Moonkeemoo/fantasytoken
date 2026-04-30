@@ -24,6 +24,11 @@ export const ContestListItem = z.object({
   /** When true, every entry receives a (decaying) prize share — used by
    * Practice. Defaults false for backward-compat with pre-deploy responses. */
   payAll: z.boolean().default(false),
+  /** ADR-0003: $-first UX. Virtual budget in cents per contest (display-only;
+   * backend score / payout still runs in % space). Default 10_000_000 = $100K
+   * matches the legacy fixed-budget concept. Optional for backward-compat
+   * with pre-0017 API responses. */
+  virtualBudgetCents: z.number().int().nonnegative().default(10_000_000),
   // True if the requesting user has an entry in this contest.
   userHasEntered: z.boolean(),
 });

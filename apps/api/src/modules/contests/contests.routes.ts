@@ -77,6 +77,7 @@ export function makeContestsRoutes(deps: ContestsRoutesDeps): FastifyPluginAsync
           isFeatured: r.isFeatured,
           minRank: r.minRank,
           payAll: r.payAll,
+          virtualBudgetCents: r.virtualBudgetCents,
           userHasEntered: r.userHasEntered,
         })),
       };

@@ -44,6 +44,7 @@ function rowFromDbRow(
     isFeatured: row.isFeatured,
     minRank: row.minRank,
     payAll: row.payAll,
+    virtualBudgetCents: Number(row.virtualBudgetCents),
     userHasEntered,
   };
 }

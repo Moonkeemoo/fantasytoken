@@ -120,6 +120,13 @@
       "when": 1777481235500,
       "tag": "0016_entries_result_viewed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777481235600,
+      "tag": "0017_contest_virtual_budget",
+      "breakpoints": true
     }
   ]
 }

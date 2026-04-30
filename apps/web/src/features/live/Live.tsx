@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LeaderboardModal } from './LeaderboardModal.js';
 import { LiveHeader } from './LiveHeader.js';
@@ -6,12 +6,9 @@ import { LiveHero } from './LiveHero.js';
 import { LiveTeam } from './LiveTeam.js';
 import { LocalLeaderboard } from './LocalLeaderboard.js';
 import { useLive } from './useLive.js';
+import { useLiveSlice } from './useLiveSlice.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
-import type { ContestMode } from '../team-builder/AllocSheet.js';
-
-function inferMode(name: string): ContestMode {
-  return /\bbear\b/i.test(name) ? 'bear' : 'bull';
-}
+import { MomentBanner } from './MomentBanner.js';
 
 /**
  * Live screen — $-first redesign (TZ-001 §08).
@@ -42,21 +39,7 @@ export function Live(): JSX.Element {
     }
   }, [live.data, id, navigate]);
 
-  const mode = useMemo<ContestMode>(
-    () => (live.data ? inferMode(live.data.contestName) : 'bull'),
-    [live.data],
-  );
-
-  // Slice the full leaderboard to a "[me−2 … me+2]" window for around-me.
-  const aroundMe = useMemo(() => {
-    if (!live.data) return [];
-    const all = live.data.leaderboardAll;
-    const meIdx = all.findIndex((e) => e.isMe);
-    if (meIdx === -1) return [];
-    const start = Math.max(0, meIdx - 2);
-    const end = Math.min(all.length, meIdx + 3);
-    return all.slice(start, end);
-  }, [live.data]);
+  const slice = useLiveSlice(live.data ?? null);
 
   if (!id) return <div className="p-6 text-hl-red">missing contest id</div>;
   if (live.isLoading) return <LoadingSplash />;
@@ -74,6 +57,7 @@ export function Live(): JSX.Element {
         endsAt={data.endsAt}
         status={data.status}
       />
+      <MomentBanner rank={data.rank} rankDelta1h={slice.rankDelta1h} />
       <LiveHero
         rank={data.rank}
         totalEntries={data.totalEntries}
@@ -81,10 +65,10 @@ export function Live(): JSX.Element {
         pctChange={data.portfolio.plPct}
         prizeEstCents={prizeEstCents}
       />
-      <LiveTeam rows={data.lineup} mode={mode} />
+      <LiveTeam rows={data.lineup} mode={data.type} />
       <LocalLeaderboard
         top={data.leaderboardTop}
-        around={aroundMe}
+        around={slice.aroundMe}
         all={data.leaderboardAll}
         onViewAll={() => setModalOpen(true)}
       />

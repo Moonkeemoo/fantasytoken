@@ -24,6 +24,7 @@ function makeRow(overrides: Partial<ContestRowFromRepo> = {}): ContestRowFromRep
     isFeatured: false,
     minRank: 1,
     payAll: false,
+    virtualBudgetCents: 10_000_000,
     userHasEntered: false,
     ...overrides,
   };

@@ -14,6 +14,8 @@ export interface ContestRowFromRepo {
   isFeatured: boolean;
   minRank: number;
   payAll: boolean;
+  /** ADR-0003: $-first UX layer (display-only). */
+  virtualBudgetCents: number;
   userHasEntered: boolean;
 }
 

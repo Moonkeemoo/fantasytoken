@@ -1,11 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  DEFAULT_VIRTUAL_BUDGET_USD,
-  dollarsFor,
-  fmtMoney,
-  fmtMoneyExact,
-} from '@fantasytoken/shared';
+import { dollarsFor, fmtMoney, fmtMoneyExact } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { Label } from '../../components/ui/Label.js';
 import { useCountdown } from '../../lib/countdown.js';
@@ -43,7 +38,7 @@ export function LockedScreen(): JSX.Element {
   const stateQuery = useLockedState(id);
   const navState = (location.state ?? {}) as LockedNavState;
 
-  const tier = DEFAULT_VIRTUAL_BUDGET_USD;
+  const tier = stateQuery.data ? Math.round(stateQuery.data.virtualBudgetCents / 100) : 100_000;
   const picks = useMemo(() => navState.picks ?? [], [navState.picks]);
 
   const startsAt = stateQuery.data?.startsAt;

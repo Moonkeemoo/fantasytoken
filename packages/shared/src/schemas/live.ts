@@ -23,6 +23,11 @@ export type LeaderboardEntry = z.infer<typeof LeaderboardEntry>;
 export const LiveResponse = z.object({
   contestId: z.string().uuid(),
   contestName: z.string(),
+  /** ADR-0003: surface contest mode so the Live screen can colour helping/
+   * hurting borders without a name-based heuristic. */
+  type: z.enum(['bull', 'bear']).default('bull'),
+  /** ADR-0003: $-first UX layer (display-only). */
+  virtualBudgetCents: z.number().int().nonnegative().default(10_000_000),
   status: z.enum(['scheduled', 'active', 'finalizing', 'finalized', 'cancelled']),
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),

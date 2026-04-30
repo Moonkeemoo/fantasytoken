@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ContestListItem, DEFAULT_VIRTUAL_BUDGET_USD } from '@fantasytoken/shared';
+import { ContestListItem } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 import { useMe } from '../me/useMe.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { DraftScreen } from './DraftScreen.js';
 import { useSubmitEntry } from './useSubmitEntry.js';
-import type { ContestMode } from './AllocSheet.js';
 import type { LineupPick } from './lineupReducer.js';
 
 function useContest(id: string | undefined) {
@@ -16,12 +15,6 @@ function useContest(id: string | undefined) {
     queryFn: () => apiFetch(`/contests/${id!}`, ContestListItem),
     enabled: !!id,
   });
-}
-
-/** Heuristic until contest API ships an explicit `mode` field. INV-4 keeps Bear
- * frozen for MVP, so this is effectively always 'bull' in production today. */
-function inferMode(contestName: string): ContestMode {
-  return /\bbear\b/i.test(contestName) ? 'bear' : 'bull';
 }
 
 export function TeamBuilder(): JSX.Element {
@@ -88,17 +81,15 @@ export function TeamBuilder(): JSX.Element {
     return <div className="p-6 text-hl-red">contest not found</div>;
   if (!me.data) return <div className="p-6 text-hl-red">not authenticated</div>;
 
-  const mode = inferMode(contest.data.name);
-
   return (
     <>
       <DraftScreen
         contestId={id}
         contestName={contest.data.name}
-        mode={mode}
-        // ADR-0003: virtualBudget is per-contest UX. Until the API exposes it,
-        // every contest renders against DEFAULT_VIRTUAL_BUDGET_USD.
-        tier={DEFAULT_VIRTUAL_BUDGET_USD}
+        mode={contest.data.type}
+        // ADR-0003: virtualBudget is display-only. Backend stores cents;
+        // DraftScreen and AllocSheet expect dollars. Convert at the boundary.
+        tier={Math.round(contest.data.virtualBudgetCents / 100)}
         entryFeeCents={contest.data.entryFeeCents}
         balanceCents={me.data.balanceCents}
         isSubmitting={submit.isPending}

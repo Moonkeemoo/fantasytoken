@@ -27,6 +27,8 @@ export interface ContestSnapshot {
   type: 'bull' | 'bear';
   /** Whether every entry is paid (Practice) vs the standard top-50% curve. */
   payAll: boolean;
+  /** ADR-0003: $-first UX layer (display-only). */
+  virtualBudgetCents: number;
 }
 
 export interface LeaderboardRepo {
@@ -148,6 +150,8 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       return {
         contestId: contest.id,
         contestName: contest.name,
+        type: contest.type,
+        virtualBudgetCents: contest.virtualBudgetCents,
         status: contest.status,
         startsAt: contest.startsAt.toISOString(),
         endsAt: contest.endsAt.toISOString(),

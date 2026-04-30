@@ -17,6 +17,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
           entryFeeCents: contests.entryFeeCents,
           type: contests.type,
           payAll: contests.payAll,
+          virtualBudgetCents: contests.virtualBudgetCents,
         })
         .from(contests)
         .where(eq(contests.id, id))
@@ -32,6 +33,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
         entryFeeCents: Number(c.entryFeeCents),
         type: c.type === 'bear' ? 'bear' : 'bull',
         payAll: c.payAll,
+        virtualBudgetCents: Number(c.virtualBudgetCents),
       };
     },
 
