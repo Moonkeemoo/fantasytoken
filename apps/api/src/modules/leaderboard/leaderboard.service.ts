@@ -130,6 +130,13 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         const my = await deps.repo.getMyEntry(contestId, userId);
         if (my) {
           const images = await deps.repo.getImagesBySymbols(my.picks.map((p) => p.symbol));
+          // Bear inverts player score (INV-4). Per-token contribUsd must follow
+          // the same inversion so it stays consistent with portfolio.plPct
+          // (which is already mode-aware) — otherwise a token dropping in a
+          // Bear contest renders with a negative contribUsd that contradicts
+          // the player's actual gain. pctChange stays raw (universal "price
+          // went up/down" semantic; UI colors that as red/green regardless).
+          const dirContrib = contest.type === 'bear' ? -1 : 1;
           lineup = my.picks.map((p) => {
             const start = startPrices.get(p.symbol) ?? null;
             const cur = currentPrices.get(p.symbol) ?? null;
@@ -139,7 +146,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
               imageUrl: images.get(p.symbol) ?? null,
               alloc: p.alloc,
               pctChange: pct,
-              contribUsd: (p.alloc / 100) * pct * 100,
+              contribUsd: (p.alloc / 100) * pct * 100 * dirContrib,
             };
           });
         }

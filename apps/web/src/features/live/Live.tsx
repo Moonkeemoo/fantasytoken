@@ -69,7 +69,7 @@ export function Live(): JSX.Element {
         pctChange={data.portfolio.plPct}
         prizeEstCents={prizeEstCents}
       />
-      <LiveTeam rows={data.lineup} mode={data.type} />
+      <LiveTeam rows={data.lineup} />
       <LocalLeaderboard
         top={data.leaderboardTop}
         around={slice.aroundMe}

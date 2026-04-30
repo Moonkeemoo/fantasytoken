@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   FriendsRankingResponse,
   GlobalRankingResponse,
+  type RankingMode,
   ReferralsLeaderboardResponse,
 } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
@@ -28,18 +29,19 @@ type RecruitersScope = 'global' | 'friends';
 export function Rankings() {
   const me = useMe();
   const [tab, setTab] = useState<Tab>('friends');
+  const [mode, setMode] = useState<RankingMode>('total');
   const [topUpOpen, setTopUpOpen] = useState(false);
 
   const [recruitersScope, setRecruitersScope] = useState<RecruitersScope>('global');
   const friends = useQuery({
-    queryKey: ['rankings', 'friends'],
-    queryFn: () => apiFetch('/rankings/friends', FriendsRankingResponse),
+    queryKey: ['rankings', 'friends', mode],
+    queryFn: () => apiFetch(`/rankings/friends?mode=${mode}`, FriendsRankingResponse),
     enabled: tab === 'friends',
     staleTime: 30_000,
   });
   const global = useQuery({
-    queryKey: ['rankings', 'global'],
-    queryFn: () => apiFetch('/rankings/global', GlobalRankingResponse),
+    queryKey: ['rankings', 'global', mode],
+    queryFn: () => apiFetch(`/rankings/global?mode=${mode}`, GlobalRankingResponse),
     enabled: tab === 'global',
     staleTime: 30_000,
   });
@@ -83,16 +85,36 @@ export function Rankings() {
         </Pill>
       </div>
 
+      {(tab === 'friends' || tab === 'global') && (
+        <div className="flex gap-1.5 px-3 pb-2 text-[11px]">
+          <Pill active={mode === 'total'} onClick={() => setMode('total')}>
+            Total
+          </Pill>
+          <Pill active={mode === 'bull'} onClick={() => setMode('bull')}>
+            🐂 Bull
+          </Pill>
+          <Pill active={mode === 'bear'} onClick={() => setMode('bear')}>
+            🐻 Bear
+          </Pill>
+        </div>
+      )}
+
       {tab === 'friends' && (
         <FriendsView
           data={friends.data}
+          mode={mode}
           isLoading={friends.isLoading}
           isError={friends.isError}
           onInvite={handleInvite}
         />
       )}
       {tab === 'global' && (
-        <GlobalView data={global.data} isLoading={global.isLoading} isError={global.isError} />
+        <GlobalView
+          data={global.data}
+          mode={mode}
+          isLoading={global.isLoading}
+          isError={global.isError}
+        />
       )}
       {tab === 'recruiters' && (
         <RecruitersView
@@ -111,13 +133,30 @@ export function Rankings() {
   );
 }
 
+function pnlForMode(
+  row: { netPnlCents: number; bullPnlCents: number; bearPnlCents: number },
+  mode: RankingMode,
+): number {
+  if (mode === 'bull') return row.bullPnlCents;
+  if (mode === 'bear') return row.bearPnlCents;
+  return row.netPnlCents;
+}
+
+function modeLabel(mode: RankingMode): string {
+  if (mode === 'bull') return 'bull P&L';
+  if (mode === 'bear') return 'bear P&L';
+  return 'all-time P&L';
+}
+
 function FriendsView({
   data,
+  mode,
   isLoading,
   isError,
   onInvite,
 }: {
   data: FriendsRankingResponse | undefined;
+  mode: RankingMode;
   isLoading: boolean;
   isError: boolean;
   onInvite: () => void;
@@ -125,7 +164,7 @@ function FriendsView({
   return (
     <div className="flex flex-col">
       <div className="px-3 py-2">
-        <Label>friends · all-time P&amp;L</Label>
+        <Label>friends · {modeLabel(mode)}</Label>
       </div>
       {isLoading && <div className="px-4 py-3 text-[11px] text-muted">loading…</div>}
       {isError && <div className="px-4 py-3 text-[11px] text-hl-red">error loading rankings</div>}
@@ -152,11 +191,7 @@ function FriendsView({
                   </span>
                 </span>
               </span>
-              <span
-                className={`font-bold ${r.netPnlCents > 0 ? 'text-hl-green' : r.netPnlCents < 0 ? 'text-hl-red' : ''}`}
-              >
-                {formatPnlCents(r.netPnlCents)}
-              </span>
+              <RowPnL row={r} mode={mode} />
             </Card>
           ))}
         </div>
@@ -167,19 +202,36 @@ function FriendsView({
   );
 }
 
+function RowPnL({
+  row,
+  mode,
+}: {
+  row: { netPnlCents: number; bullPnlCents: number; bearPnlCents: number };
+  mode: RankingMode;
+}) {
+  const value = pnlForMode(row, mode);
+  return (
+    <span className={`font-bold ${value > 0 ? 'text-hl-green' : value < 0 ? 'text-hl-red' : ''}`}>
+      {formatPnlCents(value)}
+    </span>
+  );
+}
+
 function GlobalView({
   data,
+  mode,
   isLoading,
   isError,
 }: {
   data: GlobalRankingResponse | undefined;
+  mode: RankingMode;
   isLoading: boolean;
   isError: boolean;
 }) {
   return (
     <div className="flex flex-col">
       <div className="px-3 py-2">
-        <Label>top 100 · all-time P&amp;L</Label>
+        <Label>top 100 · {modeLabel(mode)}</Label>
       </div>
       {isLoading && <div className="px-4 py-3 text-[11px] text-muted">loading…</div>}
       {isError && <div className="px-4 py-3 text-[11px] text-hl-red">error loading rankings</div>}
@@ -202,11 +254,7 @@ function GlobalView({
                   {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
                 </span>
               </span>
-              <span
-                className={`font-bold ${r.netPnlCents > 0 ? 'text-hl-green' : r.netPnlCents < 0 ? 'text-hl-red' : ''}`}
-              >
-                {formatPnlCents(r.netPnlCents)}
-              </span>
+              <RowPnL row={r} mode={mode} />
             </Card>
           ))}
         </div>
@@ -223,11 +271,7 @@ function GlobalView({
                 {data.me.displayName} <span className="text-[10px] text-muted">(you)</span>
               </span>
             </span>
-            <span
-              className={`font-bold ${data.me.netPnlCents > 0 ? 'text-hl-green' : data.me.netPnlCents < 0 ? 'text-hl-red' : ''}`}
-            >
-              {formatPnlCents(data.me.netPnlCents)}
-            </span>
+            <RowPnL row={data.me} mode={mode} />
           </Card>
         </div>
       )}

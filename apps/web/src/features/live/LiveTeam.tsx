@@ -2,22 +2,17 @@ import type { LineupRow } from '@fantasytoken/shared';
 import { fmtPnL } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { Label } from '../../components/ui/Label.js';
-import type { ContestMode } from '../team-builder/AllocSheet.js';
 
 export interface LiveTeamProps {
   rows: LineupRow[];
-  mode: ContestMode;
 }
 
 /**
- * Per-token P&L list (TZ-001 §08.3). Helping/hurting determined by mode:
- * bull contest → token up = helping. bear contest → token down = helping.
- * 3px left border in the corresponding color makes the contribution status
- * legible in a glance without reading the number.
- *
- * TOP badge marks the single biggest \$-contributor when their P&L is positive.
+ * Per-token P&L list (TZ-001 §08.3). Mode-aware accounting is on the backend
+ * (contribUsd is inverted for Bear so a falling token contributes positively),
+ * which lets the UI use a single sign-comparison for helping/hurting/TOP.
  */
-export function LiveTeam({ rows, mode }: LiveTeamProps): JSX.Element {
+export function LiveTeam({ rows }: LiveTeamProps): JSX.Element {
   const winner = rows
     .filter((r) => r.contribUsd > 0)
     .sort((a, b) => b.contribUsd - a.contribUsd)[0];
@@ -34,18 +29,23 @@ export function LiveTeam({ rows, mode }: LiveTeamProps): JSX.Element {
       </div>
       <ul className="mt-2 space-y-1.5">
         {rows.map((r) => {
-          const isHelping = mode === 'bull' ? r.pctChange > 0 : r.pctChange < 0;
-          const isHurting = mode === 'bull' ? r.pctChange < 0 : r.pctChange > 0;
+          // contribUsd is mode-aware on the backend (Bear inverts), so the
+          // helping/hurting/TOP logic is straightforward sign comparison.
+          const isHelping = r.contribUsd > 0;
+          const isHurting = r.contribUsd < 0;
           const borderClass = isHelping
             ? 'border-l-bull'
             : isHurting
               ? 'border-l-bear'
               : 'border-l-line';
+          // pctChange stays raw — universal "price up = green, down = red".
+          // In Bear the player still sees red on a falling token (true) but
+          // the dollar PnL beside it is green (player benefits). That dual
+          // signal is correct and informative.
           const pctColor =
             r.pctChange > 0 ? 'text-bull' : r.pctChange < 0 ? 'text-bear' : 'text-muted';
           const isTop = winner?.symbol === r.symbol && r.contribUsd > 0;
-          const pnlColor =
-            r.contribUsd > 0 ? 'text-bull' : r.contribUsd < 0 ? 'text-bear' : 'text-ink';
+          const pnlColor = isHelping ? 'text-bull' : isHurting ? 'text-bear' : 'text-ink';
 
           return (
             <li
