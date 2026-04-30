@@ -257,7 +257,11 @@ export function AllocSheet({
           </label>
           <div className="mt-1.5 flex items-center justify-between gap-2">
             <div className="flex flex-1 items-center gap-1 rounded-lg border border-line bg-paper-dim px-2.5 py-1.5 font-mono text-[18px] font-bold text-ink focus-within:border-ink">
-              <span>🪙</span>
+              {/* Allocate-as-dollars (ADR-0003 $-first UX). The 🪙 prefix
+                  here was a leftover from the coins-economy redesign — the
+                  input is the player's portfolio allocation, denominated in
+                  the contest's virtual budget ($), NOT their wallet coins. */}
+              <span>$</span>
               <input
                 ref={dollarInputRef}
                 type="text"
@@ -265,7 +269,7 @@ export function AllocSheet({
                 value={dollars.toLocaleString('en-US')}
                 onChange={onDollarInput}
                 className="w-full bg-transparent outline-none"
-                aria-label="Coin amount"
+                aria-label="Dollar amount"
               />
             </div>
             <div className="text-right leading-tight">
