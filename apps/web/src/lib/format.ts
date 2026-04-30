@@ -16,6 +16,16 @@ export function formatPct(decimal: number): string {
   return `${sign}${Math.abs(pct).toFixed(1)}%`;
 }
 
+/** Same as formatPct but with 2-decimal precision — used in places where a
+ * sub-tenth-percent move would otherwise round visually to "0.0%" and hide
+ * the actual sign of the result (e.g. the no-prize headline). */
+export function formatPctPrecise(decimal: number): string {
+  const pct = decimal * 100;
+  if (pct === 0) return '0.00%';
+  const sign = pct > 0 ? '+' : '-';
+  return `${sign}${Math.abs(pct).toFixed(2)}%`;
+}
+
 /**
  * P&L on the fixed $100 portfolio budget (PORTFOLIO_BUDGET_USD).
  * `score` is a fraction (e.g. 0.0013 → +$0.13). Sign-prefixed; zero unsigned.
