@@ -48,9 +48,18 @@ function makeFakeRepo(): UsersRepo & {
       throw new Error('user not found');
     },
     async markWelcomeCredited(id) {
+      // Mirrors the production atomic test-and-set: only flips the stamp on
+      // the FIRST call and reports whether THIS call won the race.
       for (const [, v] of state) {
-        if (v.id === id) v.welcomeCreditedAt = v.welcomeCreditedAt ?? new Date();
+        if (v.id === id) {
+          if (v.welcomeCreditedAt === null) {
+            v.welcomeCreditedAt = new Date();
+            return true;
+          }
+          return false;
+        }
       }
+      return false;
     },
     async setReferrerIfEligible(_args) {
       // Default fake: never attribute. Specific tests can stub a different fake

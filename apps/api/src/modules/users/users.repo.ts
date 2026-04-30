@@ -59,12 +59,17 @@ export function createUsersRepo(db: Database): UsersRepo {
     },
 
     async markWelcomeCredited(id) {
-      // Only stamp if not already set — preserves the original credit timestamp
-      // so the 7-day expiry window doesn't reset on retry/re-auth.
-      await db
+      // Atomic-test-and-set: only stamps when welcome_credited_at IS NULL,
+      // returning the row id only on the WINNING update. Service layer reads
+      // the boolean to decide whether THIS request should mint the bonus.
+      // Closes a race where 3 concurrent /me hits all observed null and
+      // all credited 20 🪙 → user ended up with 60 instead of 20.
+      const r = await db
         .update(users)
-        .set({ welcomeCreditedAt: sql`COALESCE(${users.welcomeCreditedAt}, NOW())` })
-        .where(eq(users.id, id));
+        .set({ welcomeCreditedAt: sql`NOW()` })
+        .where(and(eq(users.id, id), sql`${users.welcomeCreditedAt} IS NULL`))
+        .returning({ id: users.id });
+      return r.length > 0;
     },
 
     async findUsersWithExpiredWelcome({ expiryDays }) {

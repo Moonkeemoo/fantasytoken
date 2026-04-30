@@ -28,9 +28,10 @@ export interface UsersRepo {
   /** Idempotent — only sets tutorial_done_at if currently NULL. Returns the
    * effective timestamp (existing one if already set). */
   markTutorialDone(id: string): Promise<Date>;
-  /** Stamp welcome_credited_at = NOW() so the daily expiry cron starts the
-   * 7-day clock. Only runs once per user; subsequent calls are no-ops. */
-  markWelcomeCredited(id: string): Promise<void>;
+  /** Atomic test-and-set: stamps welcome_credited_at = NOW() and returns
+   * `true` only if THIS call was the one that flipped NULL → NOW. Other
+   * concurrent racers receive `false` and must NOT mint a duplicate bonus. */
+  markWelcomeCredited(id: string): Promise<boolean>;
   /** Attribute a referrer with the INV-13 guard (referrer immutable + 60s
    * window from signup + 0 finalized entries). Returns true if the row was
    * actually updated, false if any guard failed (anti-abuse silent no-op). */
@@ -122,22 +123,26 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
         // welcome_credited_at without a transaction (or vice versa).
         let balanceCents = await deps.currency.getBalance(existing.id);
         if (existing.welcomeCreditedAt === null && deps.welcomeBonusCoins > 0n) {
-          try {
-            const r = await deps.currency.transact({
-              userId: existing.id,
-              deltaCents: deps.welcomeBonusCoins,
-              type: 'WELCOME_BONUS',
-            });
-            balanceCents = r.balanceAfter;
-            await deps.repo.markWelcomeCredited(existing.id);
-            deps.log?.info(
-              { userId: existing.id, deltaCents: deps.welcomeBonusCoins.toString() },
-              'welcome bonus retro-credited (recovery)',
-            );
-          } catch (err) {
-            // Don't block auth if the recovery credit fails (cron will retry
-            // ideas — for now we just log and continue with stale balance).
-            deps.log?.warn({ err, userId: existing.id }, 'welcome retro-credit failed');
+          // Atomic-acquire BEFORE transact (was the other way around — that
+          // produced a race where 3 concurrent /me requests all observed
+          // null, all credited 20 🪙, and the user ended up with 60). Only
+          // the winning racer flips NULL → NOW and proceeds to mint.
+          const wonRace = await deps.repo.markWelcomeCredited(existing.id);
+          if (wonRace) {
+            try {
+              const r = await deps.currency.transact({
+                userId: existing.id,
+                deltaCents: deps.welcomeBonusCoins,
+                type: 'WELCOME_BONUS',
+              });
+              balanceCents = r.balanceAfter;
+              deps.log?.info(
+                { userId: existing.id, deltaCents: deps.welcomeBonusCoins.toString() },
+                'welcome bonus retro-credited (recovery)',
+              );
+            } catch (err) {
+              deps.log?.warn({ err, userId: existing.id }, 'welcome retro-credit failed');
+            }
           }
         }
         return {
@@ -150,16 +155,19 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       const created = await deps.repo.create(args);
       let balanceCents = 0n;
       if (deps.welcomeBonusCoins > 0n) {
-        const r = await deps.currency.transact({
-          userId: created.id,
-          deltaCents: deps.welcomeBonusCoins,
-          type: 'WELCOME_BONUS',
-        });
-        balanceCents = r.balanceAfter;
-        // Stamp credited-at so the 7-day expiry cron has a clock to compare against.
-        // Existing users (pre-migration 0011) keep welcome_credited_at = NULL and
-        // are skipped by the cron — grandfathered.
-        await deps.repo.markWelcomeCredited(created.id);
+        // Same atomic-acquire-first pattern as the existing-user branch —
+        // create() always succeeds with welcome_credited_at NULL, but a
+        // following concurrent /me hit could otherwise enter the existing
+        // branch and double-mint before this transact returns.
+        const wonRace = await deps.repo.markWelcomeCredited(created.id);
+        if (wonRace) {
+          const r = await deps.currency.transact({
+            userId: created.id,
+            deltaCents: deps.welcomeBonusCoins,
+            type: 'WELCOME_BONUS',
+          });
+          balanceCents = r.balanceAfter;
+        }
       }
       // Brand-new user: tutorial not yet done — FE routes to /tutorial.
       return { userId: created.id, isNew: true, balanceCents, tutorialDoneAt: null };

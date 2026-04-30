@@ -44,6 +44,7 @@ export function ContestRow({
   onTopUp,
 }: ContestRowProps) {
   const ms = useCountdown(contest.startsAt);
+  const msToEnd = useCountdown(contest.endsAt);
   const isFull = contest.spotsFilled >= contest.maxCapacity;
   const cantAfford = balanceCents < contest.entryFeeCents;
   const isFree = contest.entryFeeCents === 0;
@@ -76,6 +77,11 @@ export function ContestRow({
       // them on the live page incorrectly.
       cta = { label: 'VIEW', onClick: () => onLocked(contest.id), variant: 'ghost' };
     }
+  } else if (contest.status === 'active') {
+    // Active + not entered → spectator (Lobby v2 Watch zone). Pre-v2 this
+    // showed "CLOSED" because the lobby only ever surfaced scheduled
+    // contests; with the spectator route live we route on tap.
+    cta = { label: 'WATCH', onClick: () => onView(contest.id), variant: 'ghost' };
   } else if (contest.status !== 'scheduled') {
     cta = { label: 'CLOSED', onClick: () => {}, disabled: true, variant: 'ghost' };
   } else if (isFull) {
@@ -89,7 +95,10 @@ export function ContestRow({
   // Second-line caption depends on status.
   let caption: string;
   if (contest.status === 'active') {
-    caption = `LIVE NOW · ${contest.spotsFilled}/${contest.maxCapacity}`;
+    // Live contests: show "ends in MM:SS" so spectators know how long they
+    // have to watch. Without this the row read "LIVE NOW · 20/20" with no
+    // sense of how soon the result drops.
+    caption = `LIVE · ends in ${formatTimeLeft(msToEnd)} · ${contest.spotsFilled}/${contest.maxCapacity}`;
   } else if (contest.status === 'finalized' || contest.status === 'cancelled') {
     caption = `Final · ${contest.spotsFilled}/${contest.maxCapacity}`;
   } else {
