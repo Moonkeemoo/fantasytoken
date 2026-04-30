@@ -156,8 +156,6 @@ function BalanceCard({ balanceCents, onTopUp }: { balanceCents: number; onTopUp:
 
 function TrackRecord({ stats }: { stats: ProfileResponse['stats'] }) {
   const winRateText = stats.winRate === null ? '—' : `${Math.round(stats.winRate * 100)}%`;
-  const allPnlClass =
-    stats.allTimePnlCents > 0 ? 'text-hl-green' : stats.allTimePnlCents < 0 ? 'text-hl-red' : '';
 
   // Best Bull / Best Bear — split per-mode so a Bear win doesn't get drowned
   // by a bigger Bull win (or vice versa). PnL math is mode-neutral (INV-4),
@@ -190,13 +188,6 @@ function TrackRecord({ stats }: { stats: ProfileResponse['stats'] }) {
         valueClass={bestBearClass}
         borderLeft
         borderTop
-      />
-      <Stat
-        label="all-time P&L"
-        value={formatPnlCents(stats.allTimePnlCents)}
-        valueClass={allPnlClass}
-        borderTop
-        spanFull
       />
     </div>
   );
