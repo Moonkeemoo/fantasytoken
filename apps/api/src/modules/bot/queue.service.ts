@@ -2,15 +2,18 @@ import type { Logger } from '../../logger.js';
 import type { BotInstance } from './bot.js';
 import {
   formatCommissionDM,
+  formatContestCancelledDM,
   formatContestFinalizedDM,
   type CommissionEvent,
+  type ContestCancelledEvent,
   type ContestFinalizedEvent,
 } from './notifications.js';
 
 /** Discriminated union of payloads stored on bot_dm_queue.payload (jsonb). */
 export type DmPayload =
   | { kind: 'commission'; event: CommissionEvent }
-  | { kind: 'contest_finalized'; event: ContestFinalizedEvent };
+  | { kind: 'contest_finalized'; event: ContestFinalizedEvent }
+  | { kind: 'contest_cancelled'; event: ContestCancelledEvent };
 
 export interface DmQueueRepo {
   /** Insert a row with `scheduled_at = max(now + floorSeconds, lastDmSent + 1h)`.
@@ -59,6 +62,10 @@ export interface DmQueueService {
     recipientUserId: string;
     event: ContestFinalizedEvent;
   }): Promise<void>;
+  enqueueContestCancelled(args: {
+    recipientUserId: string;
+    event: ContestCancelledEvent;
+  }): Promise<void>;
   /** Cron entry-point. Called from server.ts every minute. */
   drain(): Promise<{ sentCount: number; failedCount: number; skippedCount: number }>;
 }
@@ -69,6 +76,9 @@ const COMMISSION_FLOOR_SECONDS = 60;
  * the app on their own. If they view the result during this window, the drain
  * skips the DM (covered by findViewedEntryIds). */
 const CONTEST_FINALIZED_FLOOR_SECONDS = 5 * 60;
+/** Floor for cancellation rows — short. Refund already landed in their
+ * balance, the DM is just informational; no benefit to delaying it. */
+const CONTEST_CANCELLED_FLOOR_SECONDS = 60;
 
 export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
   const maxAttempts = deps.maxAttempts ?? 3;
@@ -101,6 +111,20 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
         );
       }
     },
+    async enqueueContestCancelled({ recipientUserId, event }) {
+      try {
+        await deps.repo.enqueue({
+          recipientUserId,
+          payload: { kind: 'contest_cancelled', event },
+          floorSeconds: CONTEST_CANCELLED_FLOOR_SECONDS,
+        });
+      } catch (err) {
+        deps.log.warn(
+          { err, recipientUserId, contestId: event.contestId },
+          'dm.enqueueContestCancelled failed',
+        );
+      }
+    },
     async drain() {
       let sentCount = 0;
       let failedCount = 0;
@@ -122,15 +146,18 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
       for (const group of ready) {
         // Partition into kinds; skip any contest_finalized row whose entry was
         // already viewed (user came back on their own — DM would be redundant).
+        // Cancellation rows are NOT skip-on-viewed: even if the user saw the
+        // refund result page, a DM confirming the balance change is helpful.
         const commissionEvents: CommissionEvent[] = [];
         const finalizedEvents: ContestFinalizedEvent[] = [];
+        const cancelledEvents: ContestCancelledEvent[] = [];
         const skipIds: string[] = [];
         const sendIds: string[] = [];
         for (const r of group.rows) {
           if (r.payload.kind === 'commission') {
             commissionEvents.push(r.payload.event);
             sendIds.push(r.id);
-          } else {
+          } else if (r.payload.kind === 'contest_finalized') {
             const ev = r.payload.event;
             if (viewedEntryIds.has(ev.entryId)) {
               skipIds.push(r.id);
@@ -138,6 +165,10 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
               finalizedEvents.push(ev);
               sendIds.push(r.id);
             }
+          } else {
+            // contest_cancelled
+            cancelledEvents.push(r.payload.event);
+            sendIds.push(r.id);
           }
         }
 
@@ -148,11 +179,11 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
         if (sendIds.length === 0) continue;
 
         try {
-          // Two separate sends so each kind can use its own copy. Per the
-          // per-recipient debounce both fire in the same drain tick only if
-          // last_dm_sent_at allows; in practice this happens only when both
-          // kinds got enqueued in the same window for a user who hadn't
-          // received a DM in the prior hour.
+          // Separate sends per kind so each can use its own copy. Per the
+          // per-recipient debounce all fire in the same drain tick only if
+          // last_dm_sent_at allows; in practice this happens only when
+          // multiple kinds got enqueued in the same window for a user who
+          // hadn't received a DM in the prior hour.
           if (commissionEvents.length > 0) {
             const text = formatCommissionDM(commissionEvents);
             await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
@@ -161,6 +192,12 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           }
           if (finalizedEvents.length > 0) {
             const text = formatContestFinalizedDM(finalizedEvents);
+            await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
+              parse_mode: 'MarkdownV2',
+            });
+          }
+          if (cancelledEvents.length > 0) {
+            const text = formatContestCancelledDM(cancelledEvents);
             await deps.bot.api.sendMessage(group.recipientTelegramId, text, {
               parse_mode: 'MarkdownV2',
             });

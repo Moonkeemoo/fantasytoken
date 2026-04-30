@@ -4,6 +4,7 @@ import { contests, entries, transactions } from '../../db/schema/index.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 import { errors } from '../../lib/errors.js';
 import type { Logger } from '../../logger.js';
+import type { DmQueueService } from '../bot/queue.service.js';
 
 export interface CancelContestArgs {
   contestId: string;
@@ -18,12 +19,24 @@ export interface CancelContestDeps {
   db: Database;
   currency: CurrencyService;
   log: Logger;
+  /** Optional bot DM queue. When provided, every refunded entry gets a
+   * "your contest was cancelled" DM enqueued so the user knows their
+   * balance bumped back up — useful for offline/idle users. */
+  dmQueue?: DmQueueService;
+  /** Mini-app deep-link base used to point the DM at the result page
+   * (which renders the cancelled-state UI). Skipped if absent. */
+  miniAppUrl?: string;
 }
 
 export function createCancelContest(deps: CancelContestDeps) {
   return async (args: CancelContestArgs): Promise<CancelContestResult> => {
     const [contest] = await deps.db
-      .select({ id: contests.id, status: contests.status, entryFeeCents: contests.entryFeeCents })
+      .select({
+        id: contests.id,
+        name: contests.name,
+        status: contests.status,
+        entryFeeCents: contests.entryFeeCents,
+      })
       .from(contests)
       .where(eq(contests.id, args.contestId))
       .limit(1);
@@ -109,6 +122,21 @@ export function createCancelContest(deps: CancelContestDeps) {
       });
       refundedCount += 1;
       totalCents += entryFee;
+
+      // DM the user about the cancellation + refund. INV-7: any failure
+      // here is logged inside enqueue and never blocks the refund itself.
+      if (deps.dmQueue && deps.miniAppUrl) {
+        await deps.dmQueue.enqueueContestCancelled({
+          recipientUserId: e.userId,
+          event: {
+            entryId: e.id,
+            contestId: args.contestId,
+            contestName: contest.name,
+            refundCents: entryFee,
+            resultUrl: `${deps.miniAppUrl}?startapp=result_${args.contestId}`,
+          },
+        });
+      }
     }
 
     deps.log.info(

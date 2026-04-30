@@ -28,6 +28,20 @@ export interface ContestFinalizedEvent {
   resultUrl: string;
 }
 
+/**
+ * One contest-cancelled event. Emitted per refunded entry when the
+ * stale-state cron auto-cancels a contest stuck in scheduled / active /
+ * finalizing past the threshold. We DM so users know their balance got
+ * topped back up rather than wondering where the entry went.
+ */
+export interface ContestCancelledEvent {
+  entryId: string;
+  contestId: string;
+  contestName: string;
+  refundCents: number;
+  resultUrl: string;
+}
+
 /** MarkdownV2 reserved chars per https://core.telegram.org/bots/api#markdownv2-style. */
 function escMd(s: string): string {
   return s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => `\\${c}`);
@@ -133,6 +147,48 @@ export function formatContestFinalizedDM(events: ContestFinalizedEvent[]): strin
       : `🏁 *${events.length} contests* finished`;
   // Aggregated DMs send the user to the live list rather than picking one
   // contest's URL arbitrarily; the result rows are reachable from there.
+  const firstUrl = escMdUrl(events[0]!.resultUrl);
+  return `${header}\n\n${lines.join('\n')}\n\n[Open app →](${firstUrl})`;
+}
+
+/**
+ * "Contest was cancelled, here's your refund" DM. Same aggregation shape
+ * as the finalized variant — single → personal copy, multiple → summary.
+ * Always includes the refund total so the user trusts the balance change.
+ */
+export function formatContestCancelledDM(events: ContestCancelledEvent[]): string {
+  if (events.length === 0) throw new Error('formatContestCancelledDM: empty events');
+
+  if (events.length === 1) {
+    const e = events[0]!;
+    const contest = escMd(e.contestName);
+    const url = escMdUrl(e.resultUrl);
+    if (e.refundCents > 0) {
+      const refund = escMd(fmtUsd(e.refundCents));
+      return (
+        `↩️ *${contest}* was cancelled\n\n` +
+        `*\\+${refund}* refunded to your balance\n\n` +
+        `[Open app →](${url})`
+      );
+    }
+    return (
+      `↩️ *${contest}* was cancelled\n\n` +
+      `Free contest — nothing to refund\\. New contests are open already\\.\n\n` +
+      `[Open app →](${url})`
+    );
+  }
+
+  const totalCents = events.reduce((s, e) => s + e.refundCents, 0);
+  const lines = events.map((e) => {
+    const name = escMd(e.contestName);
+    const tail = e.refundCents > 0 ? `*\\+${escMd(fmtUsd(e.refundCents))}*` : '_no refund_';
+    return `• *${name}* — ${tail}`;
+  });
+  const header =
+    totalCents > 0
+      ? `↩️ *${events.length} contests* cancelled\n\n` +
+        `*\\+${escMd(fmtUsd(totalCents))}* total refunded`
+      : `↩️ *${events.length} contests* cancelled`;
   const firstUrl = escMdUrl(events[0]!.resultUrl);
   return `${header}\n\n${lines.join('\n')}\n\n[Open app →](${firstUrl})`;
 }

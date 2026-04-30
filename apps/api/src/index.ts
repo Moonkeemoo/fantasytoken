@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { createLogger } from './logger.js';
@@ -7,6 +10,21 @@ async function main() {
   const config = loadConfig();
   const logger = createLogger(config);
   const db = createDatabase(config);
+
+  // Auto-migrate on boot. Idempotent: drizzle tracks applied migrations
+  // via the `__drizzle_migrations` table, so a redeploy with no new
+  // migrations is a no-op. Folder resolution works in both dev (tsx
+  // running from src/) and prod (node from dist/) — the build script
+  // copies src/db/migrations into dist/db/migrations.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const migrationsFolder = path.resolve(here, 'db/migrations');
+  try {
+    await migrate(db, { migrationsFolder });
+    logger.info({ migrationsFolder }, 'migrations applied');
+  } catch (err) {
+    logger.fatal({ err, migrationsFolder }, 'migrations failed — aborting boot');
+    process.exit(1);
+  }
 
   const { app, stopCrons } = await createServer({ config, logger, db });
 

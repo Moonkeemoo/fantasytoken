@@ -174,7 +174,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
     },
   );
-  const cancelContest = createCancelContest({ db: deps.db, currency, log: deps.logger });
+  const cancelContest = createCancelContest({
+    db: deps.db,
+    currency,
+    log: deps.logger,
+    ...(dmQueue ? { dmQueue } : {}),
+    ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
+  });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
   const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
   const replenish = createReplenishService({

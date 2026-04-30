@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.build.json && cp -R src/assets dist/assets",
+    "build": "tsc -p tsconfig.build.json && cp -R src/assets dist/assets && cp -R src/db/migrations dist/db/migrations",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
