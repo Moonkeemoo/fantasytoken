@@ -68,7 +68,10 @@ export function Result() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <div className="flex items-center justify-between border-b-[1.5px] border-ink px-3 py-2">
         <button onClick={() => navigate('/lobby')} className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-ink bg-paper text-[14px] leading-none">

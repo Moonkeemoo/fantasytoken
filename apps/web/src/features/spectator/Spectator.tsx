@@ -42,7 +42,10 @@ export function Spectator(): JSX.Element {
   const top10 = data.leaderboardAll.slice(0, 10);
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <LiveHeader
         contestName={data.contestName}
         mode={data.type}

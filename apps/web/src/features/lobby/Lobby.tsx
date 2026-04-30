@@ -64,7 +64,13 @@ export function Lobby() {
   const goWatch = (id: string) => navigate(`/contests/${id}/watch`);
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      // Reserve room for the fixed BottomNav (56px) PLUS the iPhone home
+      // indicator's safe-area inset; otherwise content slides under the bar
+      // on notched devices and the last lineup row becomes untappable.
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <Header
         firstName={me.data.user.first_name}
         photoUrl={me.data.user.photo_url}

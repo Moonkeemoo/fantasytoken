@@ -56,7 +56,11 @@ export function Live(): JSX.Element {
   const pnlUsd = data.portfolio.currentUsd - data.portfolio.startUsd;
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      // Reserve room for BottomNav + iPhone safe-area inset (see Lobby.tsx).
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <LiveHeader
         contestName={data.contestName}
         mode={data.type}
