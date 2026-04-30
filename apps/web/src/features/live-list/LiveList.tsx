@@ -4,7 +4,6 @@ import { useMe } from '../me/useMe.js';
 import { useContests } from '../lobby/useContests.js';
 import { Header } from '../lobby/Header.js';
 import { ContestList } from '../lobby/ContestList.js';
-import { BottomNav } from '../lobby/BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { Label } from '../../components/ui/Label.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
@@ -44,7 +43,7 @@ export function LiveList() {
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
       <Header
         firstName={me.data.user.first_name}
         photoUrl={me.data.user.photo_url}
@@ -85,7 +84,6 @@ export function LiveList() {
         </>
       )}
       <div className="flex-1" />
-      <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>
   );

@@ -17,6 +17,7 @@ import { CommissionToast } from './features/referrals/CommissionToast.js';
 import { ReferralFriend } from './features/referrals/ReferralFriend.js';
 import { ReferralsDetail } from './features/referrals/ReferralsDetail.js';
 import { GlobalInviteSheet } from './features/referrals/GlobalInviteSheet.js';
+import { BottomNav } from './features/lobby/BottomNav.js';
 
 export function App() {
   return (
@@ -55,6 +56,7 @@ export function App() {
           }
         />
       </Routes>
+      <BottomNav />
     </>
   );
 }

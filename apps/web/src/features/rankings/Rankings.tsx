@@ -9,7 +9,6 @@ import { apiFetch } from '../../lib/api-client.js';
 import { telegram } from '../../lib/telegram.js';
 import { useMe } from '../me/useMe.js';
 import { Header } from '../lobby/Header.js';
-import { BottomNav } from '../lobby/BottomNav.js';
 import { Pill } from '../../components/ui/Pill.js';
 import { Card } from '../../components/ui/Card.js';
 import { Button } from '../../components/ui/Button.js';
@@ -65,7 +64,7 @@ export function Rankings() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
       <Header
         firstName={me.data.user.first_name}
         photoUrl={me.data.user.photo_url}
@@ -107,7 +106,6 @@ export function Rankings() {
       )}
 
       <div className="flex-1" />
-      <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>
   );

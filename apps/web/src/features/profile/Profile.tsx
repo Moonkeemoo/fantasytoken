@@ -5,7 +5,6 @@ import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
 import { Button } from '../../components/ui/Button.js';
 import { Avatar } from '../../components/ui/Avatar.js';
-import { BottomNav } from '../lobby/BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
@@ -28,7 +27,7 @@ export function Profile() {
 
   const data = profile.data;
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
       {/* Top bar */}
       <div className="flex items-center justify-between border-b-[1.5px] border-ink px-3 py-2">
         <h1 className="text-[14px] font-bold">Profile</h1>
@@ -88,7 +87,6 @@ export function Profile() {
       </div>
 
       <div className="flex-1" />
-      <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>
   );

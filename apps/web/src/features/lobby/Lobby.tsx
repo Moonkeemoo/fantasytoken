@@ -7,7 +7,6 @@ import { Tabs, type LobbyFilter } from './Tabs.js';
 import { FeaturedHero } from './FeaturedHero.js';
 import { ContestList } from './ContestList.js';
 import { ActiveBanner } from './ActiveBanner.js';
-import { BottomNav } from './BottomNav.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { NextRankTeaser } from '../rank/NextRankTeaser.js';
@@ -89,7 +88,7 @@ export function Lobby() {
   const goResult = (id: string) => navigate(`/contests/${id}/result`);
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
       <Header
         firstName={me.data.user.first_name}
         photoUrl={me.data.user.photo_url}
@@ -124,7 +123,6 @@ export function Lobby() {
         heading="All contests"
       />
       <div className="flex-1" />
-      <BottomNav />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </div>
   );

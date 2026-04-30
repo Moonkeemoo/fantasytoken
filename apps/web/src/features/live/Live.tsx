@@ -55,6 +55,8 @@ export function Live(): JSX.Element {
     <div className="flex min-h-screen flex-col bg-paper text-ink">
       <LiveHeader
         contestName={data.contestName}
+        mode={data.type}
+        tier={Math.round(data.virtualBudgetCents / 100)}
         startsAt={data.startsAt}
         endsAt={data.endsAt}
         status={data.status}

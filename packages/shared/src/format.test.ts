@@ -6,6 +6,12 @@ describe('fmtMoney', () => {
     expect(fmtMoney(0)).toBe('$0');
   });
 
+  it('sub-dollar — 2 decimals so small movements stay visible', () => {
+    expect(fmtMoney(0.01)).toBe('$0.01');
+    expect(fmtMoney(0.42)).toBe('$0.42');
+    expect(fmtMoney(0.99)).toBe('$0.99');
+  });
+
   it('under 1K — rounded whole dollars', () => {
     expect(fmtMoney(1)).toBe('$1');
     expect(fmtMoney(99)).toBe('$99');
@@ -62,6 +68,12 @@ describe('fmtPnL', () => {
     expect(fmtPnL(96)).toBe('+$96');
     expect(fmtPnL(1_200)).toBe('+$1.2K');
     expect(fmtPnL(420)).toBe('+$420');
+  });
+
+  it('sub-dollar PnL keeps 2-decimal precision (so +$0.42 stays visible)', () => {
+    expect(fmtPnL(0.42)).toBe('+$0.42');
+    expect(fmtPnL(-0.42)).toBe('−$0.42');
+    expect(fmtPnL(0.01)).toBe('+$0.01');
   });
 
   it('negative uses U+2212 minus (not ASCII hyphen)', () => {

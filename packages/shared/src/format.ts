@@ -15,6 +15,10 @@ const ABS_LT_1M = 1_000_000;
 const ABS_LT_1B = 1_000_000_000;
 
 function compactBody(absValue: number): string {
+  // Sub-dollar precision so a $0.42 PnL doesn't render as "$0" and look like
+  // nothing happened. Anything ≥ $1 stays at whole-dollar precision.
+  if (absValue === 0) return '0';
+  if (absValue < 1) return absValue.toFixed(2);
   if (absValue < ABS_LT_1K) return `${Math.round(absValue)}`;
   if (absValue < ABS_LT_1M) return `${trimTrailingZero(absValue / ABS_LT_1K)}K`;
   if (absValue < ABS_LT_1B) return `${trimTrailingZero(absValue / ABS_LT_1M)}M`;
