@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { dollarsFor, fmtMoney, fmtMoneyExact } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
@@ -66,11 +66,14 @@ export function LockedScreen(): JSX.Element {
   const startsAt = stateQuery.data?.startsAt;
   const ms = useCountdown(startsAt ?? new Date(Date.now() + 60 * 60_000).toISOString());
 
-  // Auto-nav to /live once the contest opens. Re-checks on every tick.
+  // Once-only gate + push (not replace) so we don't pile up history.replaceState
+  // calls — TG WebView throttles those with SecurityError after a few hits.
+  const navigatedRef = useRef(false);
   useEffect(() => {
-    if (!id || !startsAt) return;
+    if (navigatedRef.current || !id || !startsAt) return;
     if (Date.now() >= new Date(startsAt).getTime()) {
-      navigate(`/contests/${id}/live`, { replace: true });
+      navigatedRef.current = true;
+      navigate(`/contests/${id}/live`);
     }
   }, [id, startsAt, ms, navigate]);
 
@@ -89,20 +92,46 @@ export function LockedScreen(): JSX.Element {
     hour: '2-digit',
     minute: '2-digit',
   });
+  const durationMinutes = Math.round(
+    (new Date(contest.endsAt).getTime() - new Date(contest.startsAt).getTime()) / 60_000,
+  );
+  const durationLabel =
+    durationMinutes >= 60 * 24
+      ? `${Math.round(durationMinutes / 60 / 24)}d`
+      : durationMinutes >= 60
+        ? `${Math.round(durationMinutes / 60)}h`
+        : `${durationMinutes}m`;
+  const mode = contest.type;
+  const modePillClass =
+    mode === 'bear' ? 'border-bear text-bear bg-bear/5' : 'border-bull text-bull bg-bull/5';
 
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <header className="border-b border-line px-3 py-2">
-        <div className="text-[13px] font-bold leading-tight">{contest.name}</div>
-        <div className="text-[10px] text-muted">
-          {fmtMoney(tier)} budget · ends {endLabel}
+      <header className="border-b border-line px-3 pb-2 pt-3 text-center">
+        <div className="flex items-center justify-center gap-1.5 text-[14px] font-bold leading-tight">
+          <span>{contest.name}</span>
+          <span
+            className={`rounded-full border px-1.5 py-px text-[9px] font-bold uppercase ${modePillClass}`}
+          >
+            {mode}
+          </span>
+          <span className="rounded-full bg-ink px-1.5 py-px font-mono text-[9px] font-bold text-paper">
+            {fmtMoney(tier)}
+          </span>
+        </div>
+        <div className="mt-0.5 text-[10px] text-muted">
+          {durationLabel} · ends {endLabel}
         </div>
       </header>
 
-      <section className="px-3 pt-4">
-        <div className="flex items-center justify-center gap-2 text-[12px] font-bold uppercase tracking-wider text-bull">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-bull" />
-          <span>You&apos;re locked in</span>
+      <section className="relative px-3 pt-5">
+        <div className="flex items-center justify-center gap-2">
+          <span className="h-px flex-1 bg-line" />
+          <span className="flex items-center gap-2 rounded-full border border-ink bg-paper px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-bull">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-bull" />
+            You&apos;re locked in
+          </span>
+          <span className="h-px flex-1 bg-line" />
         </div>
       </section>
 

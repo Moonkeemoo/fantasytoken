@@ -92,6 +92,10 @@ export function TeamBuilder(): JSX.Element {
         tier={Math.round(contest.data.virtualBudgetCents / 100)}
         entryFeeCents={contest.data.entryFeeCents}
         balanceCents={me.data.balanceCents}
+        startsAt={contest.data.startsAt}
+        endsAt={contest.data.endsAt}
+        spotsFilled={contest.data.spotsFilled}
+        prizePoolCents={contest.data.prizePoolCents}
         isSubmitting={submit.isPending}
         errMsg={errMsg}
         onSubmit={onSubmit}

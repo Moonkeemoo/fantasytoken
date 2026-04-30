@@ -33,7 +33,15 @@ export interface AllocSheetToken {
 }
 
 export type AllocSheetAction =
-  | { kind: 'set'; symbol: string; alloc: number }
+  | {
+      kind: 'set';
+      symbol: string;
+      alloc: number;
+      /** Pass-through display metadata so the lineup slot can render the icon
+       * without DraftScreen having to look the token up again. */
+      name?: string;
+      imageUrl?: string | null;
+    }
   | { kind: 'remove'; symbol: string };
 
 export interface AllocSheetProps {
@@ -94,10 +102,12 @@ export function AllocSheet({
     };
   }, [open]);
 
-  // Esc to close + initial focus on the dollar input.
+  // Esc to close. Initial focus lands on the sheet container itself (not the
+  // dollar input) so we don't summon the soft keyboard on mobile and hide
+  // half the sheet — user taps the input only when they actually want to type.
   useEffect(() => {
     if (!open) return;
-    dollarInputRef.current?.focus();
+    sheetRef.current?.focus();
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -183,30 +193,35 @@ export function AllocSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${SHEET_LABEL_ID_PREFIX}${labelId}`}
-        className="relative max-h-[62vh] w-full max-w-[480px] overflow-y-auto rounded-t-2xl border border-line bg-paper p-5 shadow-2xl ease-sheet duration-sheet"
+        tabIndex={-1}
+        className="relative max-h-[62vh] w-full max-w-[480px] overflow-y-auto rounded-t-2xl border border-line bg-paper p-3 shadow-2xl outline-none ease-sheet duration-sheet"
         style={{ animation: 'alloc-sheet-slide-up 220ms cubic-bezier(0.2, 0.8, 0.25, 1)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-line" />
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line" />
 
-        <div className="flex items-center gap-3 border-b border-line pb-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-paper-deep text-2xl">
+        <div className="flex items-center gap-2.5 pb-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink bg-paper">
             {token.imageUrl ? (
-              <img src={token.imageUrl} alt="" className="h-9 w-9 rounded-lg" />
+              <img
+                src={token.imageUrl}
+                alt=""
+                className="h-full w-full rounded-full object-cover"
+              />
             ) : (
-              <span className="font-mono text-[14px] font-bold text-ink-soft">
+              <span className="font-mono text-[10px] font-bold text-ink-soft">
                 {token.symbol.slice(0, 3)}
               </span>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-1.5 text-[14px]">
+            <div className="flex items-baseline gap-1 text-[13px] leading-tight">
               <b id={`${SHEET_LABEL_ID_PREFIX}${labelId}`} className="font-bold text-ink">
                 {token.symbol}
               </b>
               <span className="truncate text-muted">· {token.name}</span>
             </div>
-            <div className="flex items-center gap-2 text-[11px]">
+            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] leading-tight">
               <span className="font-mono text-ink-soft">{token.priceDisplay ?? '—'}</span>
               <span className={trendUp ? 'text-bull' : 'text-bear'}>
                 {trendUp ? '+' : ''}
@@ -217,7 +232,7 @@ export function AllocSheet({
               )}
             </div>
           </div>
-          <svg viewBox={SPARK_VIEWBOX} className="h-6 w-16 shrink-0" fill="none">
+          <svg viewBox={SPARK_VIEWBOX} className="h-5 w-14 shrink-0" fill="none">
             <path
               d={sparkPath(token.symbol, trendUp)}
               stroke={sparkColor}
@@ -229,17 +244,19 @@ export function AllocSheet({
         </div>
 
         <div
-          className={`mt-3 rounded-md px-3 py-2 text-[12px] ${
+          className={`rounded-md px-2.5 py-1.5 text-[11px] ${
             positive ? 'bg-bull/10 text-bull' : 'bg-bear/10 text-bear'
           }`}
         >
           {fitText}
         </div>
 
-        <div className="mt-4">
-          <label className="text-label text-muted uppercase">Allocate</label>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="flex flex-1 items-center gap-1 rounded-lg border border-line bg-paper-dim px-3 py-2 font-mono text-[20px] font-bold text-ink focus-within:border-ink">
+        <div className="mt-3">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted">
+            Allocate
+          </label>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <div className="flex flex-1 items-center gap-1 rounded-lg border border-line bg-paper-dim px-2.5 py-1.5 font-mono text-[18px] font-bold text-ink focus-within:border-ink">
               <span>$</span>
               <input
                 ref={dollarInputRef}
@@ -251,22 +268,22 @@ export function AllocSheet({
                 aria-label="Dollar amount"
               />
             </div>
-            <div className="text-right">
-              <div className="font-mono text-pnl-big text-ink">{cappedPct}%</div>
+            <div className="text-right leading-tight">
+              <div className="font-mono text-[20px] font-bold text-ink">{cappedPct}%</div>
               <div className="text-[10px] text-muted">of {fmtMoney(tier)}</div>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-1">
             {chips.map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => setPct(v)}
-                className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors ${
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
                   cappedPct === v
                     ? 'border-ink bg-ink text-paper'
-                    : 'border-line bg-paper text-ink-soft hover:bg-paper-dim'
+                    : 'border-line bg-paper text-ink-soft'
                 }`}
               >
                 {v}%
@@ -275,24 +292,24 @@ export function AllocSheet({
             <button
               type="button"
               onClick={() => setPct(remaining)}
-              className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors ${
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
                 cappedPct === remaining && remaining > 0
                   ? 'border-ink bg-ink text-paper'
-                  : 'border-line bg-paper text-ink-soft hover:bg-paper-dim'
+                  : 'border-line bg-paper text-ink-soft'
               }`}
             >
               max ({remaining}%)
             </button>
           </div>
 
-          <div className="mt-4">
-            <div className="relative h-1.5 rounded-full bg-paper-deep">
+          <div className="mt-2.5">
+            <div className="relative h-1 rounded-full bg-paper-deep">
               <span
                 className="absolute left-0 top-0 h-full rounded-full bg-ink"
                 style={{ width: `${cappedPct}%` }}
               />
               <span
-                className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 bg-accent"
+                className="absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 bg-accent"
                 style={{ left: `${remaining}%` }}
                 aria-hidden="true"
               />
@@ -305,17 +322,12 @@ export function AllocSheet({
               value={cappedPct}
               onChange={(e) => setPct(Number.parseInt(e.target.value, 10))}
               onKeyDown={onSliderKey}
-              className="mt-2 w-full accent-ink"
+              className="mt-1 w-full accent-ink"
               aria-label="Allocation percent"
             />
-            <div className="mt-1 flex justify-between text-[10px] text-muted">
-              <span>0</span>
-              <span>cap {remaining}%</span>
-              <span>100</span>
-            </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-[12px] text-ink-soft">
+          <div className="mt-2 flex items-center justify-between rounded-md bg-paper-dim/60 px-2.5 py-1.5 text-[11px] text-ink-soft">
             <span>After this pick</span>
             <b className="font-mono">
               {fmtMoneyExact(dollarsFor(otherAlloc + cappedPct, tier))} of {fmtMoney(tier)}
@@ -323,12 +335,12 @@ export function AllocSheet({
           </div>
         </div>
 
-        <div className="mt-5 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-1.5">
           {isEdit && (
             <button
               type="button"
               onClick={() => onConfirm({ kind: 'remove', symbol: token.symbol })}
-              className="rounded-lg border border-bear px-3 py-2 text-[12px] font-semibold text-bear hover:bg-bear/10"
+              className="rounded-lg border border-bear px-2.5 py-1.5 text-[11px] font-semibold text-bear"
             >
               Remove
             </button>
@@ -336,18 +348,24 @@ export function AllocSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-line px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-paper-dim"
+            className="rounded-lg border border-line px-2.5 py-1.5 text-[11px] font-semibold text-ink-soft"
           >
             Cancel
           </button>
           <button
             type="button"
             disabled={confirmDisabled}
-            onClick={() => onConfirm({ kind: 'set', symbol: token.symbol, alloc: cappedPct })}
-            className={`ml-auto rounded-lg px-4 py-2 text-[13px] font-bold text-paper transition-colors ${
-              mode === 'bear'
-                ? 'bg-bear hover:bg-bear/90 disabled:bg-bear/40'
-                : 'bg-bull hover:bg-bull/90 disabled:bg-bull/40'
+            onClick={() =>
+              onConfirm({
+                kind: 'set',
+                symbol: token.symbol,
+                alloc: cappedPct,
+                name: token.name,
+                imageUrl: token.imageUrl,
+              })
+            }
+            className={`ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold text-paper transition-colors ${
+              mode === 'bear' ? 'bg-bear disabled:bg-bear/40' : 'bg-bull disabled:bg-bull/40'
             } disabled:cursor-not-allowed`}
           >
             {confirmLabel}

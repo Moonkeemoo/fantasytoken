@@ -1,15 +1,23 @@
 import { useMemo, useState } from 'react';
 import type { Token } from '@fantasytoken/shared';
 import { fmtMoney, fmtMoneyExact } from '@fantasytoken/shared';
-import { formatCents } from '../../lib/format.js';
+import { formatCents, formatTimeLeft } from '../../lib/format.js';
+import { useCountdown } from '../../lib/countdown.js';
 import { Label } from '../../components/ui/Label.js';
 import { AllocSheet, type AllocSheetAction, type ContestMode } from './AllocSheet.js';
 import { LineupSlot } from './LineupSlot.js';
 import { StartFromStrip, defaultPresets, type StartFromPreset } from './StartFromStrip.js';
 import { TokenResultRow } from './TokenResultRow.js';
-import { applyPreset, removeToken, setAlloc, type LineupPick } from './lineupReducer.js';
+import {
+  applyPreset,
+  removeToken,
+  setAlloc,
+  type AddTokenInput,
+  type LineupPick,
+} from './lineupReducer.js';
 import { useDraft } from './useDraft.js';
 import { useLastLineup } from './useLastLineup.js';
+import { useTokenList } from './useTokenList.js';
 import { useTokenSearch } from './useTokenSearch.js';
 
 const N_SLOTS = 5;
@@ -22,6 +30,11 @@ export interface DraftScreenProps {
   tier: number;
   entryFeeCents: number;
   balanceCents: number;
+  /** ISO timestamp — kickoff. Drives the "47:12 to start" status pill. */
+  startsAt: string;
+  endsAt: string;
+  spotsFilled: number;
+  prizePoolCents: number;
   isSubmitting: boolean;
   errMsg: string | null;
   onSubmit: (picks: LineupPick[]) => void;
@@ -37,6 +50,10 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     tier,
     entryFeeCents,
     balanceCents,
+    startsAt,
+    endsAt,
+    spotsFilled,
+    prizePoolCents,
     isSubmitting,
     errMsg,
     onSubmit,
@@ -51,14 +68,30 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
 
   const [q, setQ] = useState('');
   const search = useTokenSearch(q, contestId);
-  const items = useMemo(() => search.data?.items ?? [], [search.data]);
+  const defaultTokens = useTokenList(50);
+
+  // Source of truth for the Browse-tokens list:
+  // - typing → search results (contest-scoped: includes pickedByPct)
+  // - empty  → top-N by market cap so the section is never blank
+  const items = useMemo<Token[]>(() => {
+    if (q.length === 0) return defaultTokens.data?.items ?? [];
+    return search.data?.items ?? [];
+  }, [q, search.data, defaultTokens.data]);
+
   const allocBySymbol = useMemo(() => new Map(draft.map((p) => [p.symbol, p.alloc])), [draft]);
   const cantAfford = balanceCents < entryFeeCents;
 
   const lastLineupQ = useLastLineup();
 
+  // Presets always need symbols — pull from the full token universe (default
+  // list), not from the search results (which can be empty).
+  const presetSymbols = useMemo(
+    () => (defaultTokens.data?.items ?? []).slice(0, 5).map((t) => t.symbol),
+    [defaultTokens.data],
+  );
+
   const presets = useMemo<StartFromPreset[]>(() => {
-    const base = defaultPresets(items.slice(0, 5).map((t) => t.symbol));
+    const base = defaultPresets(presetSymbols);
     const last = lastLineupQ.data?.lineup;
     if (!last || last.picks.length !== 5) return base;
     const pnl = last.pnlPct;
@@ -71,7 +104,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
       picks: last.picks,
     };
     return [personal, ...base];
-  }, [items, lastLineupQ.data]);
+  }, [presetSymbols, lastLineupQ.data]);
 
   const onTokenSelect = (token: Token): void => {
     openSheet({
@@ -97,10 +130,11 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     if (action.kind === 'remove') {
       setDraft(removeToken(draft, action.symbol));
     } else {
-      const meta = items.find((t) => t.symbol === action.symbol);
-      const input = meta
-        ? { symbol: meta.symbol, name: meta.name, imageUrl: meta.imageUrl }
-        : action.symbol;
+      const input: AddTokenInput = {
+        symbol: action.symbol,
+        ...(action.name !== undefined && { name: action.name }),
+        ...(action.imageUrl !== undefined && { imageUrl: action.imageUrl }),
+      };
       setDraft(setAlloc(draft, input, action.alloc));
     }
     closeSheet();
@@ -130,8 +164,8 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
   const ctaTone =
     cta.kind === 'ready'
       ? mode === 'bear'
-        ? 'bg-bear text-paper hover:bg-bear/90'
-        : 'bg-bull text-paper hover:bg-bull/90'
+        ? 'bg-bear text-paper'
+        : 'bg-bull text-paper'
       : cta.kind === 'over'
         ? 'bg-bear/30 text-bear'
         : 'bg-paper-deep text-muted';
@@ -152,28 +186,72 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     return withD24.map((x) => x.t);
   }, [items, mode]);
 
+  const startMs = useCountdown(startsAt);
+  const durationLabel = useMemo(() => {
+    const minutes = Math.round(
+      (new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000,
+    );
+    if (minutes >= 60 * 24) return `${Math.round(minutes / 60 / 24)}d`;
+    if (minutes >= 60) return `${Math.round(minutes / 60)}h`;
+    return `${minutes}m`;
+  }, [startsAt, endsAt]);
+  const endLabel = useMemo(
+    () =>
+      new Date(endsAt).toLocaleString('en-US', {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [endsAt],
+  );
+
+  const modePillClass =
+    mode === 'bear' ? 'border-bear text-bear bg-bear/5' : 'border-bull text-bull bg-bull/5';
+
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <header className="flex items-start justify-between border-b border-line px-3 py-2">
-        <button onClick={onBack} className="flex items-center gap-2" aria-label="Back to lobby">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-ink bg-paper text-[12px] leading-none">
-            ‹
-          </span>
-          <div className="text-left">
-            <div className="text-[13px] font-bold leading-tight">{contestName}</div>
-            <div className="text-[10px] text-muted">
-              {fmtMoney(tier)} budget · {formatCents(entryFeeCents)} entry
-            </div>
-          </div>
+      <header className="relative border-b border-line px-3 pb-2 pt-3">
+        <button
+          onClick={onBack}
+          className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-ink bg-paper text-[12px] leading-none"
+          aria-label="Back to lobby"
+        >
+          ‹
         </button>
-        <div className="text-right">
-          <Label>step 1/2</Label>
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-1.5 text-[14px] font-bold leading-tight">
+            <span>{contestName}</span>
+            <span
+              className={`rounded-full border px-1.5 py-px text-[9px] font-bold uppercase ${modePillClass}`}
+            >
+              {mode}
+            </span>
+            <span className="rounded-full bg-ink px-1.5 py-px font-mono text-[9px] font-bold text-paper">
+              {fmtMoney(tier)}
+            </span>
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted">
+            {durationLabel} · ends {endLabel}
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+          <span className="flex items-center gap-1 rounded-full border border-line bg-paper px-2 py-0.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <span className="font-mono">{formatTimeLeft(startMs)} to start</span>
+          </span>
+          <span className="rounded-full border border-line bg-paper px-2 py-0.5 font-mono">
+            {spotsFilled} in
+          </span>
+          <span className="font-mono font-bold text-gold">{formatCents(prizePoolCents)}</span>
         </div>
       </header>
 
       <section className="border-b border-line px-3 py-2">
         <div className="flex items-baseline justify-between">
-          <Label>Your lineup</Label>
+          <div className="flex items-baseline gap-1.5">
+            <Label>Your lineup</Label>
+            <span className="text-[10px] text-muted">budget {fmtMoney(tier)}</span>
+          </div>
           <div className="text-[10px] text-muted">
             <span className={draft.length === N_SLOTS ? 'font-bold text-ink' : ''}>
               {draft.length}
@@ -207,33 +285,34 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
 
       <section className="flex flex-1 flex-col gap-2 px-3 py-2">
         <input
-          type="text"
+          type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search ticker or paste contract…"
+          placeholder="🔍 Search ticker or paste contract…"
           className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[12px] placeholder:text-muted focus:border-ink focus:outline-none"
-          autoFocus
+          aria-label="Search tokens"
         />
 
         <div className="flex items-center justify-between">
           <Label>Browse tokens</Label>
           {sortedItems.length > 0 && (
             <span className="text-[10px] text-muted">
-              {sortedItems.length} · sorted by 24h {mode === 'bull' ? '↓' : '↑'}
+              {sortedItems.length} · {q.length > 0 ? 'matches' : 'top by mcap'} · 24h{' '}
+              {mode === 'bull' ? '↓' : '↑'}
             </span>
           )}
         </div>
 
-        {q.length === 0 && sortedItems.length === 0 && (
-          <div className="py-8 text-center text-[11px] text-muted">
-            type a ticker to search · pick 5 tokens to compete
-          </div>
-        )}
-        {q.length > 0 && search.isLoading && (
+        {q.length > 0 && search.isLoading && sortedItems.length === 0 && (
           <div className="text-center text-[10px] text-muted">searching…</div>
         )}
         {q.length > 0 && !search.isLoading && sortedItems.length === 0 && (
-          <div className="text-center text-[10px] text-muted">no tokens match &quot;{q}&quot;</div>
+          <div className="text-center text-[10px] text-muted">
+            no tokens match &quot;{q.trim()}&quot;
+          </div>
+        )}
+        {q.length === 0 && defaultTokens.isLoading && (
+          <div className="text-center text-[10px] text-muted">loading tokens…</div>
         )}
 
         <div className="flex flex-col gap-1">

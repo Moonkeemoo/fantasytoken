@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LeaderboardModal } from './LeaderboardModal.js';
 import { LiveHeader } from './LiveHeader.js';
@@ -26,17 +26,19 @@ export function Live(): JSX.Element {
   const live = useLive(id);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Once-only gate: prevents the locked↔live ping-pong that piled up
+  // history.replaceState calls and crashed TG WebView with SecurityError.
+  const finalizeNavRef = useRef(false);
   useEffect(() => {
-    if (!live.data) return;
+    if (finalizeNavRef.current || !live.data) return;
     const status = live.data.status;
     if (status === 'finalizing' || status === 'finalized' || status === 'cancelled') {
+      finalizeNavRef.current = true;
       navigate(`/contests/${id}/result`);
-    } else if (status === 'scheduled') {
-      // ADR-0003: pre-kickoff goes through the LockedScreen waiting room.
-      // Lobby's "VIEW" CTA on already-entered scheduled contests bounces here;
-      // redirect on so the player lands in the right state.
-      navigate(`/contests/${id}/locked`, { replace: true });
     }
+    // Pre-kickoff (status='scheduled') is now rendered inline as a "starting
+    // soon" banner — the previous redirect-back-to-locked race-looped against
+    // LockedScreen's auto-nav-to-live and crashed history.replaceState.
   }, [live.data, id, navigate]);
 
   const slice = useLiveSlice(live.data ?? null);
