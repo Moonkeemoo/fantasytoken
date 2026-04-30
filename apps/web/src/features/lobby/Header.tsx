@@ -15,9 +15,18 @@ export function Header({ firstName, photoUrl, balanceCents, onTopUp }: HeaderPro
   return (
     <div
       className="flex items-center justify-between gap-2 border-b-[1.5px] border-ink px-3 py-2"
-      // iPhone notch / Dynamic Island guard. Without this the wallet pill
-      // collides with the carrier bar on devices with safe-area top inset.
-      style={{ paddingTop: 'max(8px, env(safe-area-inset-top))' }}
+      style={{
+        // Three-layer guard for the top inset:
+        //   1. env(safe-area-inset-top) — iPhone notch / Dynamic Island
+        //   2. var(--tg-content-safe-area-inset-top) — TG fullscreen mode
+        //      slides our app under TG's own Close/⋮/drag chrome; this var
+        //      is the height of that chrome, exposed by TG 8+ WebApp SDK.
+        //   3. 8px min for older devices that report no inset.
+        // `max(...)` picks the largest of the three. Without #2 the wallet
+        // pill and "Hi, Taras" text collide with TG's buttons in fullscreen.
+        paddingTop:
+          'max(8px, env(safe-area-inset-top, 0px), var(--tg-content-safe-area-inset-top, 0px))',
+      }}
     >
       {/* Identity stack: avatar + greeting on top, rank chip directly below
           the name so it reads as "this is who I am, this is my tier". */}

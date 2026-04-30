@@ -14,6 +14,23 @@ import { queryClient } from './lib/query-client.js';
 WebApp.ready();
 WebApp.expand();
 
+// TG fullscreen mode (drag-up) puts our app under TG's own Close/⋮/drag-handle
+// chrome. TG 8+ exposes `contentSafeAreaInset` and a CSS variable
+// `--tg-content-safe-area-inset-top`, but support varies across clients —
+// publish our own copy so Header.tsx max() always has a fresh value.
+type TgWithSafeArea = typeof WebApp & {
+  contentSafeAreaInset?: { top?: number };
+  onEvent?: (ev: string, cb: () => void) => void;
+};
+const tg = WebApp as TgWithSafeArea;
+function syncSafeArea(): void {
+  const top = tg.contentSafeAreaInset?.top ?? 0;
+  document.documentElement.style.setProperty('--tg-content-safe-area-inset-top', `${top}px`);
+}
+syncSafeArea();
+tg.onEvent?.('contentSafeAreaChanged', syncSafeArea);
+tg.onEvent?.('viewportChanged', syncSafeArea);
+
 // Lock viewport zoom. iOS Safari (which TG Mini Apps run on) ignores
 // `user-scalable=no`, so we also block the gesture events explicitly.
 window.addEventListener('gesturestart', (e) => e.preventDefault());
