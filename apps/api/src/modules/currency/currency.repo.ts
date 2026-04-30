@@ -19,6 +19,7 @@ export function createCurrencyRepo(db: Database): CurrencyRepo {
             type: args.type,
             refType: args.refType ?? null,
             refId: args.refId ?? null,
+            paymentChargeId: args.paymentChargeId ?? null,
           })
           .returning({ id: transactions.id });
 

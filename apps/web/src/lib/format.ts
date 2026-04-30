@@ -1,12 +1,11 @@
-const cents = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-export function formatCents(amountCents: number): string {
-  return cents.format(amountCents / 100);
+// TZ-002: amounts on the wire are now WHOLE COINS (1 coin = $1 fantasy
+// display). Function name kept under `formatCents` so the 60+ call sites
+// don't churn — semantic flipped, math simplified to "format as dollars".
+export function formatCents(amount: number): string {
+  if (!Number.isFinite(amount)) return '$0';
+  const rounded = Math.round(amount);
+  if (rounded === 0) return '$0';
+  return `$${rounded.toLocaleString('en-US')}`;
 }
 
 export function formatPct(decimal: number): string {
@@ -27,14 +26,15 @@ export function formatPctPrecise(decimal: number): string {
 }
 
 /**
- * P&L on the fixed $100 portfolio budget (PORTFOLIO_BUDGET_USD).
- * `score` is a fraction (e.g. 0.0013 → +$0.13). Sign-prefixed; zero unsigned.
+ * P&L on the fixed 100-coin portfolio (TZ-002 swap-in). `score` is a fraction
+ * (e.g. 0.10 → +$10 = +10 coins). Sign-prefixed; zero unsigned.
  */
 export function formatPnl(score: number): string {
-  const cents = Math.round(score * 10_000);
-  if (cents === 0) return '$0.00';
-  const sign = cents > 0 ? '+' : '-';
-  return `${sign}${formatCents(Math.abs(cents))}`;
+  if (!Number.isFinite(score)) return '$0';
+  const coins = Math.round(score * 100);
+  if (coins === 0) return '$0';
+  const sign = coins > 0 ? '+' : '-';
+  return `${sign}${formatCents(Math.abs(coins))}`;
 }
 
 export function formatTimeLeft(ms: number): string {

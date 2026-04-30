@@ -20,3 +20,4 @@ export * from './xp_events.js';
 export * from './referral_payouts.js';
 export * from './referral_signup_bonuses.js';
 export * from './bot_dm_queue.js';
+export * from './coin_packages.js';

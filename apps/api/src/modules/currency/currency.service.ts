@@ -4,8 +4,12 @@ export interface TransactArgs {
   userId: string;
   deltaCents: bigint;
   type: TransactionType;
-  refType?: 'contest' | 'entry';
+  refType?: 'contest' | 'entry' | 'package';
   refId?: string;
+  /** TG `telegram_payment_charge_id` — only set for COINS_PURCHASE. Stored
+   * alongside the ledger row; UNIQUE WHERE NOT NULL guards against double
+   * credits when Telegram retries the successful_payment webhook. */
+  paymentChargeId?: string;
 }
 
 export interface TransactResult {

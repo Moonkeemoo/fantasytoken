@@ -17,7 +17,7 @@ export const REPLENISH_TEMPLATES = [
     name: 'Practice',
     type: 'bull' as const,
     entryFeeCents: 0n,
-    prizePoolCents: 500n,
+    prizePoolCents: 5n,
     maxCapacity: 10,
     isFeatured: false,
     minRank: 1,
@@ -29,7 +29,7 @@ export const REPLENISH_TEMPLATES = [
     // (R1, free) for one cycle, earns XP, then graduates into cash.
     name: 'Quick Match',
     type: 'bull' as const,
-    entryFeeCents: 100n,
+    entryFeeCents: 1n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -39,7 +39,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Bear Trap',
     type: 'bear' as const,
-    entryFeeCents: 100n,
+    entryFeeCents: 1n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -49,7 +49,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Memecoin Madness',
     type: 'bull' as const,
-    entryFeeCents: 500n,
+    entryFeeCents: 5n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -62,7 +62,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'High-Stakes Quick Match',
     type: 'bull' as const,
-    entryFeeCents: 1000n,
+    entryFeeCents: 10n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -72,7 +72,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Trader Cup',
     type: 'bull' as const,
-    entryFeeCents: 2000n,
+    entryFeeCents: 20n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -82,7 +82,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Bear Apocalypse',
     type: 'bear' as const,
-    entryFeeCents: 2500n,
+    entryFeeCents: 25n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -92,7 +92,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Degen Arena',
     type: 'bull' as const,
-    entryFeeCents: 5000n,
+    entryFeeCents: 50n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -102,7 +102,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Whale Vault',
     type: 'bull' as const,
-    entryFeeCents: 10000n,
+    entryFeeCents: 100n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -112,7 +112,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Legend League',
     type: 'bull' as const,
-    entryFeeCents: 25000n,
+    entryFeeCents: 250n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
@@ -122,7 +122,7 @@ export const REPLENISH_TEMPLATES = [
   {
     name: 'Mythic Cup',
     type: 'bull' as const,
-    entryFeeCents: 50000n,
+    entryFeeCents: 500n,
     prizePoolCents: 0n,
     maxCapacity: 20,
     isFeatured: false,
