@@ -35,6 +35,12 @@ export interface ContestsTickServiceDeps {
   log: Logger;
   /** Called after each successful lock so the lobby refills immediately. */
   onContestLocked?: () => Promise<void>;
+  /** Called once per tick before processing the lock list — refreshes
+   * current_price_usd for picked-token coingecko_ids so the start
+   * snapshot inserted by lockAndSpawn is genuinely current (not whatever
+   * was sitting in the DB from the prior 30s sync). Optional: tests pass
+   * undefined and the lock proceeds with whatever's already in the DB. */
+  refreshPricesBeforeLock?: () => Promise<void>;
 }
 
 const STALE_PRICE_HOURS = 2;
@@ -54,6 +60,17 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
     async tick() {
       // 1. scheduled → active
       const toLock = await deps.repo.findContestsToLock();
+      // Force a price refresh once per tick when there's anything to lock —
+      // gives the start snapshot the freshest possible baseline regardless
+      // of when the last 30s active-sync ran. Best-effort: if CG fails the
+      // lock still proceeds (we already log warnings inside the syncer).
+      if (toLock.length > 0 && deps.refreshPricesBeforeLock) {
+        try {
+          await deps.refreshPricesBeforeLock();
+        } catch (err) {
+          deps.log.warn({ err }, 'contests.tick refreshPricesBeforeLock failed');
+        }
+      }
       for (const c of toLock) {
         try {
           const tokens = await deps.repo.getTokensInPicks(c.id);

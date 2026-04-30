@@ -188,6 +188,9 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     onContestLocked: async () => {
       await replenish.replenish();
     },
+    refreshPricesBeforeLock: async () => {
+      await tokens.syncActive();
+    },
   });
 
   const leaderboardRepo = createLeaderboardRepo(deps.db);
@@ -262,11 +265,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  // Active-token price sync: refresh every 30s during a live contest so
-  // Live screen actually reflects market movement (CG free tier cap is 10-30
-  // req/min; one batched call per 30s is well below that).
+  // Active-token price sync: refresh every 15s during a live contest so
+  // Live screen actually reflects market movement. CoinGecko free tier
+  // is 5-15 req/min; one batched marketsByIds call (≤2 batches for ≤500
+  // ids) per 15s = ≤8 req/min, comfortably under the limit. Tighter than
+  // 30s so a 10-min contest registers at minimum ~40 price refreshes.
   const stopActiveSync = scheduleEvery({
-    intervalMs: 30_000,
+    intervalMs: 15_000,
     fn: async () => {
       await tokens.syncActive();
     },

@@ -82,11 +82,28 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
       try {
         const markets = await deps.client.marketsByIds(ids);
         const rows = markets.map(toUpsertRow);
+        const missing = ids.length - rows.length;
         await deps.repo.upsertMany(rows);
-        deps.log.info({ refreshed: rows.length, requested: ids.length }, 'tokens.sync.active done');
+        // Loud at info-level so it's easy to spot in Railway tail when the
+        // Live screen looks frozen: refreshed = how many actually got new
+        // prices, missing = ids CoinGecko didn't recognise (typo or delisted).
+        if (missing > 0) {
+          deps.log.warn(
+            { refreshed: rows.length, requested: ids.length, missing },
+            'tokens.sync.active partial — some ids returned no data',
+          );
+        } else {
+          deps.log.info(
+            { refreshed: rows.length, requested: ids.length },
+            'tokens.sync.active done',
+          );
+        }
         return rows.length;
       } catch (err) {
-        deps.log.warn({ err }, 'tokens.sync.active failed');
+        // Surface the message so a CoinGecko 429/5xx is obvious in logs;
+        // the user-visible symptom is a frozen P&L.
+        const message = err instanceof Error ? err.message : String(err);
+        deps.log.warn({ err, message, requested: ids.length }, 'tokens.sync.active failed');
         return 0;
       }
     },
