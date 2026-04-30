@@ -1,6 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { entrySubmissionSchema, EntrySubmissionResult } from '@fantasytoken/shared';
+import {
+  LineupsFilter,
+  type LineupsListResponse,
+  entrySubmissionSchema,
+  EntrySubmissionResult,
+} from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import { tryTelegramUser, upsertArgsFromTgUser } from '../../lib/auth-context.js';
 import type { EntriesService } from './entries.service.js';
@@ -34,6 +39,33 @@ export function makeEntriesRoutes(deps: EntriesRoutesDeps): FastifyPluginAsync {
       });
 
       const response: typeof EntrySubmissionResult._type = result;
+      return response;
+    });
+
+    /**
+     * GET /contests/:id/lineups?filter=all|friends|recent&limit=50
+     *
+     * Public Browse-others feed (TZ-001 §07). Privacy contract enforced at
+     * the repo layer: returns user handle + symbols + submittedAt only.
+     * No allocations, no entry fee, no PnL — even post-kickoff. Live PnL has
+     * its own dedicated endpoint.
+     */
+    app.get('/:id/lineups', async (req) => {
+      const { id: contestId } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const { filter, limit } = z
+        .object({
+          filter: LineupsFilter.optional(),
+          limit: z.coerce.number().int().positive().max(200).optional(),
+        })
+        .parse(req.query);
+      const resolvedFilter = filter ?? 'all';
+      const resolvedLimit = limit ?? 50;
+      const result = await deps.entries.listPublicLineups({
+        contestId,
+        filter: resolvedFilter,
+        limit: resolvedLimit,
+      });
+      const response: LineupsListResponse = result;
       return response;
     });
   };

@@ -1,4 +1,4 @@
-import type { EntryPick } from '@fantasytoken/shared';
+import type { EntryPick, LineupSummary } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
@@ -23,6 +23,17 @@ export interface EntriesRepo {
     id: string;
     submittedAt: Date;
   }>;
+  /**
+   * Fetch entries for a contest, projected for the public Browse-others feed.
+   * Returns ONLY user handle + symbols + submittedAt — never allocations,
+   * stake, or PnL (privacy contract per ADR-0003 / handoff §13 Q5).
+   * `filter='recent'` orders by submittedAt DESC; otherwise stable submittedAt ASC.
+   */
+  listPublicLineups(args: {
+    contestId: string;
+    filter: 'all' | 'friends' | 'recent';
+    limit: number;
+  }): Promise<{ lineups: LineupSummary[]; total: number }>;
 }
 
 export interface EntriesServiceDeps {
@@ -30,8 +41,15 @@ export interface EntriesServiceDeps {
   currency: CurrencyService;
 }
 
+export interface ListLineupsArgs {
+  contestId: string;
+  filter: 'all' | 'friends' | 'recent';
+  limit: number;
+}
+
 export interface EntriesService {
   submit(args: SubmitArgs): Promise<SubmitResult>;
+  listPublicLineups(args: ListLineupsArgs): Promise<{ lineups: LineupSummary[]; total: number }>;
 }
 
 export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
@@ -79,6 +97,11 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
         submittedAt: created.submittedAt.toISOString(),
         alreadyEntered: false,
       };
+    },
+
+    async listPublicLineups({ contestId, filter, limit }) {
+      const clamped = Math.max(1, Math.min(200, limit));
+      return deps.repo.listPublicLineups({ contestId, filter, limit: clamped });
     },
   };
 }

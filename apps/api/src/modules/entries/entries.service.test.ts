@@ -32,6 +32,23 @@ function makeFakeRepo(
       createdEntry = { id: `entry-${Date.now()}`, userId: args.userId, picks: args.picks };
       return { id: createdEntry.id, submittedAt: new Date() };
     },
+    async listPublicLineups({ limit }) {
+      // Two fake lineups, sorted oldest-first for filter='all'.
+      const all = [
+        {
+          user: 'alice',
+          submittedAt: new Date('2026-04-29T10:00:00Z').toISOString(),
+          picks: ['BTC', 'ETH', 'PEPE', 'WIF', 'BONK'],
+        },
+        {
+          user: 'bob',
+          submittedAt: new Date('2026-04-29T11:00:00Z').toISOString(),
+          picks: ['SOL', 'DOGE', 'SHIB', 'ADA', 'XRP'],
+        },
+      ];
+      const sliced = all.slice(0, limit);
+      return { lineups: sliced, total: sliced.length };
+    },
   };
 
   return repo;
@@ -107,5 +124,37 @@ describe('EntriesService.submit', () => {
     await expect(
       svc.submit({ userId: 'u1', contestId: 'c1', picks: VALID_PICKS }),
     ).rejects.toMatchObject({ code: 'INVALID_LINEUP' });
+  });
+});
+
+describe('EntriesService.listPublicLineups', () => {
+  it('returns lineups with privacy contract — symbols only, no allocations', async () => {
+    const repo = makeFakeRepo();
+    const cur = makeFakeCurrency();
+    const svc = createEntriesService({ repo, currency: cur });
+    const result = await svc.listPublicLineups({
+      contestId: 'c1',
+      filter: 'all',
+      limit: 50,
+    });
+    expect(result.lineups).toHaveLength(2);
+    for (const l of result.lineups) {
+      expect(l).toHaveProperty('user');
+      expect(l).toHaveProperty('picks');
+      expect(l).toHaveProperty('submittedAt');
+      expect(l).not.toHaveProperty('alloc');
+      expect(l).not.toHaveProperty('entryFee');
+      expect(l).not.toHaveProperty('pnl');
+    }
+  });
+
+  it('clamps limit to [1, 200]', async () => {
+    const repo = makeFakeRepo();
+    const cur = makeFakeCurrency();
+    const svc = createEntriesService({ repo, currency: cur });
+    const r1 = await svc.listPublicLineups({ contestId: 'c1', filter: 'all', limit: 0 });
+    expect(r1.lineups.length).toBeGreaterThan(0);
+    const r2 = await svc.listPublicLineups({ contestId: 'c1', filter: 'all', limit: 9999 });
+    expect(r2.lineups.length).toBeLessThanOrEqual(200);
   });
 });
