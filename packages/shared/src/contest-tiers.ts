@@ -10,19 +10,20 @@
  * but absent an explicit override the value below is the source of truth.
  *
  * Tiers (5):
- *   free          → $100      (10_000 cents)
- *   ≤ \$0.50      → $1,000    (100_000)
- *   ≤ \$5.00      → $10,000   (1_000_000)
- *   ≤ \$50.00     → $100,000  (10_000_000)
- *   > \$50.00     → $1,000,000 (100_000_000)
+ *   free          → $100        (10_000 cents)
+ *   ≤ \$1.00      → $1,000      (100_000)
+ *   ≤ \$10.00     → $10,000     (1_000_000)
+ *   ≤ \$50.00     → $100,000    (10_000_000)
+ *   > \$50.00     → $1,000,000  (100_000_000)
  *
- * Step factor is 10× per tier — keeps mental math simple at the table.
+ * Tuned against REPLENISH_TEMPLATES so each tier holds 2–3 contests; the
+ * effective leverage is roughly 1000× entry → budget.
  */
 
 export const VIRTUAL_BUDGET_TIERS_CENTS = [
   { maxEntryFeeCents: 0, budgetCents: 10_000 }, // free → $100
-  { maxEntryFeeCents: 50, budgetCents: 100_000 }, // ≤ $0.50 → $1K
-  { maxEntryFeeCents: 500, budgetCents: 1_000_000 }, // ≤ $5 → $10K
+  { maxEntryFeeCents: 100, budgetCents: 100_000 }, // ≤ $1 → $1K
+  { maxEntryFeeCents: 1_000, budgetCents: 1_000_000 }, // ≤ $10 → $10K
   { maxEntryFeeCents: 5_000, budgetCents: 10_000_000 }, // ≤ $50 → $100K
 ] as const;
 

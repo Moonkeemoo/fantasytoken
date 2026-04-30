@@ -10,33 +10,36 @@ describe('virtualBudgetCentsFor', () => {
     expect(virtualBudgetCentsFor(0)).toBe(10_000);
   });
 
-  it('$0.25 entry → $1K', () => {
-    expect(virtualBudgetCentsFor(25)).toBe(100_000);
+  it('$1 entry (Quick Match / Bear Trap, boundary) → $1K', () => {
+    expect(virtualBudgetCentsFor(100)).toBe(100_000);
   });
 
-  it('$0.50 entry (boundary) → $1K', () => {
-    expect(virtualBudgetCentsFor(50)).toBe(100_000);
+  it('$1.01 entry (just over) → $10K', () => {
+    expect(virtualBudgetCentsFor(101)).toBe(1_000_000);
   });
 
-  it('$0.51 entry (just over) → $10K', () => {
-    expect(virtualBudgetCentsFor(51)).toBe(1_000_000);
-  });
-
-  it('$5 entry (boundary) → $10K', () => {
+  it('$5 entry (Memecoin Madness) → $10K', () => {
     expect(virtualBudgetCentsFor(500)).toBe(1_000_000);
   });
 
-  it('$25 entry → $100K', () => {
-    expect(virtualBudgetCentsFor(2_500)).toBe(10_000_000);
+  it('$10 entry (High-Stakes Quick Match, boundary) → $10K', () => {
+    expect(virtualBudgetCentsFor(1_000)).toBe(1_000_000);
   });
 
-  it('$50 entry (boundary) → $100K', () => {
+  it('$20 entry (Trader Cup) → $100K', () => {
+    expect(virtualBudgetCentsFor(2_000)).toBe(10_000_000);
+  });
+
+  it('$50 entry (Degen Arena, boundary) → $100K', () => {
     expect(virtualBudgetCentsFor(5_000)).toBe(10_000_000);
   });
 
-  it('$50.01+ entry → $1M (top tier)', () => {
-    expect(virtualBudgetCentsFor(5_001)).toBe(VIRTUAL_BUDGET_TOP_TIER_CENTS);
-    expect(virtualBudgetCentsFor(100_000)).toBe(VIRTUAL_BUDGET_TOP_TIER_CENTS);
+  it('$100 entry (Whale Vault) → $1M (top tier)', () => {
+    expect(virtualBudgetCentsFor(10_000)).toBe(VIRTUAL_BUDGET_TOP_TIER_CENTS);
+  });
+
+  it('$500 entry (Mythic Cup) → $1M', () => {
+    expect(virtualBudgetCentsFor(50_000)).toBe(VIRTUAL_BUDGET_TOP_TIER_CENTS);
   });
 
   it('rejects non-finite / negative input — falls back to lowest tier', () => {
