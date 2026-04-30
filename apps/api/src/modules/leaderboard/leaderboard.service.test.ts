@@ -101,7 +101,9 @@ describe('LeaderboardService.getLive', () => {
     const r = await svc.getLive({ contestId: 'c-1', userId: 'user-e1' });
     expect(r).not.toBeNull();
     expect(r!.portfolio.plPct).toBeCloseTo(0.04);
-    expect(r!.portfolio.currentUsd).toBeCloseTo(104);
+    // TZ-003: portfolio.currentUsd scales with the contest's virtualBudgetCents
+    // (was hardcoded 100). Fixture has 10_000_000 → currentUsd = 10.4M.
+    expect(r!.portfolio.currentUsd).toBeCloseTo(10_400_000);
     expect(r!.rank).toBe(1);
     expect(r!.totalEntries).toBe(1);
     expect(r!.realEntries).toBe(1);

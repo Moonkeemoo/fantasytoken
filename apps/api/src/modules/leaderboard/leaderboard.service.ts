@@ -130,14 +130,21 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       }
 
       // Lineup with per-pick perf for the user.
+      // Contest budget in USD-units (virtualBudgetCents stores whole coins
+      // post TZ-002; 1 coin = $1 fantasy). Drives both the per-row contribUsd
+      // and the hero portfolio. Earlier we hardcoded 100, which by accident
+      // worked for the legacy $100 budget but broke for any other tier and
+      // produced row-vs-hero PnL mismatches when budget tiers shifted.
+      const budgetUsd = Number(contest.virtualBudgetCents);
+
       let lineup: LineupRow[] = [];
       if (userId) {
         const my = await deps.repo.getMyEntry(contestId, userId);
         if (my) {
           const images = await deps.repo.getImagesBySymbols(my.picks.map((p) => p.symbol));
           // Per-token contribUsd uses the same `dir` as the entry-level score
-          // so the row sum equals (myScore × 100) — i.e. the per-token list
-          // stays consistent with portfolio.plPct. pctChange stays raw
+          // so the row sum equals (myScore × budgetUsd) — i.e. the per-token
+          // list stays consistent with portfolio.plPct. pctChange stays raw
           // (universal "price went up = green, down = red"; player reads
           // both signals together to interpret a Bear pick).
           lineup = my.picks.map((p) => {
@@ -149,7 +156,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
               imageUrl: images.get(p.symbol) ?? null,
               alloc: p.alloc,
               pctChange: pct,
-              contribUsd: (p.alloc / 100) * pct * 100 * dir,
+              contribUsd: (p.alloc / 100) * pct * budgetUsd * dir,
             };
           });
         }
@@ -166,8 +173,8 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         startsAt: contest.startsAt.toISOString(),
         endsAt: contest.endsAt.toISOString(),
         portfolio: {
-          startUsd: 100,
-          currentUsd: 100 * (1 + myScore),
+          startUsd: budgetUsd,
+          currentUsd: budgetUsd * (1 + myScore),
           plPct: myScore,
         },
         rank: userRank,
