@@ -1,8 +1,21 @@
-import type { ContestListItem } from '@fantasytoken/shared';
+import { computePrizeCurve, type ContestListItem } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
 import { Card } from '../../components/ui/Card.js';
 import { formatCents, formatTimeLeft } from '../../lib/format.js';
 import { useCountdown } from '../../lib/countdown.js';
+
+/**
+ * What rank #1 will pocket when the room fills. The full prize_pool_cents
+ * is split across paying ranks via the geometric decay (Practice's $5 pool
+ * with 10 seats + payAll → rank-1 ≈ $1.79, not $5). Showing the pool as
+ * "Win up to" misled players into expecting the entire amount.
+ */
+function topPrizeCents(contest: ContestListItem): number {
+  const curve = computePrizeCurve(contest.maxCapacity, contest.prizePoolCents, {
+    payAll: contest.payAll,
+  });
+  return curve.get(1) ?? contest.prizePoolCents;
+}
 
 export interface ContestRowProps {
   contest: ContestListItem;
@@ -73,7 +86,7 @@ export function ContestRow({
   } else if (contest.status === 'finalized' || contest.status === 'cancelled') {
     caption = `Final · ${contest.spotsFilled}/${contest.maxCapacity}`;
   } else {
-    caption = `Win up to ${formatCents(contest.prizePoolCents)} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
+    caption = `Win up to ${formatCents(topPrizeCents(contest))} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
   }
 
   const isBear = contest.type === 'bear';
