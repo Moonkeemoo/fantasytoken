@@ -34,13 +34,32 @@ export interface CreateBotArgs {
  * deploy means no leader election needed; if you scale to N>1 replicas,
  * switch to webhook mode (one container takes the webhook, others stay quiet).
  */
+/**
+ * Telegram Bot API rejects `web_app: { url: ... }` when the URL is a
+ * t.me deep-link — the `web_app` type expects the HTTPS URL of the
+ * actual frontend (the one registered via /newapp in @BotFather).
+ * For t.me/<bot>/<short> links we fall back to a regular `url:` button
+ * which TG clients resolve client-side back into a mini-app launch.
+ *
+ * Net effect: button always renders, regardless of whether the env
+ * gives us the t.me alias or the raw frontend URL.
+ */
+function openAppButton(
+  url: string,
+): { text: string; url: string } | { text: string; web_app: { url: string } } {
+  if (/^https:\/\/t\.me\//i.test(url)) {
+    return { text: '🎯 Open app', url };
+  }
+  return { text: '🎯 Open app', web_app: { url } };
+}
+
 export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstance {
   const bot = new Bot(token);
 
   /** Reusable inline keyboard for the "Open app" CTA. Lets us reuse the
    * same button across /start and /play so muscle memory works. */
   const openAppKeyboard = miniAppUrl
-    ? { inline_keyboard: [[{ text: '🎯 Open app', web_app: { url: miniAppUrl } }]] }
+    ? { inline_keyboard: [[openAppButton(miniAppUrl)]] }
     : { inline_keyboard: [] };
 
   bot.command('start', async (ctx) => {
@@ -104,9 +123,22 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
       //   • opening it via that button registers the mini-app in TG's
       //     "Recent Apps" tray so users find it from the home/main menu
       //   • a fresh chat shows it immediately on first /start
-      // No-op (logged) if miniAppUrl is unset (dev / unconfigured env).
-      if (!miniAppUrl) {
-        log.warn('bot.setup skipping menu button — MINI_APP_URL not configured');
+      // Telegram only accepts the raw frontend URL for menu_button.web_app
+      // (a t.me/<bot>/<short> deep-link is rejected). When MINI_APP_URL
+      // is the t.me variant we fall back to type:'commands' — the slash-
+      // command list (set above) becomes the visible menu instead of
+      // text saying nothing's there.
+      const isTmeAlias = miniAppUrl && /^https:\/\/t\.me\//i.test(miniAppUrl);
+      if (!miniAppUrl || isTmeAlias) {
+        try {
+          await bot.api.setChatMenuButton({ menu_button: { type: 'commands' } });
+          log.info(
+            { reason: !miniAppUrl ? 'MINI_APP_URL unset' : 't.me alias unsupported by web_app' },
+            'bot.setup menu button → commands list (set MINI_APP_URL to the raw frontend HTTPS URL to enable the Play button)',
+          );
+        } catch (err) {
+          log.warn({ err }, 'bot.setup setChatMenuButton(commands) failed');
+        }
         return;
       }
       try {
@@ -119,7 +151,15 @@ export function createBot({ token, log, miniAppUrl }: CreateBotArgs): BotInstanc
         });
         log.info({ miniAppUrl }, 'bot.setup menu button installed');
       } catch (err) {
-        log.warn({ err, miniAppUrl }, 'bot.setup setChatMenuButton failed');
+        log.warn(
+          { err, miniAppUrl },
+          'bot.setup setChatMenuButton failed — falling back to commands',
+        );
+        try {
+          await bot.api.setChatMenuButton({ menu_button: { type: 'commands' } });
+        } catch (err2) {
+          log.warn({ err: err2 }, 'bot.setup commands fallback also failed');
+        }
       }
     },
     async stop() {

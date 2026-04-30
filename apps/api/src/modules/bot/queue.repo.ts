@@ -8,20 +8,25 @@ const PER_RECIPIENT_DEBOUNCE = sql`'1 hour'::interval`;
 
 export function createDmQueueRepo(db: Database): DmQueueRepo {
   return {
-    async enqueue({ recipientUserId, payload, floorSeconds }) {
-      // scheduled_at = max(NOW() + floorSeconds, last_dm_sent_at + 1h).
-      // The floor differs by kind: commissions coalesce a burst (60s),
-      // contest_finalized waits 5 min so a user who opens the app on their
-      // own doesn't get a redundant DM.
+    async enqueue({ recipientUserId, payload, floorSeconds, respectHourlyDebounce }) {
+      // scheduled_at = NOW + floorSeconds, optionally clamped to
+      // last_dm_sent_at + 1h. Commissions opt into the hourly cap to
+      // collapse a burst of 50 friend-wins into one summary DM. Per-
+      // user-action events (contest_finalized / cancelled / referral
+      // unlock) skip the cap so an unrelated commission DM doesn't
+      // delay the contest-result DM by an hour.
+      const debouncedSql = respectHourlyDebounce
+        ? sql`GREATEST(
+            NOW() + (${floorSeconds} || ' seconds')::interval,
+            COALESCE(u.last_dm_sent_at, NOW()) + ${PER_RECIPIENT_DEBOUNCE}
+          )`
+        : sql`NOW() + (${floorSeconds} || ' seconds')::interval`;
       const result = await db.execute<{ id: string }>(sql`
         INSERT INTO ${botDmQueue} (recipient_user_id, payload, scheduled_at)
         SELECT
           ${recipientUserId},
           ${sql.raw(`'${JSON.stringify(payload).replace(/'/g, "''")}'::jsonb`)},
-          GREATEST(
-            NOW() + (${floorSeconds} || ' seconds')::interval,
-            COALESCE(u.last_dm_sent_at, NOW()) + ${PER_RECIPIENT_DEBOUNCE}
-          )
+          ${debouncedSql}
         FROM ${users} u WHERE u.id = ${recipientUserId}
         RETURNING id
       `);

@@ -19,13 +19,18 @@ export type DmPayload =
   | { kind: 'referral_unlock'; event: ReferralUnlockEvent };
 
 export interface DmQueueRepo {
-  /** Insert a row with `scheduled_at = max(now + floorSeconds, lastDmSent + 1h)`.
-   * `floorSeconds` is the immediate-grouping window (commissions: 60s; contest
-   * finalized: 300s, giving the user time to come back on their own). */
+  /** Insert a row with `scheduled_at = max(now + floorSeconds, [hourly cap])`.
+   * `floorSeconds` is the immediate-grouping window. The hourly per-recipient
+   * cap (last_dm_sent_at + 1h) is applied ONLY when `respectHourlyDebounce`
+   * is true — used by commissions where 50 friends winning would otherwise
+   * spam the user. Per-action events (contest_finalized / cancelled /
+   * referral_unlock) skip the cap so a +\$0.09 commission DM doesn't delay
+   * the unrelated "your contest finished" DM by 60 minutes. */
   enqueue(args: {
     recipientUserId: string;
     payload: DmPayload;
     floorSeconds: number;
+    respectHourlyDebounce: boolean;
   }): Promise<{ id: string }>;
   /** Fetch ready rows grouped by recipient. Returns at most `cap` recipients
    * per call so a backlog doesn't starve other crons. */
@@ -100,6 +105,8 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           recipientUserId,
           payload: { kind: 'commission', event },
           floorSeconds: COMMISSION_FLOOR_SECONDS,
+          // Anti-spam: 50 friends winning in a row collapses to one DM/hour.
+          respectHourlyDebounce: true,
         });
       } catch (err) {
         // INV-7: log and swallow — DM enqueue failure must not bubble into
@@ -113,6 +120,8 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           recipientUserId,
           payload: { kind: 'contest_finalized', event },
           floorSeconds: CONTEST_FINALIZED_FLOOR_SECONDS,
+          // Naturally rate-limited (one per contest the user entered).
+          respectHourlyDebounce: false,
         });
       } catch (err) {
         deps.log.warn(
@@ -127,6 +136,7 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           recipientUserId,
           payload: { kind: 'contest_cancelled', event },
           floorSeconds: CONTEST_CANCELLED_FLOOR_SECONDS,
+          respectHourlyDebounce: false,
         });
       } catch (err) {
         deps.log.warn(
@@ -141,6 +151,9 @@ export function createDmQueueService(deps: DmQueueServiceDeps): DmQueueService {
           recipientUserId,
           payload: { kind: 'referral_unlock', event },
           floorSeconds: REFERRAL_UNLOCK_FLOOR_SECONDS,
+          // One-per-friend-first-game; the +\$25 needs an explanation
+          // even if a commission DM landed within the same hour.
+          respectHourlyDebounce: false,
         });
       } catch (err) {
         deps.log.warn(
