@@ -182,11 +182,12 @@ export function createContestsTickRepo(
       //   - scheduled  → should have locked by startsAt + thresholdMs
       //   - active     → should have finalized by endsAt + thresholdMs
       //   - finalizing → payouts should have completed by endsAt + thresholdMs
-      // Plus a separate abnormal-duration safety net for legacy rows whose
-      // (endsAt - startsAt) span is hours/days — those need cancelling
-      // regardless of where they are in the lifecycle.
+      // Contests v2 (ADR-0004) introduced 24h and 7d lanes intentionally —
+      // the legacy "abnormal duration > 1h" safety net would now nuke every
+      // Daily / Marathon contest at the first tick. We rely on the per-state
+      // cutoff (`thresholdMs` past startsAt/endsAt) which still catches stuck
+      // 10m/30m/1h cells but leaves long lanes alone.
       const cutoff = new Date(Date.now() - thresholdMs);
-      const ABNORMAL_DURATION_S = 60 * 60; // 1 h
       const rows = await db
         .select({ id: contests.id })
         .from(contests)
@@ -195,10 +196,6 @@ export function createContestsTickRepo(
             and(eq(contests.status, 'scheduled'), lt(contests.startsAt, cutoff)),
             and(eq(contests.status, 'active'), lt(contests.endsAt, cutoff)),
             and(eq(contests.status, 'finalizing'), lt(contests.endsAt, cutoff)),
-            and(
-              or(eq(contests.status, 'scheduled'), eq(contests.status, 'active')),
-              sql`(${contests.endsAt} - ${contests.startsAt}) > make_interval(secs => ${ABNORMAL_DURATION_S})`,
-            ),
           ),
         );
       return rows;
