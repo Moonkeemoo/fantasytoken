@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { Lobby } from './features/lobby/Lobby.js';
 import { TeamBuilder } from './features/team-builder/TeamBuilder.js';
 import { AllocSheetDev } from './features/team-builder/AllocSheetDev.js';
@@ -19,6 +19,11 @@ import { ReferralsDetail } from './features/referrals/ReferralsDetail.js';
 import { GlobalInviteSheet } from './features/referrals/GlobalInviteSheet.js';
 import { BottomNav } from './features/lobby/BottomNav.js';
 
+function RedirectBrowseToWatch() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/contests/${id ?? ''}/watch`} replace />;
+}
+
 export function App() {
   return (
     <>
@@ -33,6 +38,9 @@ export function App() {
         <Route path="/contests/:id/locked" element={<LockedScreen />} />
         <Route path="/contests/:id/live" element={<Live />} />
         <Route path="/contests/:id/watch" element={<Spectator />} />
+        {/* Back-compat: legacy /browse links (DM deep-links, prior bundles)
+            redirect to the new spectator. */}
+        <Route path="/contests/:id/browse" element={<RedirectBrowseToWatch />} />
         <Route path="/contests/:id/result" element={<Result />} />
         <Route path="/live" element={<LiveList />} />
         <Route path="/rankings" element={<Rankings />} />

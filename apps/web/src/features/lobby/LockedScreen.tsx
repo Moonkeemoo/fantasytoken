@@ -246,7 +246,7 @@ export function LockedScreen(): JSX.Element {
         </button>
         <button
           type="button"
-          onClick={() => navigate(`/contests/${id}/browse`)}
+          onClick={() => navigate(`/contests/${id}/watch`)}
           className="flex-1 rounded-lg bg-ink px-3 py-2.5 text-[12px] font-bold text-paper hover:bg-ink-soft"
         >
           Browse others →
