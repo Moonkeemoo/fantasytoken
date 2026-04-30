@@ -17,8 +17,8 @@ export interface UseDraftOptions {
   mode?: ContestMode;
   /** Drives $ display in selectors (slot tile, hero, etc.). */
   tier?: number;
-  /** Drives "GO BULL · 50 ⭐" label trailing. */
-  entryFeeStars?: number;
+  /** Trailing label for the GO CTA (e.g. "$0.50 entry", "50 ⭐ entry"). */
+  entryLabel?: string;
 }
 
 export interface UseDraft {
@@ -47,7 +47,7 @@ const DEFAULT_TIER = 100_000;
 export function useDraft(contestId: string, options: UseDraftOptions = {}): UseDraft {
   const mode = options.mode ?? 'bull';
   const tier = options.tier ?? DEFAULT_TIER;
-  const entryFeeStars = options.entryFeeStars ?? 50;
+  const entryLabel = options.entryLabel ?? '$0.50 entry';
 
   const [draft, setDraftState] = useState<LineupPick[]>(() => {
     try {
@@ -95,7 +95,7 @@ export function useDraft(contestId: string, options: UseDraftOptions = {}): UseD
   const total = useMemo(() => totalAlloc(draft), [draft]);
   const remaining = useMemo(() => remainingPct(draft), [draft]);
   const committed = useMemo(() => dollarsTotal(draft, tier), [draft, tier]);
-  const cta = useMemo(() => ctaState(draft, mode, entryFeeStars), [draft, mode, entryFeeStars]);
+  const cta = useMemo(() => ctaState(draft, mode, entryLabel), [draft, mode, entryLabel]);
 
   return {
     draft,

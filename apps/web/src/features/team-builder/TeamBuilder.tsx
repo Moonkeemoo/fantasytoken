@@ -1,18 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { Token } from '@fantasytoken/shared';
-import { ContestListItem } from '@fantasytoken/shared';
+import { ContestListItem, DEFAULT_VIRTUAL_BUDGET_USD } from '@fantasytoken/shared';
 import { apiFetch } from '../../lib/api-client.js';
 import { useMe } from '../me/useMe.js';
 import { TopUpModal } from '../wallet/TopUpModal.js';
-import { ContextBar } from './ContextBar.js';
-import { LineupSummary } from './LineupSummary.js';
-import { TokenSearch } from './TokenSearch.js';
-import { ConfirmBar } from './ConfirmBar.js';
-import { useDraft } from './useDraft.js';
+import { DraftScreen } from './DraftScreen.js';
 import { useSubmitEntry } from './useSubmitEntry.js';
-import { addToken, bumpAlloc, removeToken } from './lineupReducer.js';
+import type { ContestMode } from './AllocSheet.js';
+import type { LineupPick } from './lineupReducer.js';
 
 function useContest(id: string | undefined) {
   return useQuery({
@@ -22,33 +18,37 @@ function useContest(id: string | undefined) {
   });
 }
 
-export function TeamBuilder() {
+/** Heuristic until contest API ships an explicit `mode` field. INV-4 keeps Bear
+ * frozen for MVP, so this is effectively always 'bull' in production today. */
+function inferMode(contestName: string): ContestMode {
+  return /\bbear\b/i.test(contestName) ? 'bear' : 'bull';
+}
+
+export function TeamBuilder(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const me = useMe();
   const contest = useContest(id);
-  const { draft, setDraft, clearDraft } = useDraft(id ?? '');
   const submit = useSubmitEntry();
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const onAdd = (t: Token) =>
-    setDraft(addToken(draft, { symbol: t.symbol, name: t.name, imageUrl: t.imageUrl }));
-  const onRemove = (sym: string) => setDraft(removeToken(draft, sym));
-  const onBump = (sym: string, delta: number) => setDraft(bumpAlloc(draft, sym, delta));
-
-  const onSubmit = () => {
+  const onSubmit = (picks: LineupPick[]): void => {
     if (!id) return;
     setErrMsg(null);
     // Strip display-only metadata before posting — backend zod schema only
     // accepts { symbol, alloc } and would reject the enriched LineupPick.
-    const wirePicks = draft.map((p) => ({ symbol: p.symbol, alloc: p.alloc }));
+    const wirePicks = picks.map((p) => ({ symbol: p.symbol, alloc: p.alloc }));
     submit.mutate(
       { contestId: id, picks: wirePicks },
       {
         onSuccess: (res) => {
-          clearDraft();
-          navigate(`/contests/${id}/live?entry=${res.entryId}`);
+          try {
+            localStorage.removeItem(`draft:contest:${id}`);
+          } catch {
+            // ignore
+          }
+          navigate(`/contests/${id}/locked?entry=${res.entryId}`);
         },
         onError: (err) => {
           const msg = String(err);
@@ -72,26 +72,26 @@ export function TeamBuilder() {
     return <div className="p-6 text-hl-red">contest not found</div>;
   if (!me.data) return <div className="p-6 text-hl-red">not authenticated</div>;
 
+  const mode = inferMode(contest.data.name);
+
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <ContextBar
-        name={contest.data.name}
-        entryFeeCents={contest.data.entryFeeCents}
-        prizePoolCents={contest.data.prizePoolCents}
-        hasUnsavedPicks={draft.length > 0}
-      />
-      <LineupSummary picks={draft} onRemove={onRemove} />
-      <TokenSearch picks={draft} onAdd={onAdd} onRemove={onRemove} onBump={onBump} />
-      {errMsg && <div className="m-3 text-[10px] text-hl-red">{errMsg}</div>}
-      <ConfirmBar
+    <>
+      <DraftScreen
+        contestId={id}
+        contestName={contest.data.name}
+        mode={mode}
+        // ADR-0003: virtualBudget is per-contest UX. Until the API exposes it,
+        // every contest renders against DEFAULT_VIRTUAL_BUDGET_USD.
+        tier={DEFAULT_VIRTUAL_BUDGET_USD}
         entryFeeCents={contest.data.entryFeeCents}
         balanceCents={me.data.balanceCents}
-        picks={draft}
         isSubmitting={submit.isPending}
+        errMsg={errMsg}
         onSubmit={onSubmit}
+        onBack={() => navigate(-1)}
         onTopUp={() => setTopUpOpen(true)}
       />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
-    </div>
+    </>
   );
 }

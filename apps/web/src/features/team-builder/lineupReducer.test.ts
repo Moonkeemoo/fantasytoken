@@ -268,8 +268,8 @@ describe('lineupReducer', () => {
 
   describe('ctaState', () => {
     it('< 5 picks → pick N more', () => {
-      expect(ctaState([], 'bull', 50)).toEqual({ kind: 'pick', label: 'PICK 5 MORE' });
-      expect(ctaState([{ symbol: 'BTC', alloc: 50 }], 'bull', 50)).toEqual({
+      expect(ctaState([], 'bull', '50 ⭐ entry')).toEqual({ kind: 'pick', label: 'PICK 5 MORE' });
+      expect(ctaState([{ symbol: 'BTC', alloc: 50 }], 'bull', '50 ⭐ entry')).toEqual({
         kind: 'pick',
         label: 'PICK 4 MORE',
       });
@@ -283,7 +283,7 @@ describe('lineupReducer', () => {
         { symbol: 'WIF', alloc: 20 },
         { symbol: 'BONK', alloc: 15 },
       ];
-      expect(ctaState(five, 'bull', 50)).toEqual({
+      expect(ctaState(five, 'bull', '50 ⭐ entry')).toEqual({
         kind: 'alloc',
         label: 'ALLOCATE 5% MORE',
       });
@@ -297,7 +297,7 @@ describe('lineupReducer', () => {
         { symbol: 'WIF', alloc: 20 },
         { symbol: 'BONK', alloc: 10 },
       ];
-      expect(ctaState(five, 'bull', 50)).toEqual({
+      expect(ctaState(five, 'bull', '50 ⭐ entry')).toEqual({
         kind: 'over',
         label: 'OVER BUDGET BY 15%',
       });
@@ -311,11 +311,11 @@ describe('lineupReducer', () => {
         { symbol: 'WIF', alloc: 15 },
         { symbol: 'BONK', alloc: 10 },
       ];
-      expect(ctaState(five, 'bull', 50)).toEqual({
+      expect(ctaState(five, 'bull', '50 ⭐ entry')).toEqual({
         kind: 'ready',
         label: 'GO BULL · 50 ⭐ entry',
       });
-      expect(ctaState(five, 'bear', 25)).toEqual({
+      expect(ctaState(five, 'bear', '25 ⭐ entry')).toEqual({
         kind: 'ready',
         label: 'GO BEAR · 25 ⭐ entry',
       });

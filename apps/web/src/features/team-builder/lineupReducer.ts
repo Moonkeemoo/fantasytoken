@@ -7,7 +7,7 @@ import {
   dollarsFor,
 } from '@fantasytoken/shared';
 
-// Display metadata is attached on add so LineupSummary can render real
+// Display metadata is attached on add so LineupSlot can render real
 // icons + names without a separate symbol→token lookup. Only `symbol` and
 // `alloc` go on the wire (extra fields are stripped at submission).
 export interface LineupPick {
@@ -118,7 +118,7 @@ export function isValid(lineup: LineupPick[]): boolean {
   return lineup.every((p) => p.alloc >= MIN && p.alloc <= MAX && p.alloc % STEP === 0);
 }
 
-// ---------- Selectors (pure, used by DraftScreen + ConfirmBar) ----------
+// ---------- Selectors (pure, used by DraftScreen sticky CTA) ----------
 
 export function totalAlloc(lineup: LineupPick[]): number {
   return lineup.reduce((s, p) => s + p.alloc, 0);
@@ -144,12 +144,12 @@ export interface CtaState {
 export function ctaState(
   lineup: LineupPick[],
   mode: ContestModeForCta,
-  entryFeeStars: number,
+  entryLabel: string,
 ): CtaState {
   if (isValid(lineup)) {
     return {
       kind: 'ready',
-      label: `GO ${mode.toUpperCase()} · ${entryFeeStars} ⭐ entry`,
+      label: `GO ${mode.toUpperCase()} · ${entryLabel}`,
     };
   }
   if (lineup.length < N) {
