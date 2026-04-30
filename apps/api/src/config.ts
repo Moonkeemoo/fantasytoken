@@ -36,10 +36,16 @@ const ConfigSchema = z.object({
   // Used to build absolute og:image links for the share card. Empty → routes derive
   // from request headers, which works behind Railway / Vercel proxies.
   PUBLIC_API_URL: z.string().url().optional(),
-  /** Mini-app URL used by the TG bot's /start inline button to deep-link
-   * back into the app. Optional — when missing, /start replies without a
-   * button. Set to https://t.me/<bot>/<short> on prod. */
-  MINI_APP_URL: z.string().url().optional(),
+  /** Telegram deep-link to the mini-app, e.g. https://t.me/<bot>/<short>.
+   * Used inside DMs and share links — opens *inside* Telegram and supports
+   * ?startapp=... for in-app routing (result pages, referral attribution).
+   * Default points at the production bot; override on staging environments. */
+  MINI_APP_URL: z.string().url().default('https://t.me/fantasytokenbot/fantasytoken'),
+  /** Direct HTTPS URL of the deployed mini-app frontend (Vercel/etc).
+   * Telegram requires this format for `web_app: { url }` in inline buttons
+   * and `setChatMenuButton.web_app` — a t.me alias is silently rejected.
+   * Default points at the production Vercel deploy. */
+  MINI_APP_WEB_URL: z.string().url().default('https://fantasytoken.vercel.app'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

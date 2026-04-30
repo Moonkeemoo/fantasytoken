@@ -141,6 +141,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
           token: deps.config.TELEGRAM_BOT_TOKEN,
           log: deps.logger,
           ...(deps.config.MINI_APP_URL ? { miniAppUrl: deps.config.MINI_APP_URL } : {}),
+          ...(deps.config.MINI_APP_WEB_URL ? { miniAppWebUrl: deps.config.MINI_APP_WEB_URL } : {}),
         });
   const dmQueueRepo = createDmQueueRepo(deps.db);
   const dmQueue = bot
