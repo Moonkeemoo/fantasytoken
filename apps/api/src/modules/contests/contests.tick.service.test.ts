@@ -203,7 +203,7 @@ describe('ContestsTickService', () => {
       expect(op0?.kind === 'lock' ? op0.bots : undefined).toBe(0);
     });
 
-    it('aborts lock if any token price stale (>2h)', async () => {
+    it('locks even when some token prices are >2h stale (graceful degradation, no deadlock)', async () => {
       const { repo, ops } = makeFakeRepo({
         contests: [
           {
@@ -225,7 +225,9 @@ describe('ContestsTickService', () => {
       });
       const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
-      expect(ops).toHaveLength(0);
+      const op0 = ops[0];
+      expect(op0?.kind).toBe('lock');
+      expect(op0?.kind === 'lock' ? op0.contestId : undefined).toBe('c1');
     });
   });
 
@@ -289,29 +291,25 @@ describe('ContestsTickService', () => {
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'long-duration')).toBe(true);
     });
 
-    it('cancels scheduled contest stuck because prices were stale at lock time', async () => {
+    it('cancels legacy scheduled contest with abnormal endsAt (long-duration safety net)', async () => {
+      // Legacy seed contests had 24h windows. The stale-cancel cron catches
+      // any scheduled contest with endsAt − startsAt > threshold and refunds
+      // it so the user isn't left holding an entry forever. The current
+      // schedule (5min fill + 10min play) never hits this branch.
       const { repo, ops } = makeFakeRepo({
         contests: [
           {
             id: 'orphan',
             status: 'scheduled',
             startsAt: nowPlusMin(-180),
-            endsAt: nowPlusMin(60 * 12), // legacy long endsAt
+            endsAt: nowPlusMin(60 * 12),
             maxCapacity: 100,
             realEntries: 0,
           },
         ],
-        tokens: [
-          { symbol: 'BTC', lastUpdatedAt: new Date(Date.now() - 3 * 3600_000) },
-          { symbol: 'ETH', lastUpdatedAt: new Date() },
-          { symbol: 'PEPE', lastUpdatedAt: new Date() },
-          { symbol: 'WIF', lastUpdatedAt: new Date() },
-          { symbol: 'BONK', lastUpdatedAt: new Date() },
-        ],
       });
       const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
-      expect(ops.some((o) => o.kind === 'lock')).toBe(false); // lock aborted by stale prices
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'orphan')).toBe(true);
     });
 

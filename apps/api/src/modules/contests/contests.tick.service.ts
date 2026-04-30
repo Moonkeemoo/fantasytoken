@@ -56,11 +56,17 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
           const cutoff = Date.now() - STALE_PRICE_HOURS * 3600_000;
           const stale = tokens.filter((t) => t.lastUpdatedAt && t.lastUpdatedAt.getTime() < cutoff);
           if (stale.length > 0) {
+            // Stale prices used to abort the lock; that turned into a
+            // deadlock whenever no other contest was active to keep the
+            // active-token sync warm. We now lock anyway — the start
+            // snapshot uses whatever current_price_usd is at lock time
+            // (the same value the user saw when entering), preserving
+            // internal fairness. Operationally this just means a contest
+            // can occasionally start with a slightly stale baseline.
             deps.log.warn(
               { contestId: c.id, stale: stale.map((t) => t.symbol) },
-              'contests.tick lock aborted (stale prices)',
+              'contests.tick lock proceeding with stale prices',
             );
-            continue;
           }
 
           // Fill remaining seats: maxCapacity − realEntries. Pure capacity-fill, no

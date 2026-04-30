@@ -67,14 +67,18 @@ export function createTokensRepo(db: Database): TokensRepo {
     },
 
     async listActiveCoingeckoIds() {
-      // Resolve symbols-in-active-contests → coingecko_ids via tokens table.
+      // Resolve symbols-in-live-or-pending-contests → coingecko_ids. We
+      // include 'scheduled' so prices stay warm during the fill window —
+      // otherwise a contest with no peers could age its picks past the
+      // 2h staleness gate the tick service used to enforce, and locking
+      // would deadlock waiting for prices that never refresh.
       const rows = await db.execute<{ coingecko_id: string }>(
         sql`SELECT DISTINCT t.coingecko_id
             FROM ${entries} e
             JOIN ${contests} c ON e.contest_id = c.id,
             jsonb_array_elements(e.picks::jsonb) pick
             JOIN ${tokens} t ON UPPER(t.symbol) = UPPER(pick->>'symbol')
-            WHERE c.status = 'active'`,
+            WHERE c.status IN ('scheduled', 'active')`,
       );
       return (rows as unknown as Array<{ coingecko_id: string }>).map((r) => r.coingecko_id);
     },
