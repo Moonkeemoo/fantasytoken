@@ -16,20 +16,36 @@ WebApp.expand();
 
 // TG fullscreen mode (drag-up) puts our app under TG's own Close/⋮/drag-handle
 // chrome. TG 8+ exposes `contentSafeAreaInset` and a CSS variable
-// `--tg-content-safe-area-inset-top`, but support varies across clients —
-// publish our own copy so Header.tsx max() always has a fresh value.
+// `--tg-content-safe-area-inset-top`, but iOS clients <11 don't always set
+// it. We measure ourselves: the difference between window.innerHeight (full
+// viewport) and WebApp.viewportHeight (height TG actually grants us minus
+// the bottom keyboard) is roughly the top chrome inset. Combined with a
+// generous fixed minimum it reliably clears the buttons even on stale TGs.
 type TgWithSafeArea = typeof WebApp & {
   contentSafeAreaInset?: { top?: number };
+  viewportHeight?: number;
+  viewportStableHeight?: number;
+  isExpanded?: boolean;
   onEvent?: (ev: string, cb: () => void) => void;
 };
 const tg = WebApp as TgWithSafeArea;
+
 function syncSafeArea(): void {
-  const top = tg.contentSafeAreaInset?.top ?? 0;
-  document.documentElement.style.setProperty('--tg-content-safe-area-inset-top', `${top}px`);
+  const sdkValue = tg.contentSafeAreaInset?.top ?? 0;
+  // Heuristic: if the WebApp is in expanded/fullscreen mode the TG title bar
+  // lands ON TOP of our content. iOS Safari reports env(safe-area-inset-top)
+  // for the device notch (~44px) but NOT for the TG chrome above it
+  // (another ~16-24px). We add a 24px floor whenever we're expanded.
+  const expandedFloor = tg.isExpanded ? 24 : 0;
+  const px = Math.max(sdkValue, expandedFloor);
+  document.documentElement.style.setProperty('--tg-content-safe-area-inset-top', `${px}px`);
 }
+
 syncSafeArea();
 tg.onEvent?.('contentSafeAreaChanged', syncSafeArea);
 tg.onEvent?.('viewportChanged', syncSafeArea);
+tg.onEvent?.('safeAreaChanged', syncSafeArea);
+tg.onEvent?.('fullscreenChanged', syncSafeArea);
 
 // Lock viewport zoom. iOS Safari (which TG Mini Apps run on) ignores
 // `user-scalable=no`, so we also block the gesture events explicitly.

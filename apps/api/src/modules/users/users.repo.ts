@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { users } from '../../db/schema/index.js';
 import type { UsersRepo } from './users.service.js';
