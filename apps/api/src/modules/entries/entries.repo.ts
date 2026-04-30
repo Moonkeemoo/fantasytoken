@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, tokens, users } from '../../db/schema/index.js';
-import type { LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
+import type { ActivityItem, LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
 import type { EntriesRepo } from './entries.service.js';
 
 export function createEntriesRepo(db: Database): EntriesRepo {
@@ -132,6 +132,34 @@ export function createEntriesRepo(db: Database): EntriesRepo {
         pnlPct,
         picks,
       };
+    },
+
+    async listActivity({ contestId, limit }): Promise<ActivityItem[]> {
+      const rows = await db
+        .select({
+          firstName: users.firstName,
+          username: users.username,
+          botHandle: entries.botHandle,
+          isBot: entries.isBot,
+          submittedAt: entries.submittedAt,
+        })
+        .from(entries)
+        .leftJoin(users, eq(users.id, entries.userId))
+        .where(eq(entries.contestId, contestId))
+        .orderBy(desc(entries.submittedAt))
+        .limit(limit);
+
+      return rows.map((r) => {
+        // First-name preferred (privacy contract — handoff §13 Q4 reply).
+        // Fall back to username only when first name is absent (rare in real
+        // TG accounts; common in stubbed dev data).
+        const handle = r.firstName ?? r.username ?? r.botHandle ?? (r.isBot ? 'bot' : 'player');
+        return {
+          user: handle,
+          action: 'locked-in' as const,
+          submittedAt: r.submittedAt.toISOString(),
+        };
+      });
     },
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { dollarsFor, fmtMoney, fmtMoneyExact } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
@@ -6,10 +6,20 @@ import { Label } from '../../components/ui/Label.js';
 import { useCountdown } from '../../lib/countdown.js';
 import { formatCents } from '../../lib/format.js';
 import type { LineupPick } from '../team-builder/lineupReducer.js';
+import { useActivity } from './useActivity.js';
 import { useLockedState } from './useLockedState.js';
 
 interface LockedNavState {
   picks?: LineupPick[];
+}
+
+function formatAgo(then: number, now: number): string {
+  const s = Math.max(0, Math.floor((now - then) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
 }
 
 function formatCountdown(ms: number): { primary: string; subtitle: string } {
@@ -40,6 +50,18 @@ export function LockedScreen(): JSX.Element {
 
   const tier = stateQuery.data ? Math.round(stateQuery.data.virtualBudgetCents / 100) : 100_000;
   const picks = useMemo(() => navState.picks ?? [], [navState.picks]);
+
+  const activityQ = useActivity(id);
+  const activity = useMemo(() => activityQ.data?.items ?? [], [activityQ.data]);
+
+  const [activityIdx, setActivityIdx] = useState(0);
+  useEffect(() => {
+    if (activity.length <= 1) return;
+    const t = setInterval(() => {
+      setActivityIdx((i) => (i + 1) % activity.length);
+    }, 4_000);
+    return () => clearInterval(t);
+  }, [activity.length]);
 
   const startsAt = stateQuery.data?.startsAt;
   const ms = useCountdown(startsAt ?? new Date(Date.now() + 60 * 60_000).toISOString());
@@ -109,8 +131,23 @@ export function LockedScreen(): JSX.Element {
         </div>
         <div className="mt-2 flex items-center gap-2 border-t border-line pt-2 text-[11px] text-ink-soft">
           <span className="h-1.5 w-1.5 rounded-full bg-bull" />
-          <span className="truncate">You just locked in</span>
-          <span className="ml-auto text-muted">just now</span>
+          {activity.length === 0 ? (
+            <>
+              <span className="truncate">You just locked in</span>
+              <span className="ml-auto text-muted">just now</span>
+            </>
+          ) : (
+            (() => {
+              const item = activity[activityIdx % activity.length]!;
+              const ago = formatAgo(Date.parse(item.submittedAt), Date.now());
+              return (
+                <>
+                  <span className="truncate">{item.user} just locked in</span>
+                  <span className="ml-auto text-muted">{ago}</span>
+                </>
+              );
+            })()
+          )}
         </div>
       </section>
 

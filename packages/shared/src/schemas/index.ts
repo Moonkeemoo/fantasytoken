@@ -1,3 +1,4 @@
+export * from './activity.js';
 export * from './contest.js';
 export * from './contest-list.js';
 export * from './user.js';

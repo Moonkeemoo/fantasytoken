@@ -1,4 +1,9 @@
-import type { EntryPick, LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
+import type {
+  ActivityItem,
+  EntryPick,
+  LastLineupResponse,
+  LineupSummary,
+} from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
@@ -30,6 +35,12 @@ export interface EntriesRepo {
    */
   findLastLineupForUser(userId: string): Promise<LastLineupResponse['lineup']>;
   /**
+   * Recent lock-in events for the LockedScreen rotating activity row
+   * (TZ-001 §06.2). Privacy contract: first-name handles only — never
+   * username + stake combinations.
+   */
+  listActivity(args: { contestId: string; limit: number }): Promise<ActivityItem[]>;
+  /**
    * Fetch entries for a contest, projected for the public Browse-others feed.
    * Returns ONLY user handle + symbols + submittedAt — never allocations,
    * stake, or PnL (privacy contract per ADR-0003 / handoff §13 Q5).
@@ -57,6 +68,7 @@ export interface EntriesService {
   submit(args: SubmitArgs): Promise<SubmitResult>;
   listPublicLineups(args: ListLineupsArgs): Promise<{ lineups: LineupSummary[]; total: number }>;
   findLastLineupForUser(userId: string): Promise<LastLineupResponse['lineup']>;
+  listActivity(args: { contestId: string; limit: number }): Promise<ActivityItem[]>;
 }
 
 export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
@@ -113,6 +125,11 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
 
     async findLastLineupForUser(userId) {
       return deps.repo.findLastLineupForUser(userId);
+    },
+
+    async listActivity({ contestId, limit }) {
+      const clamped = Math.max(1, Math.min(50, limit));
+      return deps.repo.listActivity({ contestId, limit: clamped });
     },
   };
 }

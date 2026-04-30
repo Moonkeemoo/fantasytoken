@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import {
+  type ActivityResponse,
   LineupsFilter,
   type LineupsListResponse,
   entrySubmissionSchema,
@@ -66,6 +67,27 @@ export function makeEntriesRoutes(deps: EntriesRoutesDeps): FastifyPluginAsync {
         limit: resolvedLimit,
       });
       const response: LineupsListResponse = result;
+      return response;
+    });
+
+    /**
+     * GET /contests/:id/activity?limit=20
+     *
+     * Recent lock-in events for the LockedScreen rotating activity row.
+     * Privacy: first-name handles only (handoff §13 Q4).
+     */
+    app.get('/:id/activity', async (req) => {
+      const { id: contestId } = z.object({ id: z.string().uuid() }).parse(req.params);
+      const { limit } = z
+        .object({
+          limit: z.coerce.number().int().positive().max(50).optional(),
+        })
+        .parse(req.query);
+      const items = await deps.entries.listActivity({
+        contestId,
+        limit: limit ?? 20,
+      });
+      const response: ActivityResponse = { items };
       return response;
     });
   };

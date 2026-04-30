@@ -35,6 +35,9 @@ function makeFakeRepo(
     async findLastLineupForUser() {
       return null;
     },
+    async listActivity() {
+      return [];
+    },
     async listPublicLineups({ limit }) {
       // Two fake lineups, sorted oldest-first for filter='all'.
       const all = [
