@@ -17,6 +17,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async search() {
       return [];
     },
+    async pickedByPctMap() {
+      return new Map<string, number>();
+    },
     async listActiveSymbols() {
       return [];
     },

@@ -35,6 +35,10 @@ export interface TokensRepo {
       marketCapUsd: string | null;
     }>
   >;
+  /** Per-symbol pick frequency in a contest, expressed as integer percent.
+   * Returns symbols that appear in ≥1 entry; missing symbols imply 0%.
+   * Used by the contest-scoped /tokens/search to surface 🔥 N% picked. */
+  pickedByPctMap(args: { contestId: string; symbols: string[] }): Promise<Map<string, number>>;
   listActiveSymbols(): Promise<string[]>;
   /** Returns coingecko_ids for tokens used in any active contest's entry picks. */
   listActiveCoingeckoIds(): Promise<string[]>;
@@ -50,7 +54,17 @@ export interface TokensService {
   syncCatalog(args: { pages: number; perPage: number; pageDelayMs?: number }): Promise<number>;
   syncActive(): Promise<number>;
   listPage(args: { page: number; limit: number }): ReturnType<TokensRepo['listPage']>;
-  search(args: { q: string; limit: number }): ReturnType<TokensRepo['search']>;
+  search(args: { q: string; limit: number; contestId?: string }): Promise<
+    Array<{
+      symbol: string;
+      name: string;
+      imageUrl: string | null;
+      currentPriceUsd: string | null;
+      pctChange24h: string | null;
+      marketCapUsd: string | null;
+      pickedByPct?: number;
+    }>
+  >;
 }
 
 export function createTokensService(deps: TokensServiceDeps): TokensService {
@@ -115,7 +129,17 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
     async search(args) {
       const trimmed = args.q.trim();
       if (trimmed.length === 0) return [];
-      return deps.repo.search({ q: trimmed, limit: args.limit });
+      const items = await deps.repo.search({ q: trimmed, limit: args.limit });
+      if (!args.contestId || items.length === 0) return items;
+      const pickedMap = await deps.repo.pickedByPctMap({
+        contestId: args.contestId,
+        symbols: items.map((t) => t.symbol),
+      });
+      return items.map((t) => {
+        const pct = pickedMap.get(t.symbol);
+        if (pct === undefined) return t;
+        return { ...t, pickedByPct: pct };
+      });
     },
   };
 }

@@ -11,6 +11,8 @@ const QuerySchema = z.object({
 const SearchQuery = z.object({
   q: z.string().min(1).max(40),
   limit: z.coerce.number().int().positive().max(50).default(20),
+  /** When provided, the response includes per-symbol pickedByPct (🔥 N% picked). */
+  contestId: z.string().uuid().optional(),
 });
 
 export interface TokensRoutesDeps {
@@ -32,7 +34,11 @@ export function makeTokensRoutes(deps: TokensRoutesDeps): FastifyPluginAsync {
 
     app.get('/search', async (req) => {
       const q = SearchQuery.parse(req.query);
-      const items = await deps.tokens.search({ q: q.q, limit: q.limit });
+      const items = await deps.tokens.search({
+        q: q.q,
+        limit: q.limit,
+        ...(q.contestId !== undefined && { contestId: q.contestId }),
+      });
       return { items };
     });
   };

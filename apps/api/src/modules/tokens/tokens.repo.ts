@@ -55,6 +55,33 @@ export function createTokensRepo(db: Database): TokensRepo {
         .limit(limit);
     },
 
+    async pickedByPctMap({ contestId, symbols }) {
+      if (symbols.length === 0) return new Map<string, number>();
+      // Count entries containing each symbol vs total entries in the contest.
+      // We pre-count totals once and then run a JSONB-array-elements lateral
+      // join to count matches per symbol.
+      const totalRows = await db.execute<{ total: number }>(
+        sql`SELECT COUNT(*)::int AS total FROM ${entries} WHERE ${entries.contestId} = ${contestId}`,
+      );
+      const total = (totalRows as unknown as Array<{ total: number }>)[0]?.total ?? 0;
+      if (total === 0) return new Map<string, number>();
+      const upper = symbols.map((s) => s.toUpperCase());
+      const rows = await db.execute<{ symbol: string; n: number }>(
+        sql`SELECT pick->>'symbol' AS symbol, COUNT(DISTINCT ${entries.id})::int AS n
+            FROM ${entries},
+                 jsonb_array_elements(${entries.picks}::jsonb) pick
+            WHERE ${entries.contestId} = ${contestId}
+              AND UPPER(pick->>'symbol') = ANY(${upper})
+            GROUP BY pick->>'symbol'`,
+      );
+      const map = new Map<string, number>();
+      for (const r of rows as unknown as Array<{ symbol: string; n: number }>) {
+        const pct = Math.round((r.n / total) * 100);
+        map.set(r.symbol, pct);
+      }
+      return map;
+    },
+
     async listActiveSymbols() {
       const rows = await db.execute<{ symbol: string }>(
         sql`SELECT DISTINCT (pick->>'symbol')::text AS symbol

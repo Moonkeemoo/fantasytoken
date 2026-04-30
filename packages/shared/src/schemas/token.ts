@@ -10,6 +10,10 @@ export const Token = z.object({
   currentPriceUsd: z.string().nullable(),
   pctChange24h: z.string().nullable(),
   marketCapUsd: z.string().nullable(),
+  /** ADR-0003: % of contest entrants who picked this token. Set only when the
+   * search was contest-scoped (?contestId=…); absent for global searches.
+   * Drives the 🔥 N% picked badge on TokenResultRow. */
+  pickedByPct: z.number().int().min(0).max(100).optional(),
 });
 export type Token = z.infer<typeof Token>;
 

@@ -6,7 +6,12 @@ import { apiFetch } from '../../lib/api-client.js';
 
 const SearchResponse = z.object({ items: z.array(Token) });
 
-export function useTokenSearch(rawQuery: string) {
+/**
+ * Token search with optional contest scoping.
+ * When `contestId` is provided, the response includes per-symbol `pickedByPct`
+ * (drives the 🔥 N% picked badge on TokenResultRow).
+ */
+export function useTokenSearch(rawQuery: string, contestId?: string) {
   const [debounced, setDebounced] = useState(rawQuery);
 
   useEffect(() => {
@@ -15,8 +20,12 @@ export function useTokenSearch(rawQuery: string) {
   }, [rawQuery]);
 
   return useQuery({
-    queryKey: ['tokens', 'search', debounced],
-    queryFn: () => apiFetch(`/tokens/search?q=${encodeURIComponent(debounced)}`, SearchResponse),
+    queryKey: ['tokens', 'search', debounced, contestId ?? null],
+    queryFn: () => {
+      const params = new URLSearchParams({ q: debounced });
+      if (contestId) params.set('contestId', contestId);
+      return apiFetch(`/tokens/search?${params.toString()}`, SearchResponse);
+    },
     enabled: debounced.length > 0,
     staleTime: 60_000,
   });

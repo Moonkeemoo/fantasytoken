@@ -50,7 +50,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
     draftCtx;
 
   const [q, setQ] = useState('');
-  const search = useTokenSearch(q);
+  const search = useTokenSearch(q, contestId);
   const items = useMemo(() => search.data?.items ?? [], [search.data]);
   const allocBySymbol = useMemo(() => new Map(draft.map((p) => [p.symbol, p.alloc])), [draft]);
   const cantAfford = balanceCents < entryFeeCents;
@@ -80,6 +80,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
       imageUrl: token.imageUrl,
       pctChange24h: token.pctChange24h !== null ? Number.parseFloat(token.pctChange24h) : null,
       priceDisplay: token.currentPriceUsd ? `$${Number.parseFloat(token.currentPriceUsd)}` : null,
+      ...(token.pickedByPct !== undefined && { pickedByPct: token.pickedByPct }),
     });
   };
 
@@ -246,6 +247,7 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
                 {...(alloc !== undefined ? { alloc } : {})}
                 tier={tier}
                 mode={mode}
+                {...(t.pickedByPct !== undefined ? { pickedByPct: t.pickedByPct } : {})}
                 onSelect={() => onTokenSelect(t)}
               />
             );
