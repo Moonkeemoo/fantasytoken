@@ -81,13 +81,17 @@ function Populated({
   const navigate = useNavigate();
 
   // Up to 5 avatar chips + "+N" overflow. Sort: active first, then most-
-  // recent. Keeps the most-engaged faces in front.
-  const l1 = (tree?.l1 ?? []).slice().sort((a, b) => {
+  // recent. Anchor the count to summary.l1Count (authoritative) and pad
+  // with anonymous placeholders when tree hasn't resolved or returns
+  // fewer rows — better than telling the user "no friends yet" when the
+  // stat box right above proudly says "1 invited".
+  const realL1 = (tree?.l1 ?? []).slice().sort((a, b) => {
     if (a.hasPlayed !== b.hasPlayed) return a.hasPlayed ? -1 : 1;
     return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
   });
-  const previewCount = Math.min(5, l1.length);
-  const overflow = l1.length - previewCount;
+  const totalL1 = Math.max(realL1.length, summary.l1Count);
+  const previewCount = Math.min(5, totalL1);
+  const overflow = totalL1 - previewCount;
 
   return (
     <Card variant="dim" className="!px-[14px] !py-3">
@@ -115,17 +119,23 @@ function Populated({
 
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-dashed border-ink/30 pt-[10px]">
         <div className="flex items-center -space-x-[6px]">
-          {l1.slice(0, previewCount).map((n) => (
-            <div key={n.userId} className="rounded-full ring-2 ring-paper-dim">
-              <Avatar name={n.firstName ?? '?'} url={n.photoUrl} size={22} />
-            </div>
-          ))}
+          {Array.from({ length: previewCount }).map((_, i) => {
+            const n = realL1[i];
+            return (
+              <div
+                key={n?.userId ?? `placeholder-${i}`}
+                className="rounded-full ring-2 ring-paper-dim"
+              >
+                <Avatar name={n?.firstName ?? '?'} url={n?.photoUrl ?? null} size={22} />
+              </div>
+            );
+          })}
           {overflow > 0 && (
             <div className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold ring-2 ring-paper-dim">
               +{overflow}
             </div>
           )}
-          {l1.length === 0 && (
+          {totalL1 === 0 && (
             <span className="font-mono text-[10px] text-muted">no friends yet</span>
           )}
         </div>

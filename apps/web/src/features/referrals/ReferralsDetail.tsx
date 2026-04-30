@@ -54,11 +54,14 @@ export function ReferralsDetail() {
   // Top contributors: drawn from L1+L2 by lifetime contributedCents.
   // The mock has "this month" but we don't track windows on the BE yet —
   // keep the lifetime ranking honest until the BE adds month buckets.
+  // Show every friend who's actually played (contests > 0), not just
+  // those who already paid commissions — a freshly-played first-contest
+  // friend should appear immediately, before commissions accumulate.
   const allContributors = [
     ...(t?.l1 ?? []).map((n) => ({ ...n, level: 1 as const })),
     ...(t?.l2 ?? []).map((n) => ({ ...n, level: 2 as const })),
   ]
-    .filter((n) => n.totalContributedCents > 0)
+    .filter((n) => n.contestsPlayed > 0 || n.totalContributedCents > 0)
     .sort((a, b) => b.totalContributedCents - a.totalContributedCents)
     .slice(0, 5);
 
@@ -167,12 +170,14 @@ export function ReferralsDetail() {
           <TreeRow
             label="L1"
             nodes={t?.l1 ?? []}
+            expectedCount={s.l1Count}
             activeCount={s.l1ActiveCount}
             emptyHint="no direct invites yet"
           />
           <TreeRow
             label="L2"
             nodes={t?.l2 ?? []}
+            expectedCount={s.l2Count}
             activeCount={s.l2ActiveCount}
             emptyHint="L2 fills as your friends invite theirs"
           />
@@ -230,6 +235,7 @@ function TierCard({
 function TreeRow({
   label,
   nodes,
+  expectedCount,
   activeCount,
   emptyHint,
 }: {
@@ -240,26 +246,38 @@ function TreeRow({
     photoUrl: string | null;
     hasPlayed: boolean;
   }>;
+  /** Authoritative count from the summary — used to anchor the row in
+   * case `nodes` (from the tree query) is still loading or returned
+   * fewer items than expected. We pad with placeholder bubbles. */
+  expectedCount: number;
   activeCount: number;
   emptyHint: string;
 }) {
   const PREVIEW = 7;
-  const overflow = nodes.length - PREVIEW;
+  const total = Math.max(nodes.length, expectedCount);
+  const previewCount = Math.min(PREVIEW, total);
+  const overflow = total - previewCount;
   return (
     <div className="flex items-center gap-2">
       <span className="font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] text-muted">
         {label}
       </span>
-      {nodes.length === 0 ? (
+      {total === 0 ? (
         <span className="text-[11px] text-ink-soft">{emptyHint}</span>
       ) : (
         <>
           <div className="flex items-center -space-x-[4px]">
-            {nodes.slice(0, PREVIEW).map((n) => (
-              <div key={n.userId} className="rounded-full ring-2 ring-paper-dim">
-                <Avatar name={n.firstName ?? '?'} url={n.photoUrl} size={22} />
-              </div>
-            ))}
+            {Array.from({ length: previewCount }).map((_, i) => {
+              const n = nodes[i];
+              return (
+                <div
+                  key={n?.userId ?? `${label}-placeholder-${i}`}
+                  className="rounded-full ring-2 ring-paper-dim"
+                >
+                  <Avatar name={n?.firstName ?? '?'} url={n?.photoUrl ?? null} size={22} />
+                </div>
+              );
+            })}
             {overflow > 0 && (
               <div className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold ring-2 ring-paper-dim">
                 +{overflow}
