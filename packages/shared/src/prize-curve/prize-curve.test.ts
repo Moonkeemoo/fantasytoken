@@ -25,28 +25,30 @@ describe('computePrizeCurve', () => {
     expect(m.get(2)!).toBeGreaterThan(m.get(3)!);
   });
 
-  it('21 entries → top 6 paid, top-3 in 70-80% band, monotonic, sum == pool', () => {
+  it('21 entries → top 10 paid (50%), top-3 in 65-80% band, monotonic, sum == pool', () => {
     const m = computePrizeCurve(21, 1890);
-    expect(m.size).toBe(6);
+    expect(m.size).toBe(10);
     const sum = [...m.values()].reduce((s, v) => s + v, 0);
     expect(sum).toBe(1890);
     let prev = Infinity;
-    for (let r = 1; r <= 6; r++) {
+    for (let r = 1; r <= 10; r++) {
       const v = m.get(r)!;
       expect(v).toBeLessThanOrEqual(prev);
       prev = v;
     }
     const top3 = (m.get(1)! + m.get(2)! + m.get(3)!) / 1890;
-    expect(top3).toBeGreaterThan(0.7);
+    // Decay r=0.65 over a wider paying band drops top-3 share a touch
+    // (~73% with 10 ranks paid vs ~78% with 6) — still solid podium emphasis.
+    expect(top3).toBeGreaterThan(0.65);
     expect(top3).toBeLessThan(0.8);
   });
 
-  it('100 entries → 30 ranks paid, sum == pool, monotonic, top-1 ~30-40%', () => {
+  it('100 entries → 50 ranks paid, sum == pool, monotonic, top-1 ~30-40%', () => {
     const m = computePrizeCurve(100, 1_000_000);
-    expect(m.size).toBe(30);
+    expect(m.size).toBe(50);
     expect([...m.values()].reduce((s, v) => s + v, 0)).toBe(1_000_000);
     let prev = Infinity;
-    for (let r = 1; r <= 30; r++) {
+    for (let r = 1; r <= 50; r++) {
       const v = m.get(r) ?? 0;
       expect(v).toBeLessThanOrEqual(prev);
       prev = v;

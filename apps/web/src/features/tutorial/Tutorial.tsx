@@ -69,7 +69,7 @@ export function Tutorial() {
         {step === 2 && (
           <>
             <h2 className="text-[28px] font-extrabold leading-tight">win the prize pool</h2>
-            <p className="mt-1 text-[12px] text-muted">top 30% of real entries · payouts in $</p>
+            <p className="mt-1 text-[12px] text-muted">top 50% of entries · payouts in $</p>
           </>
         )}
       </div>

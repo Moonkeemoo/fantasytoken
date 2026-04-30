@@ -26,7 +26,7 @@ export const contests = pgTable('contests', {
   // Rank-system: gating + XP multiplier (RANK_SYSTEM.md §6).
   minRank: integer('min_rank').notNull().default(1),
   xpMultiplier: numeric('xp_multiplier', { precision: 3, scale: 2 }).notNull().default('1.00'),
-  // Pay-curve override. Default `false` keeps the standard "top 30% pays"
+  // Pay-curve override. Default `false` keeps the standard "top 50% pays"
   // curve. `true` makes every entry payable (used by Practice — "all 10
   // positions get a slice"). Curve shape stays geometric either way.
   payAll: boolean('pay_all').notNull().default(false),

@@ -39,7 +39,7 @@ export const LiveResponse = z.object({
    * arbitrary tie-break order — show what's at the top of the mountain. */
   topPrizeCents: z.number().int().nonnegative(),
   /** Pay-curve flag mirrored from the contest. Drives the Scoreboard subtitle
-   * ("top 30% pays" vs "all positions paid"). */
+   * ("top 50% pays" vs "all positions paid"). */
   payAll: z.boolean().default(false),
   lineup: z.array(LineupRow),
   leaderboardTop: z.array(LeaderboardEntry),

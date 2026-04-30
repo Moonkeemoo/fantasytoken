@@ -19,16 +19,19 @@ export function computeActualPrizeCents(args: {
  *   share[i] = r^i / Σ r^j   for i = 0..payingCount-1
  *
  * One smooth curve — no special-case top-3 vs rest, no leftover. Decay r=0.65
- * keeps top-3 in the 70-80% band across realistic room sizes (3..100). Pays the
- * top 30% of entries (with a floor of 3 ranks for tiny rooms; full room when N ≤ 3).
+ * keeps top-3 in the ~70-75% band across realistic room sizes (3..100). Pays
+ * the top 50% of entries (with a floor of 3 ranks for tiny rooms; full room
+ * when N ≤ 3). Choosing 50% over a tournament-style 20-30% cutoff means a
+ * player in the top half walks away with at least *something* — softens the
+ * "−\$1 again" feeling that drove churn on contests like Quick Match.
  *
- * `payAll: true` overrides the 30% gate so every entry receives a (decaying)
+ * `payAll: true` overrides the cutoff so every entry receives a (decaying)
  * share — used by the Practice contest where the explicit promise is "all 10
  * positions paid, $2.50 → $0.50". The curve shape stays geometric so 1st
  * still wins more than last; only the eligibility cutoff changes.
  */
 const DECAY = 0.65;
-const PAY_FRACTION = 0.3;
+const PAY_FRACTION = 0.5;
 
 export interface PrizeCurveOptions {
   payAll?: boolean;

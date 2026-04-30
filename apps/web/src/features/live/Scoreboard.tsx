@@ -116,7 +116,7 @@ export function Scoreboard({
         <Stat
           label="prize if end now"
           primary={formatCents(projectedPrizeCents)}
-          sub={payAll ? 'all positions paid' : 'top 30% pays'}
+          sub={payAll ? 'all positions paid' : 'top 50% pays'}
         />
         <Stat label="time left" primary={formatTimeLeft(ms)} sub="hh:mm:ss" mono />
       </div>

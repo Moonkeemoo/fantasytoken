@@ -14,7 +14,7 @@ export interface FinalizeArgs {
   prizePoolCents: number;
   /** 'bull' = highest P&L wins; 'bear' = most-losing P&L wins (rank ASC). Default 'bull'. */
   contestType?: 'bull' | 'bear';
-  /** Pay every entry (Practice) instead of the standard top-30% curve. */
+  /** Pay every entry (Practice) instead of the standard top-50% curve. */
   payAll?: boolean;
 }
 

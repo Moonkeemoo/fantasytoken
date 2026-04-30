@@ -148,32 +148,40 @@ entries.bot_handle text (null for real users; e.g. "Bjorn_99")
 
 ## 3. Prize structure 🟢
 
-### 3.1 Payout curve (steep, hardcoded for MVP)
+### 3.1 Payout curve
 
-Applied to **real users only**, ranked by `final_score DESC, submitted_at ASC`.
+Applied across the **full room** (real + bot), ranked by `final_score DESC, submitted_at ASC`. See `packages/shared/src/prize-curve/index.ts` for the canonical implementation.
 
-Top 30% of real users pay. Within paying ranks:
+**Top 50% of entries** pays (with a floor of 3 ranks for tiny rooms; full room when N ≤ 3). Distribution is a single geometric decay curve r=0.65 — no discrete bucket cliff:
 
-| Position       | % of prize pool           |
-| -------------- | ------------------------- |
-| 1st            | 30%                       |
-| 2nd            | 18%                       |
-| 3rd            | 12%                       |
-| 4th            | 7%                        |
-| 5th            | 5%                        |
-| 6–10           | 3% each (15% total)       |
-| 11–20          | 1% each (10% total)       |
-| 21st → top 30% | split remaining 3% evenly |
+```
+share[i] = r^i / Σ r^j   for i = 0..payingCount-1
+```
 
-If `real_count × 0.3 < 21`, the last bucket scales to whatever positions exist. Pool always allocates 100% (rounding remainder goes to 1st).
+For a 20-player $1 contest (pool = $18 after 10% rake) the curve resolves to:
 
-Rationale: top-heavy creates "winner takes most" excitement (ref: DraftKings GPP). Configurable per-contest in V2.
+| Rank | Prize |
+| ---- | ----- |
+| 1    | $6.42 |
+| 2    | $4.15 |
+| 3    | $2.69 |
+| 4    | $1.75 |
+| 5    | $1.13 |
+| 6    | $0.74 |
+| 7    | $0.48 |
+| 8    | $0.31 |
+| 9    | $0.20 |
+| 10   | $0.13 |
+
+Top-3 hold ~74% of the pool — podium emphasis stays high — and ranks 4–10 each return at least _some_ fraction of entry, softening the `−$1 again` churn signal that pure top-30% caused. Pool always allocates 100% (rounding remainder → rank 1).
+
+`payAll: true` (Practice today) overrides the cutoff so every position receives a share.
 
 ### 3.2 Bots and prizes
 
-- Top 30% pays applies to **real users only**
-- Bot positions in leaderboard are **display-only**
-- Example: 10 real users + 50 bots in contest. Display lineup may show bots at ranks #1, #2 (high random scores). Prize distribution computes ranks among the 10 real users only — top 3 real users (top 30% of 10) get prizes.
+- Curve is computed against the **full ranking** (bots + real users together) since bots also pay an entry fee into the pool.
+- Bot rows have `prize_cents` recorded but **no PRIZE_PAYOUT transaction** — the cents stay with the platform on top of rake.
+- Real users in payable ranks always get a transaction, regardless of where bots placed around them.
 
 ---
 

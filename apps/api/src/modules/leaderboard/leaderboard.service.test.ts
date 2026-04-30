@@ -147,8 +147,9 @@ describe('LeaderboardService.getLive', () => {
   });
 
   it('projectedPrize uses dynamic pool (entries × fee × (1-rake)) not hardcoded prizePoolCents', async () => {
-    // 10 real × $1 × 0.9 = $9.00 = 900c. Curve top 30% = top 3.
-    // 1st gets ~50% = 450c (regardless of guaranteed=0).
+    // 10 real × $1 × 0.9 = $9.00 = 900c. Curve pays top 50% = top 5,
+    // sum of paid ranks == pool. Top-1 share lands in the ~30-40% band
+    // for a 5-rank decay r=0.65 distribution.
     const reals = Array.from({ length: 10 }).map((_, i) =>
       entry({ id: `real-${i}`, submittedAt: new Date(NOW.getTime() - i * 1000) }),
     );
@@ -160,13 +161,11 @@ describe('LeaderboardService.getLive', () => {
     const r = await svc.getLive({ contestId: 'c-1', userId: 'user-real-9' });
     expect(r!.projectedPrizeCents).toBeGreaterThan(0);
     expect(r!.projectedPrizeCents).toBeLessThan(900); // not the full pool, just top-1 share
-    // Pool sum across top 3 = 900
-    // (We can't directly inspect pool but bounds are tight: 1st should be ~450c.)
   });
 
-  it('projectedPrize: top 30% of REAL entries gets payout', async () => {
-    // 10 real entries → top 3 pay (30% of 10).
-    // Curve: 1st: ~50%, 2nd: ~30%, 3rd: ~20% of pool (after renorm).
+  it('projectedPrize: top 50% of entries gets payout', async () => {
+    // 10 entries → top 5 pay (50%). User in 1st (earliest tie-break)
+    // gets the largest share of a $1000 guaranteed pool.
     const reals = Array.from({ length: 10 }).map((_, i) =>
       entry({ id: `real-${i}`, submittedAt: new Date(NOW.getTime() - i * 1000) }),
     );
@@ -174,8 +173,7 @@ describe('LeaderboardService.getLive', () => {
       repo: makeRepo({ entries: reals, prizePoolCents: 100_000 }),
       rakePct: 10,
     });
-    const r = await svc.getLive({ contestId: 'c-1', userId: 'user-real-9' }); // submittedAt = NOW − 9000 → earliest
-    // user-real-9 has earliest submission → wins tie-break → rank 1 → top 3 pays → gets prize
+    const r = await svc.getLive({ contestId: 'c-1', userId: 'user-real-9' }); // earliest
     expect(r!.projectedPrizeCents).toBeGreaterThan(0);
   });
 });

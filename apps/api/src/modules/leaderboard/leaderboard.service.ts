@@ -25,7 +25,7 @@ export interface ContestSnapshot {
   prizePoolCents: number;
   entryFeeCents: number;
   type: 'bull' | 'bear';
-  /** Whether every entry is paid (Practice) vs the standard top-30% curve. */
+  /** Whether every entry is paid (Practice) vs the standard top-50% curve. */
   payAll: boolean;
 }
 
