@@ -34,7 +34,7 @@ import { makeLiveRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { createResultRepo } from './modules/result/result.repo.js';
 import { createResultService } from './modules/result/result.service.js';
 import { makeResultRoutes } from './modules/result/result.routes.js';
-import { createReplenishService } from './modules/contests/contests.replenish.js';
+import { createSchedulerService } from './modules/contests/contests.scheduler.js';
 import { createShareRepo } from './modules/share/share.repo.js';
 import { createShareService } from './modules/share/share.service.js';
 import { makeShareRoutes } from './modules/share/share.routes.js';
@@ -192,7 +192,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   });
   const tickRepo = createContestsTickRepo(deps.db, finalizeRepo, cancelContest);
   const adminTelegramId = deps.config.ADMIN_TG_IDS[0] ?? 999_001;
-  const replenish = createReplenishService({
+  const scheduler = createSchedulerService({
     db: deps.db,
     log: deps.logger,
     adminTelegramId,
@@ -201,7 +201,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     repo: tickRepo,
     log: deps.logger,
     onContestLocked: async () => {
-      await replenish.replenish();
+      await scheduler.schedule();
     },
     refreshPricesBeforeLock: async () => {
       await tokens.syncActive();
@@ -334,12 +334,12 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  const stopReplenish = scheduleEvery({
+  const stopScheduler = scheduleEvery({
     intervalMs: MINUTE,
     fn: async () => {
-      await replenish.replenish();
+      await scheduler.schedule();
     },
-    name: 'contests.replenish',
+    name: 'contests.scheduler',
     log: deps.logger,
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
@@ -408,7 +408,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopCatalogSync();
       stopTick();
       stopActiveSync();
-      stopReplenish();
+      stopScheduler();
       stopWelcomeExpiry();
       stopDmDrain();
       if (bot) void bot.stop();

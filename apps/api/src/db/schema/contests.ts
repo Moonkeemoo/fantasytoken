@@ -38,6 +38,13 @@ export const contests = pgTable('contests', {
   virtualBudgetCents: bigint('virtual_budget_cents', { mode: 'bigint' })
     .notNull()
     .default(sql`10000000`),
+  // Contests v2 matrix (ADR-0004, INV-13). All three NOT NULL — see migration
+  // 0020_contests_v2_matrix.sql. matrix_cell_key is GENERATED — we never write
+  // to it; Drizzle reads it for SELECTs only.
+  durationLane: text('duration_lane').notNull(),
+  stakeTier: text('stake_tier').notNull(),
+  mode: text('mode').notNull(),
+  matrixCellKey: text('matrix_cell_key'),
   createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

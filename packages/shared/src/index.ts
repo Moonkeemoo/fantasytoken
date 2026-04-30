@@ -1,5 +1,6 @@
 export * from './constants.js';
 export * from './contest-tiers.js';
+export * from './contests/matrix.js';
 export * from './format.js';
 export * from './schemas/index.js';
 export * from './scoring/index.js';

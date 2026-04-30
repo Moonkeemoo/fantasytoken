@@ -141,6 +141,13 @@
       "when": 1777481235800,
       "tag": "0019_full_wipe_for_testing",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777481235900,
+      "tag": "0020_contests_v2_matrix",
+      "breakpoints": true
     }
   ]
 }

@@ -1,21 +1,21 @@
 import type { Database } from '../client.js';
 import type { Logger } from '../../logger.js';
-import { createReplenishService } from '../../modules/contests/contests.replenish.js';
+import { createSchedulerService } from '../../modules/contests/contests.scheduler.js';
 
 export interface SeedContestsArgs {
   adminTelegramId: number;
 }
 
 /**
- * Seed contests by delegating to the replenish service.
- * Maintains 3 scheduled contests (Quick Match, Memecoin Madness, High Stakes)
- * with startsAt = now+5min and endsAt = startsAt+10min. Idempotent by name+status.
+ * Seed contests by delegating to the matrix scheduler — every cell from
+ * MATRIX_CELLS that doesn't have a live instance gets one created. Idempotent
+ * via INV-13 unique-cell index.
  */
 export async function seedContests(
   db: Database,
   args: SeedContestsArgs,
   log: Logger,
 ): Promise<{ created: number }> {
-  const svc = createReplenishService({ db, log, adminTelegramId: args.adminTelegramId });
-  return svc.replenish();
+  const svc = createSchedulerService({ db, log, adminTelegramId: args.adminTelegramId });
+  return svc.schedule();
 }
