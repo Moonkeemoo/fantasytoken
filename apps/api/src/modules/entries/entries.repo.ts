@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { contests, entries, tokens, users } from '../../db/schema/index.js';
-import type { LineupSummary } from '@fantasytoken/shared';
+import type { LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
 import type { EntriesRepo } from './entries.service.js';
 
 export function createEntriesRepo(db: Database): EntriesRepo {
@@ -91,6 +91,47 @@ export function createEntriesRepo(db: Database): EntriesRepo {
       });
 
       return { lineups, total: lineups.length };
+    },
+
+    async findLastLineupForUser(userId): Promise<LastLineupResponse['lineup']> {
+      const [row] = await db
+        .select({
+          contestId: entries.contestId,
+          contestName: contests.name,
+          submittedAt: entries.submittedAt,
+          picks: entries.picks,
+          currentScore: entries.currentScore,
+          finalScore: entries.finalScore,
+        })
+        .from(entries)
+        .innerJoin(contests, eq(contests.id, entries.contestId))
+        .where(eq(entries.userId, userId))
+        .orderBy(desc(entries.submittedAt))
+        .limit(1);
+
+      if (!row) return null;
+
+      const picksRaw = Array.isArray(row.picks) ? row.picks : [];
+      const picks = picksRaw
+        .map((p) =>
+          p && typeof p === 'object' && 'symbol' in p && 'alloc' in p
+            ? { symbol: String(p.symbol), alloc: Number(p.alloc) }
+            : null,
+        )
+        .filter((p): p is { symbol: string; alloc: number } => p !== null);
+
+      // Prefer final (post-contest) over current (mid-contest); fall back to null
+      // when neither is recorded (pre-kickoff).
+      const scoreSrc = row.finalScore ?? row.currentScore;
+      const pnlPct = scoreSrc !== null ? Number(scoreSrc) * 100 : null;
+
+      return {
+        contestId: row.contestId,
+        contestName: row.contestName,
+        submittedAt: row.submittedAt.toISOString(),
+        pnlPct,
+        picks,
+      };
     },
   };
 }

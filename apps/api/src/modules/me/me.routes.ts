@@ -1,12 +1,15 @@
 import type { FastifyPluginAsync } from 'fastify';
+import type { LastLineupResponse } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import { parseUserFromInitData, validateInitData } from '../../lib/telegram-auth.js';
 import type { UsersService } from '../users/users.service.js';
 import type { CurrencyService } from '../currency/currency.service.js';
+import type { EntriesService } from '../entries/entries.service.js';
 
 export interface MeRoutesDeps {
   users: UsersService;
   currency: CurrencyService;
+  entries: EntriesService;
 }
 
 /**
@@ -75,6 +78,30 @@ export function makeMeRoutes(deps: MeRoutesDeps): FastifyPluginAsync {
       });
       await deps.users.markTutorialDone(upsert.userId);
       return { tutorialDone: true as const };
+    });
+
+    /**
+     * GET /me/last-lineup — caller's most recently submitted lineup.
+     * Used by DraftScreen's StartFromStrip to surface a "Last team" preset.
+     * Returns `{ lineup: null }` when the user has never entered.
+     */
+    app.get('/last-lineup', async (req) => {
+      const initData = req.headers['x-telegram-init-data'];
+      if (typeof initData !== 'string' || initData.length === 0) {
+        throw errors.missingInitData();
+      }
+      const valid = validateInitData(initData, app.deps.config.TELEGRAM_BOT_TOKEN);
+      if (!valid) throw errors.invalidInitData();
+      const tgUser = parseUserFromInitData(initData);
+      if (!tgUser) throw errors.invalidInitData();
+
+      const upsert = await deps.users.upsertOnAuth({
+        telegramId: tgUser.id,
+        ...(tgUser.first_name !== undefined && { firstName: tgUser.first_name }),
+      });
+      const lineup = await deps.entries.findLastLineupForUser(upsert.userId);
+      const response: LastLineupResponse = { lineup };
+      return response;
     });
   };
 }

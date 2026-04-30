@@ -9,6 +9,7 @@ import { StartFromStrip, defaultPresets, type StartFromPreset } from './StartFro
 import { TokenResultRow } from './TokenResultRow.js';
 import { applyPreset, removeToken, setAlloc, type LineupPick } from './lineupReducer.js';
 import { useDraft } from './useDraft.js';
+import { useLastLineup } from './useLastLineup.js';
 import { useTokenSearch } from './useTokenSearch.js';
 
 const N_SLOTS = 5;
@@ -54,10 +55,23 @@ export function DraftScreen(props: DraftScreenProps): JSX.Element {
   const allocBySymbol = useMemo(() => new Map(draft.map((p) => [p.symbol, p.alloc])), [draft]);
   const cantAfford = balanceCents < entryFeeCents;
 
-  const presets = useMemo<StartFromPreset[]>(
-    () => defaultPresets(items.slice(0, 5).map((t) => t.symbol)),
-    [items],
-  );
+  const lastLineupQ = useLastLineup();
+
+  const presets = useMemo<StartFromPreset[]>(() => {
+    const base = defaultPresets(items.slice(0, 5).map((t) => t.symbol));
+    const last = lastLineupQ.data?.lineup;
+    if (!last || last.picks.length !== 5) return base;
+    const pnl = last.pnlPct;
+    const pnlLabel = pnl === null ? '' : ` ${pnl > 0 ? '+' : ''}${pnl.toFixed(1)}%`;
+    const personal: StartFromPreset = {
+      id: 'last-team',
+      label: `Last team${pnlLabel}`,
+      sub: last.contestName,
+      isSystem: false,
+      picks: last.picks,
+    };
+    return [personal, ...base];
+  }, [items, lastLineupQ.data]);
 
   const onTokenSelect = (token: Token): void => {
     openSheet({

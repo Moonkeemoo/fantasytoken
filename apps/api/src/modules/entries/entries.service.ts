@@ -1,4 +1,4 @@
-import type { EntryPick, LineupSummary } from '@fantasytoken/shared';
+import type { EntryPick, LastLineupResponse, LineupSummary } from '@fantasytoken/shared';
 import { errors } from '../../lib/errors.js';
 import type { CurrencyService } from '../currency/currency.service.js';
 
@@ -23,6 +23,12 @@ export interface EntriesRepo {
     id: string;
     submittedAt: Date;
   }>;
+  /**
+   * Caller's most recently submitted entry for the StartFromStrip "Last team"
+   * preset (TZ-001 §05.3). Returns null when the user has never entered.
+   * Latest known PnL is included so the preset card can show "+12.4%".
+   */
+  findLastLineupForUser(userId: string): Promise<LastLineupResponse['lineup']>;
   /**
    * Fetch entries for a contest, projected for the public Browse-others feed.
    * Returns ONLY user handle + symbols + submittedAt — never allocations,
@@ -50,6 +56,7 @@ export interface ListLineupsArgs {
 export interface EntriesService {
   submit(args: SubmitArgs): Promise<SubmitResult>;
   listPublicLineups(args: ListLineupsArgs): Promise<{ lineups: LineupSummary[]; total: number }>;
+  findLastLineupForUser(userId: string): Promise<LastLineupResponse['lineup']>;
 }
 
 export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
@@ -102,6 +109,10 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
     async listPublicLineups({ contestId, filter, limit }) {
       const clamped = Math.max(1, Math.min(200, limit));
       return deps.repo.listPublicLineups({ contestId, filter, limit: clamped });
+    },
+
+    async findLastLineupForUser(userId) {
+      return deps.repo.findLastLineupForUser(userId);
     },
   };
 }

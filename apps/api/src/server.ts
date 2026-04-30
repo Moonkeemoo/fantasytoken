@@ -226,7 +226,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await seasonsSvc.ensureActive();
 
   await app.register(healthRoutes, { prefix: '/health' });
-  await app.register(makeMeRoutes({ users, currency }), { prefix: '/me' });
+  await app.register(makeMeRoutes({ users, currency, entries }), { prefix: '/me' });
   await app.register(makeRankRoutes({ db: deps.db, users }), { prefix: '/me' });
   await app.register(makeReferralsRoutes({ referrals, users, friends }), { prefix: '/me' });
   await app.register(makeRealtimeRoutes({ hub: realtimeHub, users }), { prefix: '/ws' });

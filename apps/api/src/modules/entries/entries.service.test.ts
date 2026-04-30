@@ -32,6 +32,9 @@ function makeFakeRepo(
       createdEntry = { id: `entry-${Date.now()}`, userId: args.userId, picks: args.picks };
       return { id: createdEntry.id, submittedAt: new Date() };
     },
+    async findLastLineupForUser() {
+      return null;
+    },
     async listPublicLineups({ limit }) {
       // Two fake lineups, sorted oldest-first for filter='all'.
       const all = [
@@ -156,5 +159,15 @@ describe('EntriesService.listPublicLineups', () => {
     expect(r1.lineups.length).toBeGreaterThan(0);
     const r2 = await svc.listPublicLineups({ contestId: 'c1', filter: 'all', limit: 9999 });
     expect(r2.lineups.length).toBeLessThanOrEqual(200);
+  });
+});
+
+describe('EntriesService.findLastLineupForUser', () => {
+  it('passes through to repo (returns null when none)', async () => {
+    const repo = makeFakeRepo();
+    const cur = makeFakeCurrency();
+    const svc = createEntriesService({ repo, currency: cur });
+    const r = await svc.findLastLineupForUser('u-no-history');
+    expect(r).toBeNull();
   });
 });
