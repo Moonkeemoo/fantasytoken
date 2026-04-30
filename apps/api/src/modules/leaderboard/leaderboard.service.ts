@@ -61,16 +61,21 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       const allSymbols = [...new Set(entries.flatMap((e) => e.picks.map((p) => p.symbol)))];
       const currentPrices = await deps.repo.getCurrentPrices(allSymbols);
 
-      // Compute score per entry.
+      // INV-4: Bear inverts the score so "highest score = best" holds in both
+      // modes. We invert at the SOURCE so every downstream consumer
+      // (sort, scorePct on leaderboard rows, myScore on portfolio.plPct,
+      // and per-token contribUsd derived from pct × dir) reads the same
+      // mode-aware semantic. Without this `userRow.scorePct` was raw and
+      // contradicted the (mode-aware) per-token contribUsd we ship.
+      const dir = contest.type === 'bear' ? -1 : 1;
       const scored = entries.map((e) => {
-        const score = scoreOf(e.picks, startPrices, currentPrices);
-        return { entry: e, score };
+        const raw = scoreOf(e.picks, startPrices, currentPrices);
+        return { entry: e, score: raw * dir };
       });
 
-      // Sort by score (DESC for bull, ASC for bear), submittedAt ASC tie-breaker.
-      const dir = contest.type === 'bear' ? -1 : 1;
+      // Now a single DESC sort works for both modes.
       scored.sort((a, b) => {
-        if (b.score !== a.score) return dir * (b.score - a.score);
+        if (b.score !== a.score) return b.score - a.score;
         return a.entry.submittedAt.getTime() - b.entry.submittedAt.getTime();
       });
 
@@ -130,13 +135,11 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         const my = await deps.repo.getMyEntry(contestId, userId);
         if (my) {
           const images = await deps.repo.getImagesBySymbols(my.picks.map((p) => p.symbol));
-          // Bear inverts player score (INV-4). Per-token contribUsd must follow
-          // the same inversion so it stays consistent with portfolio.plPct
-          // (which is already mode-aware) — otherwise a token dropping in a
-          // Bear contest renders with a negative contribUsd that contradicts
-          // the player's actual gain. pctChange stays raw (universal "price
-          // went up/down" semantic; UI colors that as red/green regardless).
-          const dirContrib = contest.type === 'bear' ? -1 : 1;
+          // Per-token contribUsd uses the same `dir` as the entry-level score
+          // so the row sum equals (myScore × 100) — i.e. the per-token list
+          // stays consistent with portfolio.plPct. pctChange stays raw
+          // (universal "price went up = green, down = red"; player reads
+          // both signals together to interpret a Bear pick).
           lineup = my.picks.map((p) => {
             const start = startPrices.get(p.symbol) ?? null;
             const cur = currentPrices.get(p.symbol) ?? null;
@@ -146,7 +149,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
               imageUrl: images.get(p.symbol) ?? null,
               alloc: p.alloc,
               pctChange: pct,
-              contribUsd: (p.alloc / 100) * pct * 100 * dirContrib,
+              contribUsd: (p.alloc / 100) * pct * 100 * dir,
             };
           });
         }
