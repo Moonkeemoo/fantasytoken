@@ -116,10 +116,19 @@ export function createContestsRepo(db: Database, rakePct: number): ContestsRepo 
     },
 
     async create(args: CreateContestArgs) {
+      // Contests v2 (ADR-0004) makes mode/durationLane/stakeTier NOT NULL.
+      // The admin/legacy create() path doesn't carry matrix metadata, so we
+      // pin sensible defaults: bull · 10m · c1. Production contest creation
+      // goes through the matrix scheduler (contests.scheduler.ts) which
+      // populates these from the cell definition.
       const [row] = await db
         .insert(contests)
         .values({
           name: args.name,
+          type: 'bull',
+          mode: 'bull',
+          durationLane: '10m',
+          stakeTier: 'c1',
           entryFeeCents: BigInt(args.entryFeeCents),
           prizePoolCents: BigInt(args.prizePoolCents),
           maxCapacity: args.maxCapacity,
