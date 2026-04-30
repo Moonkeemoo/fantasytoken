@@ -175,16 +175,28 @@ export function createContestsTickRepo(
     },
 
     async findStaleContests(thresholdMs) {
+      // Per-status stuck detection: a contest is considered stuck when the
+      // lifecycle marker relevant to its current state is `thresholdMs`
+      // older than now.
+      //   - scheduled  → should have locked by startsAt + thresholdMs
+      //   - active     → should have finalized by endsAt + thresholdMs
+      //   - finalizing → payouts should have completed by endsAt + thresholdMs
+      // Plus a separate abnormal-duration safety net for legacy rows whose
+      // (endsAt - startsAt) span is hours/days — those need cancelling
+      // regardless of where they are in the lifecycle.
       const cutoff = new Date(Date.now() - thresholdMs);
+      const ABNORMAL_DURATION_S = 60 * 60; // 1 h
       const rows = await db
         .select({ id: contests.id })
         .from(contests)
         .where(
-          and(
-            or(eq(contests.status, 'scheduled'), eq(contests.status, 'active')),
-            or(
-              lt(contests.startsAt, cutoff),
-              sql`(${contests.endsAt} - ${contests.startsAt}) > make_interval(secs => ${Math.floor(thresholdMs / 1000)})`,
+          or(
+            and(eq(contests.status, 'scheduled'), lt(contests.startsAt, cutoff)),
+            and(eq(contests.status, 'active'), lt(contests.endsAt, cutoff)),
+            and(eq(contests.status, 'finalizing'), lt(contests.endsAt, cutoff)),
+            and(
+              or(eq(contests.status, 'scheduled'), eq(contests.status, 'active')),
+              sql`(${contests.endsAt} - ${contests.startsAt}) > make_interval(secs => ${ABNORMAL_DURATION_S})`,
             ),
           ),
         );

@@ -23,6 +23,9 @@ function makeFakeRepo(
   opts: {
     contests?: FakeContest[];
     tokens?: FakeToken[];
+    /** Contest ids whose finalize should throw — simulates the payout
+     * loop crashing so the row stays in 'finalizing' for the stale cron. */
+    finalizeThrowIds?: string[];
   } = {},
 ) {
   const contests = opts.contests ?? [];
@@ -98,19 +101,30 @@ function makeFakeRepo(
         .map((c) => ({ id: c.id, prizePoolCents: 100_000n }));
     },
     async finalize(contestId) {
+      if (opts.finalizeThrowIds?.includes(contestId)) {
+        throw new Error(`forced finalize failure for ${contestId}`);
+      }
       ops.push({ kind: 'finalize2', contestId });
       const c = contests.find((c) => c.id === contestId);
       if (c) c.status = 'finalized' as never;
       return { paidCount: 1, totalCents: 100_000 };
     },
     async findStaleContests(thresholdMs) {
+      // Mirrors the production query: per-status time cutoffs + an abnormal-
+      // duration safety net (1h) for legacy long-window contests.
       const cutoff = Date.now() - thresholdMs;
+      const ABNORMAL_DURATION_MS = 60 * 60_000;
       return contests
         .filter((c) => {
-          if (c.status !== 'active' && c.status !== 'scheduled') return false;
-          const stuckByTime = c.startsAt.getTime() < cutoff;
-          const stuckByDuration = c.endsAt.getTime() - c.startsAt.getTime() > thresholdMs;
-          return stuckByTime || stuckByDuration;
+          if (c.status === 'scheduled' && c.startsAt.getTime() < cutoff) return true;
+          if (c.status === 'active' && c.endsAt.getTime() < cutoff) return true;
+          if (c.status === 'finalizing' && c.endsAt.getTime() < cutoff) return true;
+          if (
+            (c.status === 'scheduled' || c.status === 'active') &&
+            c.endsAt.getTime() - c.startsAt.getTime() > ABNORMAL_DURATION_MS
+          )
+            return true;
+          return false;
         })
         .map((c) => ({ id: c.id }));
     },
@@ -289,6 +303,25 @@ describe('ContestsTickService', () => {
       const svc = createContestsTickService({ repo, log: noopLog });
       await svc.tick();
       expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'long-duration')).toBe(true);
+    });
+
+    it('cancels finalizing contest stuck past endsAt + threshold (payouts crashed in retry loop)', async () => {
+      const { repo, ops } = makeFakeRepo({
+        contests: [
+          {
+            id: 'stuck-finalizing',
+            status: 'finalizing',
+            startsAt: nowPlusMin(-15),
+            endsAt: nowPlusMin(-5), // ended 5 min ago, payouts never settled
+            maxCapacity: 20,
+            realEntries: 1,
+          },
+        ],
+        finalizeThrowIds: ['stuck-finalizing'],
+      });
+      const svc = createContestsTickService({ repo, log: noopLog });
+      await svc.tick();
+      expect(ops.some((o) => o.kind === 'cancel' && o.contestId === 'stuck-finalizing')).toBe(true);
     });
 
     it('cancels legacy scheduled contest with abnormal endsAt (long-duration safety net)', async () => {

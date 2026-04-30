@@ -1,7 +1,16 @@
+import { Link } from 'react-router-dom';
 import { useCountdown } from '../../lib/countdown.js';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
 import { formatCents, formatPct, formatPnl, formatTimeLeft } from '../../lib/format.js';
+
+/**
+ * Once a contest's startsAt has passed, the lobby tick should lock the room
+ * within ~one tick (≤60s). Anything past this is unusual — show the user a
+ * "we're working on it" message with an exit so they don't stare at a
+ * spinner. Backend stale-cancel cron refunds at 3 min past startsAt anyway.
+ */
+const LOCKING_TIMEOUT_MS = 90_000;
 
 export interface ScoreboardProps {
   plPct: number;
@@ -37,6 +46,31 @@ export function Scoreboard({
   // When countdown to start is exhausted, the contest is technically still 'scheduled'
   // until the next tick locks it (≤10s). Show a transient "LOCKING" state instead of $0.
   const locking = isPreStart && ms <= 0;
+  // ms is negative once startsAt has passed; -ms = ms-since-startsAt.
+  const lockingForMs = locking ? -ms : 0;
+  const lockingStuck = lockingForMs >= LOCKING_TIMEOUT_MS;
+
+  if (isPreStart && lockingStuck) {
+    return (
+      <Card variant="dim" shadow className="m-3 px-[14px] py-4 text-center">
+        <Label>locking is taking a while</Label>
+        <div className="my-[10px] text-[28px] font-extrabold leading-tight">
+          We&apos;re re-trying in the background
+        </div>
+        <p className="text-[12px] leading-snug text-ink-soft">
+          If this persists for ~3 minutes total, we&apos;ll auto-cancel and{' '}
+          <span className="font-bold text-ink">refund your entry</span>. You can wait or pop back to
+          the lobby — your balance update will land either way.
+        </p>
+        <Link
+          to="/lobby"
+          className="mt-3 inline-block rounded-[4px] border-[1.5px] border-ink bg-paper px-4 py-2 text-[12px] font-bold uppercase tracking-[0.06em] text-ink"
+        >
+          ← Back to lobby
+        </Link>
+      </Card>
+    );
+  }
 
   if (isPreStart) {
     return (

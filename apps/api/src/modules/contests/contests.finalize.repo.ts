@@ -123,7 +123,12 @@ export function createContestsFinalizeRepo(
         payAll: contest.payAll,
       });
 
-      // 5. Apply entry updates + contest status in single tx.
+      // 5. Apply entry updates. We deliberately do NOT flip contests.status
+      // to 'finalized' here — that's deferred until step 7's payout loop
+      // succeeds (see step 7a). If finalize crashes between here and step 7,
+      // the next tick's findContestsToFinalize2 will pick the row up again
+      // (status still 'finalizing'); the entry update + payout loop are
+      // both idempotent so the retry settles cleanly.
       await db.transaction(async (tx) => {
         for (const e of result.entries) {
           await tx
@@ -136,7 +141,6 @@ export function createContestsFinalizeRepo(
             })
             .where(eq(entries.id, e.entryId));
         }
-        await tx.update(contests).set({ status: 'finalized' }).where(eq(contests.id, contestId));
       });
 
       // 6. XP awards (rank-system) — only for real users in payable AND non-payable
@@ -232,6 +236,11 @@ export function createContestsFinalizeRepo(
         paidCount += 1;
         totalCents += p.cents;
       }
+
+      // 7a. All payouts settled — now safe to mark the contest finalized.
+      // Deferred from step 5 so a payout crash leaves the contest in
+      // 'finalizing' for the next tick to retry. Idempotent UPDATE.
+      await db.update(contests).set({ status: 'finalized' }).where(eq(contests.id, contestId));
 
       // 8. Referrals — sidecar to prize distribution. INV-7: each call has its
       // own try/catch inside the service; failures here never bubble. Two passes:

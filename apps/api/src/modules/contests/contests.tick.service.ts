@@ -38,8 +38,12 @@ export interface ContestsTickServiceDeps {
 }
 
 const STALE_PRICE_HOURS = 2;
-/** Any contest still scheduled/active this long after startsAt is treated as stuck and refund-cancelled. PLAY_DURATION is 10min, so 1h gives massive margin. */
-const STALE_CONTEST_THRESHOLD_MS = 60 * 60_000;
+/** Per-status grace window past the relevant lifecycle marker. Anything
+ * still in scheduled/active/finalizing this long past the marker is treated
+ * as stuck and refund-cancelled. Tight (3 min) because the normal lifecycle
+ * is 5-min fill + 10-min play; the tick cron runs every minute, so by 3 min
+ * a healthy state should have resolved. */
+const STALE_CONTEST_THRESHOLD_MS = 3 * 60_000;
 
 export interface ContestsTickService {
   tick(): Promise<void>;
