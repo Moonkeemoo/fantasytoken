@@ -64,7 +64,10 @@ export function Live(): JSX.Element {
       <LiveHeader
         contestName={data.contestName}
         mode={data.type}
-        tier={Math.round(data.virtualBudgetCents / 100)}
+        // Post coins-economy (TZ-002) virtual_budget_cents stores whole coins
+        // (1 coin = $1 fantasy). The legacy /100 divide turned a $100 Practice
+        // budget into "$1" — drop it.
+        tier={data.virtualBudgetCents}
         startsAt={data.startsAt}
         endsAt={data.endsAt}
         status={data.status}

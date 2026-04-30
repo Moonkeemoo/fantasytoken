@@ -35,7 +35,13 @@ export function XpBreakdown({ award, rank }: XpBreakdownProps) {
             style={{ animation: `ftXpFade 280ms ease-out ${i * 80}ms both` }}
           >
             <span>{row.reason}</span>
-            <span className="font-mono font-bold">+{row.amount}</span>
+            <span className="font-mono font-bold">
+              {/* Multiplier rows can be negative (e.g. ×0.5 on Practice
+                  yields -5). Render an explicit sign so we don't print
+                  the literal "+-5". */}
+              {row.amount >= 0 ? '+' : '−'}
+              {Math.abs(row.amount)}
+            </span>
           </div>
         ))}
       </div>
