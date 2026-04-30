@@ -119,7 +119,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   const users = createUsersService({
     repo: usersRepo,
     currency,
-    welcomeBonusCents: BigInt(deps.config.WELCOME_BONUS_USD_CENTS),
+    welcomeBonusCoins: BigInt(deps.config.WELCOME_BONUS_COINS),
     log: deps.logger,
   });
 

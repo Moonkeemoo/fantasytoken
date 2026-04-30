@@ -1,15 +1,15 @@
-// Welcome economy constants. ALL bonuses are soft USD only — never real
+// Welcome economy constants. ALL bonuses are soft COINS only — never real
 // currency (Stars/TON). See REFERRAL_SYSTEM.md §3 for rationale (real-money
-// sustainability + anti-fraud + compliance).
+// sustainability + anti-fraud + compliance). 1 coin = $1 fantasy display.
 
 /** Credited on first /me upsert via CurrencyService.transact (INV-9). */
-export const WELCOME_BONUS_CENTS = 2_500; // $25
+export const WELCOME_BONUS_COINS = 20;
 
 /** Credited to the referee after they finish their 1st contest. */
-export const REFEREE_SIGNUP_BONUS_CENTS = 2_500; // $25
+export const REFEREE_SIGNUP_BONUS_COINS = 25;
 
 /** Credited to the recruiter after their referee finishes 1st contest. */
-export const RECRUITER_SIGNUP_BONUS_CENTS = 2_500; // $25
+export const RECRUITER_SIGNUP_BONUS_COINS = 25;
 
 /** Welcome bonus expires if user hasn't played anything within this window —
  * anti-inflation guard so cumulative mint stays bounded. Daily cron debits

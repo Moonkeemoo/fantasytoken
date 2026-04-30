@@ -1,4 +1,4 @@
-import { WELCOME_BONUS_CENTS, WELCOME_EXPIRY_DAYS } from '@fantasytoken/shared';
+import { WELCOME_BONUS_COINS, WELCOME_EXPIRY_DAYS } from '@fantasytoken/shared';
 import type { CurrencyService } from '../currency/currency.service.js';
 import type { Logger } from '../../logger.js';
 
@@ -69,7 +69,7 @@ export interface UpsertOnAuthResult {
 export interface UsersServiceDeps {
   repo: UsersRepo;
   currency: CurrencyService;
-  welcomeBonusCents: bigint;
+  welcomeBonusCoins: bigint;
   /** Optional — only used by expireUnusedWelcome. Tests pass a no-op logger. */
   log?: Logger;
 }
@@ -92,7 +92,7 @@ export interface UsersService {
    * profile when the caller landed via a ref-link — drives the Welcome screen. */
   getWelcomeStatus(userId: string): Promise<{
     state: 'active' | 'used' | 'expired' | 'grandfathered';
-    welcomeBonusCents: number;
+    welcomeBonusCoins: number;
     welcomeCreditedAt: Date | null;
     welcomeExpiresAt: Date | null;
     daysUntilExpiry: number | null;
@@ -121,17 +121,17 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
         // belt-and-braces for the case where someone manually patched
         // welcome_credited_at without a transaction (or vice versa).
         let balanceCents = await deps.currency.getBalance(existing.id);
-        if (existing.welcomeCreditedAt === null && deps.welcomeBonusCents > 0n) {
+        if (existing.welcomeCreditedAt === null && deps.welcomeBonusCoins > 0n) {
           try {
             const r = await deps.currency.transact({
               userId: existing.id,
-              deltaCents: deps.welcomeBonusCents,
+              deltaCents: deps.welcomeBonusCoins,
               type: 'WELCOME_BONUS',
             });
             balanceCents = r.balanceAfter;
             await deps.repo.markWelcomeCredited(existing.id);
             deps.log?.info(
-              { userId: existing.id, deltaCents: deps.welcomeBonusCents.toString() },
+              { userId: existing.id, deltaCents: deps.welcomeBonusCoins.toString() },
               'welcome bonus retro-credited (recovery)',
             );
           } catch (err) {
@@ -149,10 +149,10 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       }
       const created = await deps.repo.create(args);
       let balanceCents = 0n;
-      if (deps.welcomeBonusCents > 0n) {
+      if (deps.welcomeBonusCoins > 0n) {
         const r = await deps.currency.transact({
           userId: created.id,
-          deltaCents: deps.welcomeBonusCents,
+          deltaCents: deps.welcomeBonusCoins,
           type: 'WELCOME_BONUS',
         });
         balanceCents = r.balanceAfter;
@@ -177,13 +177,13 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
     },
     async getWelcomeStatus(userId) {
       const raw = await deps.repo.getWelcomeRaw(userId);
-      const bonusCents = WELCOME_BONUS_CENTS;
+      const bonusCoins = WELCOME_BONUS_COINS;
       const recruiter = raw?.recruiter ?? null;
       if (!raw || raw.welcomeCreditedAt === null) {
         // Pre-rollout user (migration 0011 left their welcome_credited_at NULL).
         return {
           state: 'grandfathered' as const,
-          welcomeBonusCents: bonusCents,
+          welcomeBonusCoins: bonusCoins,
           welcomeCreditedAt: null,
           welcomeExpiresAt: null,
           daysUntilExpiry: null,
@@ -196,7 +196,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       if (raw.welcomeExpiredAt !== null) {
         return {
           state: 'expired' as const,
-          welcomeBonusCents: bonusCents,
+          welcomeBonusCoins: bonusCoins,
           welcomeCreditedAt: raw.welcomeCreditedAt,
           welcomeExpiresAt: expiresAt,
           daysUntilExpiry: null,
@@ -206,7 +206,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       if (raw.finalizedCount > 0) {
         return {
           state: 'used' as const,
-          welcomeBonusCents: bonusCents,
+          welcomeBonusCoins: bonusCoins,
           welcomeCreditedAt: raw.welcomeCreditedAt,
           welcomeExpiresAt: expiresAt,
           daysUntilExpiry: null,
@@ -218,7 +218,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
       const daysUntilExpiry = Math.max(0, Math.floor(msLeft / (24 * 3600 * 1000)));
       return {
         state: 'active' as const,
-        welcomeBonusCents: bonusCents,
+        welcomeBonusCoins: bonusCoins,
         welcomeCreditedAt: raw.welcomeCreditedAt,
         welcomeExpiresAt: expiresAt,
         daysUntilExpiry,
@@ -228,7 +228,7 @@ export function createUsersService(deps: UsersServiceDeps): UsersService {
     async expireUnusedWelcome() {
       // Snapshot the bonus amount in case config changes mid-cron — we want to
       // claw back exactly what we minted, not whatever the current default says.
-      const debit = -BigInt(WELCOME_BONUS_CENTS);
+      const debit = -BigInt(WELCOME_BONUS_COINS);
       const candidates = await deps.repo.findUsersWithExpiredWelcome({
         expiryDays: WELCOME_EXPIRY_DAYS,
       });

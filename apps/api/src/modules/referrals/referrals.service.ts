@@ -1,8 +1,8 @@
 import {
   computeCommission,
   MAX_REFERRAL_DEPTH,
-  REFEREE_SIGNUP_BONUS_CENTS,
-  RECRUITER_SIGNUP_BONUS_CENTS,
+  REFEREE_SIGNUP_BONUS_COINS,
+  RECRUITER_SIGNUP_BONUS_COINS,
   REQUIRED_CONTESTS_FOR_BONUS,
   type ReferralCurrency,
 } from '@fantasytoken/shared';
@@ -376,8 +376,8 @@ export function createReferralsService(deps: ReferralsServiceDeps): ReferralsSer
           try {
             const expectedAmount =
               row.bonusType === 'REFEREE'
-                ? BigInt(REFEREE_SIGNUP_BONUS_CENTS)
-                : BigInt(RECRUITER_SIGNUP_BONUS_CENTS);
+                ? BigInt(REFEREE_SIGNUP_BONUS_COINS)
+                : BigInt(RECRUITER_SIGNUP_BONUS_COINS);
             // Sanity guard: stale row with a non-canonical amount should not silently
             // mint a different number of cents — fall back to the row's stored amount.
             const credit = row.amountCents > 0n ? row.amountCents : expectedAmount;

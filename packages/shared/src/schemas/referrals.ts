@@ -104,7 +104,7 @@ export type ReferralsFriendResponse = z.infer<typeof ReferralsFriendResponse>;
  * referee Welcome screen ("Andriy invited you"). null = organic signup. */
 export const WelcomeStatusResponse = z.object({
   state: z.enum(['active', 'used', 'expired', 'grandfathered']),
-  welcomeBonusCents: z.number().int().nonnegative(),
+  welcomeBonusCoins: z.number().int().nonnegative(),
   welcomeCreditedAt: z.string().datetime().nullable(),
   welcomeExpiresAt: z.string().datetime().nullable(),
   /** Computed: floor((credited + 7d - now) / 1d). Null when state ≠ 'active'. */

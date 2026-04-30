@@ -179,7 +179,7 @@ export function makeReferralsRoutes(deps: ReferralsRoutesDeps): FastifyPluginAsy
       const s = await deps.users.getWelcomeStatus(me.userId);
       const response: typeof WelcomeStatusResponse._type = {
         state: s.state,
-        welcomeBonusCents: s.welcomeBonusCents,
+        welcomeBonusCoins: s.welcomeBonusCoins,
         welcomeCreditedAt: s.welcomeCreditedAt?.toISOString() ?? null,
         welcomeExpiresAt: s.welcomeExpiresAt?.toISOString() ?? null,
         daysUntilExpiry: s.daysUntilExpiry,

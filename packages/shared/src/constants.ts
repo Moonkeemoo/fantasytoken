@@ -21,10 +21,9 @@ export const LEAGUE_MULTIPLIERS = {
 } as const;
 
 // MVP-economy constants (mirror server env defaults; treat env as authoritative).
-// TZ-002: numerical units are now WHOLE COINS (1 coin = $1 fantasy display).
-// Constant kept under its old name so existing call sites compile through the
-// migration; the value is the new coin grant.
-export const WELCOME_BONUS_USD_CENTS = 500 as const; // 500 🪙 signup grant
+// TZ-002: numerical units are WHOLE COINS (1 coin = $1 fantasy display).
+// WELCOME_BONUS_COINS lives in `referrals/welcome-bonuses.ts` alongside the
+// other welcome-economy knobs — single source of truth for that file.
 /** Telegram Stars → Coins exchange rate (TZ-002 §2). 100⭐ → 1000🪙 base. */
 export const COINS_PER_STAR = 10 as const;
 export const RAKE_PCT_DEFAULT = 10 as const;

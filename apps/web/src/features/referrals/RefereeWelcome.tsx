@@ -37,8 +37,8 @@ export function RefereeWelcome() {
   }
 
   const recruiterName = welcome.data.recruiter.firstName ?? 'A friend';
-  const refereeBonusCents = welcome.data.welcomeBonusCents; // referee unlock equals signup bonus
-  const totalReadyCents = welcome.data.welcomeBonusCents + refereeBonusCents;
+  const refereeBonusCoins = welcome.data.welcomeBonusCoins; // referee unlock equals signup bonus
+  const totalReadyCoins = welcome.data.welcomeBonusCoins + refereeBonusCoins;
 
   const onStart = () => {
     if (typeof window !== 'undefined') window.localStorage.setItem(TUTORIAL_DONE_KEY, '1');
@@ -73,16 +73,16 @@ export function RefereeWelcome() {
           <div className="mt-2 flex flex-col gap-[6px] font-mono text-[12px]">
             <div className="flex justify-between">
               <span>Welcome bonus</span>
-              <span className="font-bold">+{formatCents(welcome.data.welcomeBonusCents)}</span>
+              <span className="font-bold">+{formatCents(welcome.data.welcomeBonusCoins)}</span>
             </div>
             <div className="flex justify-between">
               <span>Referral bonus (after 1st game)</span>
-              <span className="font-bold">+{formatCents(refereeBonusCents)}</span>
+              <span className="font-bold">+{formatCents(refereeBonusCoins)}</span>
             </div>
             <div className="my-1 border-t border-dashed border-ink/40" />
             <div className="flex justify-between text-[14px]">
               <span className="font-extrabold">Total ready to play</span>
-              <span className="font-extrabold">{formatCents(totalReadyCents)}</span>
+              <span className="font-extrabold">{formatCents(totalReadyCoins)}</span>
             </div>
           </div>
         </div>

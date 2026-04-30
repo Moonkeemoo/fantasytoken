@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { REFEREE_SIGNUP_BONUS_CENTS, RECRUITER_SIGNUP_BONUS_CENTS } from '@fantasytoken/shared';
+import { REFEREE_SIGNUP_BONUS_COINS, RECRUITER_SIGNUP_BONUS_COINS } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import {
   contests,
@@ -58,14 +58,14 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
             userId: refereeUserId,
             sourceUserId: null,
             bonusType: 'REFEREE',
-            amountCents: BigInt(REFEREE_SIGNUP_BONUS_CENTS),
+            amountCents: BigInt(REFEREE_SIGNUP_BONUS_COINS),
             currencyCode: 'USD',
           },
           {
             userId: recruiterUserId,
             sourceUserId: refereeUserId,
             bonusType: 'RECRUITER',
-            amountCents: BigInt(RECRUITER_SIGNUP_BONUS_CENTS),
+            amountCents: BigInt(RECRUITER_SIGNUP_BONUS_COINS),
             currencyCode: 'USD',
           },
         ])

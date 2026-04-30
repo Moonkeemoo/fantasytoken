@@ -8,11 +8,8 @@ const ConfigSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TON_NETWORK: z.enum(['mainnet', 'testnet']).default('mainnet'),
 
-  // TZ-002: signup grant in COINS (1 coin = $1 fantasy). Var name kept under
-  // the old `WELCOME_BONUS_USD_CENTS` so existing env vars / Railway secrets
-  // don't need a manual rename — the unit semantic flipped, value is coins.
-  // Default 500 matches spec §6.
-  WELCOME_BONUS_USD_CENTS: z.coerce.number().int().nonnegative().default(500),
+  // TZ-002: signup grant in WHOLE COINS (1 coin = $1 fantasy display).
+  WELCOME_BONUS_COINS: z.coerce.number().int().nonnegative().default(20),
   RAKE_PCT: z.coerce.number().int().min(0).max(50).default(10),
   BOT_MIN_FILLER: z.coerce.number().int().nonnegative().default(20),
   BOT_RATIO: z.coerce.number().int().nonnegative().default(3),

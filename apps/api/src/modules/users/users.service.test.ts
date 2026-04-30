@@ -95,7 +95,7 @@ describe('UsersService.upsertOnAuth', () => {
   it('creates user and credits welcome bonus on first auth', async () => {
     const repo = makeFakeRepo();
     const cur = makeFakeCurrency();
-    const svc = createUsersService({ repo, currency: cur, welcomeBonusCents: 10_000n });
+    const svc = createUsersService({ repo, currency: cur, welcomeBonusCoins: 10_000n });
     const result = await svc.upsertOnAuth({ telegramId: 42, firstName: 'Alex' });
     expect(result.balanceCents).toBe(10_000n);
     expect(cur.txs).toHaveLength(1);
@@ -105,7 +105,7 @@ describe('UsersService.upsertOnAuth', () => {
   it('does NOT duplicate welcome bonus on subsequent auth', async () => {
     const repo = makeFakeRepo();
     const cur = makeFakeCurrency();
-    const svc = createUsersService({ repo, currency: cur, welcomeBonusCents: 10_000n });
+    const svc = createUsersService({ repo, currency: cur, welcomeBonusCoins: 10_000n });
     await svc.upsertOnAuth({ telegramId: 42, firstName: 'Alex' });
     const second = await svc.upsertOnAuth({ telegramId: 42, firstName: 'Alex' });
     expect(second.balanceCents).toBe(10_000n);
@@ -116,7 +116,7 @@ describe('UsersService.upsertOnAuth', () => {
     const svc = createUsersService({
       repo: makeFakeRepo(),
       currency: makeFakeCurrency(),
-      welcomeBonusCents: 0n,
+      welcomeBonusCoins: 0n,
     });
     const r = await svc.upsertOnAuth({ telegramId: 7, firstName: 'No-Bonus' });
     expect(r.balanceCents).toBe(0n);

@@ -101,30 +101,53 @@ export function createBot({
    *   4. Empty keyboard if all unavailable.
    * Resolved lazily inside the command handler so botInfo (populated
    * only after bot.start()) is available when we evaluate it.
+   *
+   * `startParam` (e.g. "ref_12345") is forwarded so the WebApp receives
+   * `WebApp.initDataUnsafe.start_param` and can run referral attribution
+   * before routing to /welcome. Without this, a referee who taps the
+   * inline button after /start ref_X loses the param and lands in
+   * /tutorial instead of /welcome.
    */
-  function buildOpenAppKeyboard() {
+  function buildOpenAppKeyboard(startParam?: string) {
+    const sp = startParam && /^[A-Za-z0-9_-]{1,64}$/.test(startParam) ? startParam : null;
     if (miniAppWebUrl) {
+      // web_app buttons only accept the configured domain — query params on
+      // a https:// URL are passed straight through, but the WebApp SDK only
+      // surfaces `start_param` when the launch happens via t.me alias. So
+      // when we have a startParam, prefer the t.me deep-link form.
+      if (sp) {
+        const tmeFallback =
+          miniAppUrl ??
+          (bot.botInfo?.username
+            ? `https://t.me/${bot.botInfo.username}/${miniAppShortName}`
+            : null);
+        if (tmeFallback) {
+          return { inline_keyboard: [[openAppButton(`${tmeFallback}?startapp=${sp}`)]] };
+        }
+      }
       return { inline_keyboard: [[openAppButton(miniAppWebUrl)]] };
     }
     const fallback =
       miniAppUrl ??
       (bot.botInfo?.username ? `https://t.me/${bot.botInfo.username}/${miniAppShortName}` : null);
-    return fallback ? { inline_keyboard: [[openAppButton(fallback)]] } : { inline_keyboard: [] };
+    if (!fallback) return { inline_keyboard: [] };
+    const url = sp ? `${fallback}?startapp=${sp}` : fallback;
+    return { inline_keyboard: [[openAppButton(url)]] };
   }
 
   bot.command('start', async (ctx) => {
-    // Welcome message + deep-link to the mini-app. The startapp param is
-    // already on the original t.me/<bot>/<app>?startapp=ref_X URL the user
-    // followed — opening the app from this button preserves their session
-    // but loses the start_param, so the welcome text doubles as a friendly
-    // landing for users who came via the bot directly.
+    // /start payload (everything after "/start ") is the deep-link param
+    // forwarded by Telegram. For referees this is "ref_<inviterTgId>"; we
+    // pipe it back into the Open App button as ?startapp=ref_X so the
+    // WebApp's referral attribution flow fires on first launch.
+    const payload = ctx.match?.trim();
     await ctx.reply(
       '👋 Welcome to *Fantasy Token League*\\!\n\n' +
         'Pick a 5\\-coin lineup, beat the room, claim the pool\\.\n\n' +
         '_Tip: tap the blue *Play* button below the message bar to open the app any time\\._',
       {
         parse_mode: 'MarkdownV2',
-        reply_markup: buildOpenAppKeyboard(),
+        reply_markup: buildOpenAppKeyboard(payload || undefined),
       },
     );
   });

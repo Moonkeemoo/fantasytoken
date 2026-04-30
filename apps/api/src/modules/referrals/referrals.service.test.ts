@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REFEREE_SIGNUP_BONUS_CENTS,
-  RECRUITER_SIGNUP_BONUS_CENTS,
+  REFEREE_SIGNUP_BONUS_COINS,
+  RECRUITER_SIGNUP_BONUS_COINS,
   REQUIRED_CONTESTS_FOR_BONUS,
 } from '@fantasytoken/shared';
 import { createReferralsService, type ReferralsRepo } from './referrals.service.js';
@@ -53,7 +53,7 @@ function makeFakeRepo(): FakeRepo {
           id: `b-${this.bonusRows.length}`,
           userId: refereeUserId,
           bonusType: 'REFEREE',
-          amountCents: BigInt(REFEREE_SIGNUP_BONUS_CENTS),
+          amountCents: BigInt(REFEREE_SIGNUP_BONUS_COINS),
           unlocked: false,
         });
       }
@@ -62,7 +62,7 @@ function makeFakeRepo(): FakeRepo {
           id: `b-${this.bonusRows.length}`,
           userId: recruiterUserId,
           bonusType: 'RECRUITER',
-          amountCents: BigInt(RECRUITER_SIGNUP_BONUS_CENTS),
+          amountCents: BigInt(RECRUITER_SIGNUP_BONUS_COINS),
           unlocked: false,
         });
       }
@@ -278,7 +278,7 @@ describe('ReferralsService.maybeUnlockSignupBonuses', () => {
       id: 'b1',
       userId: 'u-bob',
       bonusType: 'REFEREE',
-      amountCents: BigInt(REFEREE_SIGNUP_BONUS_CENTS),
+      amountCents: BigInt(REFEREE_SIGNUP_BONUS_COINS),
       unlocked: false,
     });
     repo.finalized.set('u-bob', REQUIRED_CONTESTS_FOR_BONUS);
@@ -286,7 +286,7 @@ describe('ReferralsService.maybeUnlockSignupBonuses', () => {
     const r = await svc.maybeUnlockSignupBonuses({ userId: 'u-bob', triggeredByEntryId: 'e1' });
     expect(r.unlockedCount).toBe(1);
     expect(cur.credits).toHaveLength(1);
-    expect(cur.credits[0]?.amount).toBe(BigInt(REFEREE_SIGNUP_BONUS_CENTS));
+    expect(cur.credits[0]?.amount).toBe(BigInt(REFEREE_SIGNUP_BONUS_COINS));
     expect(repo.bonusRows[0]?.unlocked).toBe(true);
   });
 
@@ -297,7 +297,7 @@ describe('ReferralsService.maybeUnlockSignupBonuses', () => {
       id: 'b1',
       userId: 'u-bob',
       bonusType: 'REFEREE',
-      amountCents: BigInt(REFEREE_SIGNUP_BONUS_CENTS),
+      amountCents: BigInt(REFEREE_SIGNUP_BONUS_COINS),
       unlocked: false,
     });
     repo.finalized.set('u-bob', REQUIRED_CONTESTS_FOR_BONUS);
@@ -326,8 +326,8 @@ describe('ReferralsService.preCreateSignupBonuses', () => {
     const recruiterRow = repo.bonusRows.find((r) => r.bonusType === 'RECRUITER');
     expect(refereeRow?.userId).toBe('u-bob');
     expect(recruiterRow?.userId).toBe('u-alice');
-    expect(refereeRow?.amountCents).toBe(BigInt(REFEREE_SIGNUP_BONUS_CENTS));
-    expect(recruiterRow?.amountCents).toBe(BigInt(RECRUITER_SIGNUP_BONUS_CENTS));
+    expect(refereeRow?.amountCents).toBe(BigInt(REFEREE_SIGNUP_BONUS_COINS));
+    expect(recruiterRow?.amountCents).toBe(BigInt(RECRUITER_SIGNUP_BONUS_COINS));
   });
 
   it('idempotent — re-calling does not duplicate rows', async () => {
