@@ -48,7 +48,10 @@ export function TeamBuilder(): JSX.Element {
           } catch {
             // ignore
           }
-          navigate(`/contests/${id}/locked?entry=${res.entryId}`);
+          navigate(`/contests/${id}/locked?entry=${res.entryId}`, {
+            replace: true,
+            state: { picks },
+          });
         },
         onError: (err) => {
           const msg = String(err);
