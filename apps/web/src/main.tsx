@@ -4,6 +4,7 @@ import WebApp from '@twa-dev/sdk';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { App } from './App.js';
 import './index.css';
 import { ErrorBoundary } from './lib/error-boundary.js';
@@ -35,6 +36,7 @@ createRoot(root).render(
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <App />
+            <Analytics />
           </BrowserRouter>
         </QueryClientProvider>
       </TonConnectUIProvider>
