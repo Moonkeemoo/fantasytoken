@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
@@ -6,70 +5,55 @@ import { Button } from '../../components/ui/Button.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { formatCents } from '../../lib/format.js';
 import { telegram } from '../../lib/telegram.js';
-import { buildInviteUrl } from '../../lib/referral.js';
 import { useReferralsSummary, useReferralsTree } from './useReferrals.js';
-import { InviteQR } from './InviteQR.js';
 import { useInviteSheet } from './useInviteSheet.js';
 
 /**
- * Profile referrals block — REFERRAL_SYSTEM.md §6.1.
+ * Compact referrals card on the Profile screen.
  *
  * Two states:
- *  - Empty (l1Count === 0): big yellow note CTA explaining the offer.
- *  - Populated: headline + L1/L2 earnings breakdown + top earners list + 3 CTAs.
+ *  - Empty (l1Count === 0): yellow note with the "+\$50 + 5%" pitch.
+ *  - Populated: "YOUR NETWORK · +\$X lifetime" header, L1/L2 cards,
+ *    avatar cluster of L1 referees, and a DETAILS link to the
+ *    full-screen breakdown at /me/referrals.
  *
- * Both states show the same primary "📨 Invite friends" CTA so the muscle
- * memory carries over once the user starts inviting.
+ * Shaped to match the brand-mockup layout — earnings are scannable in
+ * 1 second, the heavy stats live behind the DETAILS tap.
  */
 export function ReferralsSection({ telegramId }: { telegramId: number }) {
   const summary = useReferralsSummary();
   const tree = useReferralsTree();
+  const showInviteSheet = useInviteSheet((st) => st.show);
 
   if (summary.isLoading) {
     return (
       <Card variant="dim" className="!px-[14px] !py-3">
-        <Label>referrals</Label>
+        <Label>your network</Label>
         <div className="mt-1 font-mono text-[11px] text-muted">loading…</div>
       </Card>
     );
   }
   if (summary.isError || !summary.data) {
-    return null; // Don't break the page; user retries on next visit.
+    return null;
   }
 
   const s = summary.data;
-  const showInviteSheet = useInviteSheet((st) => st.show);
   const onInvite = () => {
     telegram.hapticImpact('light');
     showInviteSheet();
-  };
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(buildInviteUrl(telegramId));
-      telegram.hapticNotification('success');
-    } catch {
-      telegram.hapticNotification('error');
-    }
   };
 
   if (s.l1Count === 0) {
     return <EmptyState onInvite={onInvite} />;
   }
-  return (
-    <Populated
-      summary={s}
-      tree={tree.data}
-      telegramId={telegramId}
-      onInvite={onInvite}
-      onCopy={onCopy}
-    />
-  );
+
+  return <Populated summary={s} tree={tree.data} telegramId={telegramId} />;
 }
 
 function EmptyState({ onInvite }: { onInvite: () => void }) {
   return (
     <div className="rounded-[6px] border-[1.5px] border-ink bg-note px-[14px] py-3">
-      <Label>referrals</Label>
+      <Label>your network</Label>
       <div className="mt-1 text-[15px] font-extrabold leading-tight">
         Invite 1 friend → +$50 and 5% from their wins forever
       </div>
@@ -88,87 +72,89 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
 function Populated({
   summary,
   tree,
-  telegramId,
-  onInvite,
-  onCopy,
+  telegramId: _telegramId,
 }: {
-  summary: ReturnType<typeof useReferralsSummary>['data'] & object;
+  summary: NonNullable<ReturnType<typeof useReferralsSummary>['data']>;
   tree: ReturnType<typeof useReferralsTree>['data'];
   telegramId: number;
-  onInvite: () => void;
-  onCopy: () => void;
 }) {
-  const [showQr, setShowQr] = useState(false);
   const navigate = useNavigate();
-  // Top earners: highest contributedCents from L1, capped to 5 for breathing room.
-  const topEarners = (tree?.l1 ?? [])
-    .filter((n) => n.totalContributedCents > 0)
-    .sort((a, b) => b.totalContributedCents - a.totalContributedCents)
-    .slice(0, 5);
+
+  // Up to 5 avatar chips + "+N" overflow. Sort: active first, then most-
+  // recent. Keeps the most-engaged faces in front.
+  const l1 = (tree?.l1 ?? []).slice().sort((a, b) => {
+    if (a.hasPlayed !== b.hasPlayed) return a.hasPlayed ? -1 : 1;
+    return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+  });
+  const previewCount = Math.min(5, l1.length);
+  const overflow = l1.length - previewCount;
 
   return (
-    <Card variant="dim" className="flex flex-col gap-3 !px-[14px] !py-3">
-      <div>
-        <Label>referrals</Label>
-        <div className="mt-1 text-[15px] font-extrabold leading-tight">
-          {summary.l1Count} invited · {formatCents(summary.totalEarnedCents)} earned
-        </div>
+    <Card variant="dim" className="!px-[14px] !py-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <Label>your network</Label>
+        <span className="font-mono text-[11px] font-extrabold uppercase tracking-[0.06em] text-accent">
+          +{formatCents(summary.totalEarnedCents)} lifetime
+        </span>
       </div>
 
-      {/* L1/L2 earnings breakdown box — paper-inset code-bg per spec §6.1 */}
-      <div className="rounded-[4px] border border-rule bg-code-bg px-[10px] py-2 font-mono text-[11px] leading-relaxed">
-        <div className="flex justify-between">
-          <span className="text-muted">L1 · 5%</span>
-          <span className="font-bold">
-            {formatCents(summary.l1EarnedCents)}{' '}
-            <span className="text-muted">({summary.l1ActiveCount} active)</span>
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted">L2 · 1%</span>
-          <span className="font-bold">
-            {formatCents(summary.l2EarnedCents)}{' '}
-            <span className="text-muted">({summary.l2ActiveCount} active)</span>
-          </span>
-        </div>
+      {/* Two stat cards side-by-side. L1 carries an extra "invited" subline
+          since invited-but-inactive matters for the recruiter's funnel. */}
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <StatBox
+          tier="L1 · 5%"
+          amountCents={summary.l1EarnedCents}
+          subline={`${summary.l1ActiveCount} active · ${summary.l1Count} invited`}
+        />
+        <StatBox
+          tier="L2 · 1%"
+          amountCents={summary.l2EarnedCents}
+          subline={`${summary.l2ActiveCount} active`}
+        />
       </div>
 
-      {topEarners.length > 0 && (
-        <div className="flex flex-col gap-[4px]">
-          <Label>top earners</Label>
-          {topEarners.map((n) => (
-            <button
-              key={n.userId}
-              onClick={() => navigate(`/me/referrals/${n.userId}`)}
-              className="flex items-center gap-[8px] rounded-[4px] border border-rule bg-paper px-[8px] py-[6px] text-left transition active:scale-[0.99]"
-            >
-              <Avatar name={n.firstName ?? '?'} url={n.photoUrl} size={28} />
-              <div className="flex-1 text-[12px] font-bold leading-tight">
-                {n.firstName ?? 'anonymous'}
-              </div>
-              <div className="font-mono text-[11px] font-bold text-hl-green">
-                +{formatCents(n.totalContributedCents)}
-              </div>
-              <span className="font-mono text-[12px] text-muted">›</span>
-            </button>
+      <div className="mt-2 flex items-center justify-between gap-2 border-t border-dashed border-ink/30 pt-[10px]">
+        <div className="flex items-center -space-x-[6px]">
+          {l1.slice(0, previewCount).map((n) => (
+            <div key={n.userId} className="rounded-full ring-2 ring-paper-dim">
+              <Avatar name={n.firstName ?? '?'} url={n.photoUrl} size={22} />
+            </div>
           ))}
+          {overflow > 0 && (
+            <div className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-ink bg-paper font-mono text-[9px] font-bold ring-2 ring-paper-dim">
+              +{overflow}
+            </div>
+          )}
+          {l1.length === 0 && (
+            <span className="font-mono text-[10px] text-muted">no friends yet</span>
+          )}
         </div>
-      )}
-
-      {/* CTAs — primary share, secondary copy + QR toggle. */}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" size="sm" onClick={onInvite}>
-          📨 Invite friends · earn 5%
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onCopy}>
-          Copy link
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => setShowQr((v) => !v)}>
-          {showQr ? 'Hide QR' : 'Show QR'}
+        <Button variant="primary" size="sm" onClick={() => navigate('/me/referrals')}>
+          DETAILS ›
         </Button>
       </div>
-
-      {showQr && <InviteQR telegramId={telegramId} />}
     </Card>
+  );
+}
+
+function StatBox({
+  tier,
+  amountCents,
+  subline,
+}: {
+  tier: string;
+  amountCents: number;
+  subline: string;
+}) {
+  return (
+    <div className="rounded-[4px] border border-rule bg-paper px-[10px] py-2">
+      <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted">{tier}</div>
+      <div className="mt-[2px] text-[20px] font-extrabold leading-tight">
+        {formatCents(amountCents)}
+      </div>
+      <div className="mt-[2px] font-mono text-[9px] uppercase tracking-[0.06em] text-muted">
+        {subline}
+      </div>
+    </div>
   );
 }

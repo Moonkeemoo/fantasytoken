@@ -12,6 +12,7 @@ import { Profile } from './features/profile/Profile.js';
 import { RefereeWelcome } from './features/referrals/RefereeWelcome.js';
 import { CommissionToast } from './features/referrals/CommissionToast.js';
 import { ReferralFriend } from './features/referrals/ReferralFriend.js';
+import { ReferralsDetail } from './features/referrals/ReferralsDetail.js';
 import { GlobalInviteSheet } from './features/referrals/GlobalInviteSheet.js';
 
 export function App() {
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/live" element={<LiveList />} />
         <Route path="/rankings" element={<Rankings />} />
         <Route path="/me" element={<Profile />} />
+        <Route path="/me/referrals" element={<ReferralsDetail />} />
         <Route path="/me/referrals/:friendId" element={<ReferralFriend />} />
         <Route path="/status" element={<StatusPage />} />
         <Route
