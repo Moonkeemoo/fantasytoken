@@ -1,10 +1,13 @@
+import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fmtPnL } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
 import { Label } from '../../components/ui/Label.js';
+import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { useLive } from '../live/useLive.js';
 import { LiveHeader } from '../live/LiveHeader.js';
+import { useTokenList } from '../team-builder/useTokenList.js';
 import { formatPctPrecise } from '../../lib/format.js';
 
 /**
@@ -34,6 +37,16 @@ export function Spectator(): JSX.Element {
 
   const data = live.data;
   const top10 = data.leaderboardAll.slice(0, 10);
+
+  // Token icon lookup (by symbol) so each leaderboard row can render
+  // the player's lineup as a 5-icon strip. Cached at the user-list cap
+  // (250) — covers every token in the matrix.
+  const tokensQ = useTokenList(250);
+  const imageBySymbol = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
+    return map;
+  }, [tokensQ.data]);
 
   return (
     <div
@@ -70,22 +83,47 @@ export function Spectator(): JSX.Element {
             const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${row.rank}`;
             const plClass =
               row.scorePct > 0 ? 'text-hl-green' : row.scorePct < 0 ? 'text-hl-red' : 'text-muted';
-            // Both $ PnL (matches the hero card on Live screen) and the
-            // raw % so spectators can compare apples-to-apples regardless
-            // of contest tier. Bigger pill is $; smaller is the %.
             const pnlUsd = row.scorePct * data.virtualBudgetCents;
             return (
-              <div key={row.rank} className="flex items-center gap-2">
-                <div className="w-[36px] text-center font-mono text-[12px] font-bold">{medal}</div>
-                <div className="flex-1 truncate text-[12px]">{row.displayName ?? 'anon'}</div>
-                <div className="text-right leading-tight">
-                  <div className={`font-mono text-[13px] font-bold ${plClass}`}>
-                    {fmtPnL(pnlUsd)}
+              <div
+                key={row.rank}
+                className="flex flex-col gap-1 border-b border-line/40 pb-1.5 last:border-0 last:pb-0"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-[36px] text-center font-mono text-[12px] font-bold">
+                    {medal}
                   </div>
-                  <div className={`font-mono text-[10px] ${plClass}`}>
-                    {formatPctPrecise(row.scorePct)}
+                  <div className="flex-1 truncate text-[12px]">{row.displayName ?? 'anon'}</div>
+                  <div className="text-right leading-tight">
+                    <div className={`font-mono text-[13px] font-bold ${plClass}`}>
+                      {fmtPnL(pnlUsd)}
+                    </div>
+                    <div className={`font-mono text-[10px] ${plClass}`}>
+                      {formatPctPrecise(row.scorePct)}
+                    </div>
                   </div>
                 </div>
+                {/* Picks strip — 5 token icons in a row. Built from
+                    leaderboard.picks (symbols only); we look images up via
+                    the cached token list. Privacy: allocations stay
+                    server-side, only symbols travel. */}
+                {row.picks.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pl-[44px]">
+                    {row.picks.map((sym) => (
+                      <span
+                        key={sym}
+                        className="inline-flex items-center gap-1 rounded-[3px] border border-line bg-paper-dim/60 px-1 py-px font-mono text-[9px]"
+                      >
+                        <TokenIcon
+                          symbol={sym}
+                          imageUrl={imageBySymbol.get(sym) ?? null}
+                          size={12}
+                        />
+                        <span className="text-ink">{sym}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

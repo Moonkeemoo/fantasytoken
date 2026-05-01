@@ -142,7 +142,10 @@ export function LockedScreen(): JSX.Element {
     mode === 'bear' ? 'border-bear text-bear bg-bear/5' : 'border-bull text-bull bg-bull/5';
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper pb-14 text-ink">
+    <div
+      className="flex min-h-screen flex-col bg-paper text-ink"
+      style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <header className="border-b border-line px-3 pb-2 pt-3 text-center">
         <div className="flex items-center justify-center gap-1.5 text-[14px] font-bold leading-tight">
           <span>{contest.name}</span>
@@ -252,7 +255,12 @@ export function LockedScreen(): JSX.Element {
         </ul>
       </section>
 
-      <div className="mt-auto sticky bottom-14 flex gap-2 border-t border-line bg-paper px-3 py-2">
+      <div
+        className="mt-auto sticky flex gap-2 border-t border-line bg-paper px-3 py-2"
+        // BottomNav (56px) + iPhone home-indicator inset; without this
+        // these CTAs land under the tab bar.
+        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+      >
         <button
           type="button"
           disabled

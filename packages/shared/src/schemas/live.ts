@@ -17,6 +17,12 @@ export const LeaderboardEntry = z.object({
   avatarUrl: z.string().nullable(),
   scorePct: z.number(),
   isMe: z.boolean(),
+  /** Symbols only (no allocations). Surfaces in the Spectator leaderboard
+   * as a 5-icon strip so watchers can read the room composition without a
+   * separate fetch. Allocations are intentionally omitted (privacy + the
+   * equal-split rule means they're derivable from count anyway). Default
+   * `[]` for backward-compat with pre-rollout API responses. */
+  picks: z.array(z.string()).default([]),
 });
 export type LeaderboardEntry = z.infer<typeof LeaderboardEntry>;
 

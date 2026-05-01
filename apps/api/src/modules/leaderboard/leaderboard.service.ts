@@ -105,6 +105,10 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
             avatarUrl,
             scorePct: s.score,
             isMe,
+            // Symbols only — Spectator renders the 5-icon strip per row.
+            // Allocations intentionally omitted (TZ-003: equal-split makes
+            // them derivable from `picks.length` anyway).
+            picks: s.entry.picks.map((p) => p.symbol),
           };
         }),
       );
