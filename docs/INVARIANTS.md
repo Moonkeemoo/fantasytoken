@@ -37,6 +37,10 @@
 
 **INV-14** — Synthetic users (`users.is_synthetic = true`) приховані від real-user-facing read paths. Partial index `users_real_only_idx` сигналізує: кожен `SELECT … FROM users` у production-контексті (профіль, friends discovery, referral attribution, real-user counts, leaderboards поза рамками одного контесту) фільтрує `is_synthetic = false`. Per-contest leaderboards — виняток: synthetic entries навмисно з'являються поруч із real, бо це "населення" продукту (TZ-005). Consequence: real юзер бачить fake handle у `friends`/`recruiter` UI → втрата довіри; analytics counts inflated → невірні бізнес-метрики. Source: ADR-0006 (TZ-005, 2026-05-01).
 
+**INV-15** — Pre-lock `entries.user_id IS NOT NULL` count ніколи не перевищує `contests.max_capacity`. Перевірка у `entriesService.submit` (server-side) ОБОВ'ЯЗКОВА — лобі-фільтр у `contests.routes.ts` не enforce, лише ховає UI. Bot fill (`lockAndSpawn`) додає ботів до залишку seats AFTER lock; до lock'а тільки реальні entries рахуються в cap. Consequence: контест "26/20" у лобі (sim-cohort showed this), drift у prize-pool математиці, broken leaderboard counts. Source: ADR-0007 / fix(entries) e03cd06.
+
+**INV-16** — `entriesService.submit` rejects with `CONTEST_NOT_OPEN` коли `users.current_rank < contests.min_rank`. Лобі route фільтрує rank-gated контести з UI, але це лише cosmetics — будь-який direct submit (curl, sim, future client divergence) має пройти server-side перевірку. Consequence: rank-1 юзер витрачає welcome bonus на rank-2/5 контест (sim showed this on day-1: synth з 20 coins вгрузався у Whale Hour minRank=13). Source: ADR-0007.
+
 ## Maintenance
 
 - Знайшов невидимий контракт у коді → додай як `INV-N`.
