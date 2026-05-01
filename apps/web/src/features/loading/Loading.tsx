@@ -48,11 +48,17 @@ export function Loading() {
   // the bug where a wiped account skipped the tutorial because localStorage
   // still held the flag from the previous identity. localStorage is kept in
   // sync on tutorial finish so future cold starts can route instantly.
-  const tutorialDone = me.data.tutorialDone;
+  // Tutorial flag: trust EITHER server flag OR localStorage. Earlier we
+  // strictly used the server value and removed the cache when server
+  // said false — a transient /me/tutorial-done failure (network blip or
+  // 401 race) made the user re-do the tutorial on every cold start.
+  // Now localStorage acts as a sticky positive fallback; the next /me
+  // refetch will eventually flip the server flag too.
+  const cachedDone =
+    typeof window !== 'undefined' && window.localStorage.getItem(TUTORIAL_DONE_KEY) === '1';
+  const tutorialDone = me.data.tutorialDone || cachedDone;
   if (tutorialDone && typeof window !== 'undefined') {
     window.localStorage.setItem(TUTORIAL_DONE_KEY, '1');
-  } else if (!tutorialDone && typeof window !== 'undefined') {
-    window.localStorage.removeItem(TUTORIAL_DONE_KEY);
   }
 
   if (tutorialDone) return <Navigate to="/lobby" replace />;

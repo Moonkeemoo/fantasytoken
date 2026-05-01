@@ -6,6 +6,10 @@ export const LineupRow = z.object({
   alloc: z.number().int(),
   pctChange: z.number(),
   contribUsd: z.number(),
+  /** Current spot price in USD. Drives the price+arrow widget on Live
+   * (replaces the v1 histogram per user feedback). null when the price
+   * snapshot is unavailable. Default `null` for back-compat. */
+  currentPriceUsd: z.number().nullable().default(null),
 });
 export type LineupRow = z.infer<typeof LineupRow>;
 

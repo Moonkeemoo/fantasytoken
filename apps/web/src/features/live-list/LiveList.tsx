@@ -16,7 +16,10 @@ export function LiveList() {
   const my = useContests('my');
   const [topUpOpen, setTopUpOpen] = useState(false);
 
-  const items = my.data?.items ?? [];
+  // Hard filter on `userHasEntered` — backend's filter='my' should already
+  // do this, but several test-flow rounds left orphan rows visible. Belt
+  // and braces: only contests where this user actually has an entry.
+  const items = (my.data?.items ?? []).filter((c) => c.userHasEntered);
   const inProgress = useMemo(
     () =>
       items

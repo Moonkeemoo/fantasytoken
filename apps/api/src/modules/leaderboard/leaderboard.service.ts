@@ -161,6 +161,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
               alloc: p.alloc,
               pctChange: pct,
               contribUsd: (p.alloc / 100) * pct * budgetUsd * dir,
+              currentPriceUsd: cur,
             };
           });
         }

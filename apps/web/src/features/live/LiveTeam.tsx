@@ -1,8 +1,18 @@
 import type { LineupRow } from '@fantasytoken/shared';
 import { fmtPnL } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
-import { TokenHistogram } from '../../components/ui/TokenHistogram.js';
+import { PriceDelta } from '../../components/ui/PriceDelta.js';
 import { Label } from '../../components/ui/Label.js';
+
+function fmtPriceCompact(n: number | null): string {
+  if (n === null || !Number.isFinite(n)) return '—';
+  if (n === 0) return '$0';
+  if (n < 0.01) return `$${n.toFixed(6)}`;
+  if (n < 1) return `$${n.toFixed(4)}`;
+  if (n < 1000) return `$${n.toFixed(2)}`;
+  if (n < 1_000_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${(n / 1_000_000).toFixed(1)}M`;
+}
 
 export interface LiveTeamProps {
   rows: LineupRow[];
@@ -39,12 +49,6 @@ export function LiveTeam({ rows }: LiveTeamProps): JSX.Element {
             : isHurting
               ? 'border-l-bear'
               : 'border-l-line';
-          // pctChange stays raw — universal "price up = green, down = red".
-          // In Bear the player still sees red on a falling token (true) but
-          // the dollar PnL beside it is green (player benefits). That dual
-          // signal is correct and informative.
-          const pctColor =
-            r.pctChange > 0 ? 'text-bull' : r.pctChange < 0 ? 'text-bear' : 'text-muted';
           const isTop = winner?.symbol === r.symbol && r.contribUsd > 0;
           const pnlColor = isHelping ? 'text-bull' : isHurting ? 'text-bear' : 'text-ink';
 
@@ -65,25 +69,20 @@ export function LiveTeam({ rows }: LiveTeamProps): JSX.Element {
                   )}
                 </div>
               </div>
-              {/* Mini histogram of the last 24h — direction tints the bars
-                  (bull / bear), magnitude spreads them. Same primitive as
-                  the Browse list so the player builds a single visual
-                  language across the app. */}
-              <TokenHistogram
-                symbol={r.symbol}
-                pctChange24h={r.pctChange * 100}
-                width={48}
-                height={20}
-                className="shrink-0"
+              {/* Price + arrow + delta-since-entry. Replaces the V1
+                  histogram per user feedback ("графіки прибирай вони
+                  безтолкові"). Pct here is entry-relative (`pctChange`
+                  is computed against the contest start snapshot). */}
+              <PriceDelta
+                price={fmtPriceCompact(r.currentPriceUsd)}
+                pct={r.pctChange * 100}
+                refLabel="vs entry"
               />
               <div className="text-right">
                 <div className={`font-mono text-[14px] font-bold ${pnlColor}`}>
                   {fmtPnL(r.contribUsd)}
                 </div>
-                <div className={`text-[10px] ${pctColor}`}>
-                  {r.pctChange > 0 ? '+' : ''}
-                  {r.pctChange.toFixed(2)}%
-                </div>
+                <div className="text-[10px] text-muted">{r.alloc}%</div>
               </div>
             </li>
           );
