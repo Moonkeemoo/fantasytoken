@@ -406,17 +406,16 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  // Active-token price sync via CoinGecko — the workhorse for everything
-  // Bybit/OKX don't list AND for quiet markets they DO list (Bybit only
-  // pushes ticker frames on price change, so a low-volume token can sit
-  // a minute without any update). Tightened cadence: 15s tick, refresh
-  // anything stale >25s. Per-cycle ask is ~250 ids = 1 CG call; 4
-  // calls/min is well inside the free-tier 30/min budget. With this:
-  // covered-and-active tokens stay <5s (live feed), covered-but-quiet
-  // tokens stay <40s (CG fallback), uncovered tokens stay <40s (CG
-  // primary). Net: most of the catalog reads <40s fresh end-to-end.
+  // Active-token price sync via CoinGecko — the workhorse for tokens
+  // Bybit/OKX don't carry AND for quiet markets they do (Bybit pushes
+  // only on price change, so a low-volume token can sit a minute with
+  // no update). Cadence: 30s tick, refresh anything stale >60s. We
+  // tried 15s/25s earlier and it produced steady HTTP 429 from the
+  // CoinGecko free-tier — per qa003, the limit is bursty per-second,
+  // not the documented per-minute total. Steady state at this cadence
+  // is <40 calls/min and stays inside the budget.
   const stopActiveSync = scheduleEvery({
-    intervalMs: 15_000,
+    intervalMs: 30_000,
     fn: async () => {
       await tokens.syncActive();
     },

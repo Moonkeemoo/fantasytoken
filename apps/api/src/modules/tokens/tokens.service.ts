@@ -109,15 +109,15 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
     },
 
     async syncActive() {
-      // Refresh anything stale > 25s. With Bybit+OKX covering ~50% of
+      // Refresh anything stale > 60s. With Bybit+OKX covering ~50% of
       // the catalog at <5s freshness on active markets, this filter
-      // naturally narrows the CoinGecko ask to: (a) the ~258 tokens
-      // those exchanges don't list, and (b) tokens they do list whose
+      // narrows the CoinGecko ask to: (a) the ~258 tokens those
+      // exchanges don't list, and (b) tokens they do list whose
       // markets went quiet (Bybit/OKX push only on price change). The
-      // 25s threshold keeps the per-cycle ask to 1 CG call and gives
-      // every token a refresh within ~40s end-to-end (25s threshold +
-      // 15s cron tick).
-      const ids = await deps.repo.listActiveCoingeckoIds({ excludeFreshWithinSec: 25 });
+      // 60s threshold (paired with 30s cron) keeps end-to-end staleness
+      // below ~90s while staying inside the free-tier per-second burst
+      // limit — tighter values produce steady 429s (see qa003).
+      const ids = await deps.repo.listActiveCoingeckoIds({ excludeFreshWithinSec: 60 });
       if (ids.length === 0) return 0;
       try {
         const markets = await deps.client.marketsByIds(ids);
