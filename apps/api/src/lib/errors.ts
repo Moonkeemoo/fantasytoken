@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'INSUFFICIENT_COINS'
   | 'CONTEST_CLOSED'
   | 'CONTEST_NOT_OPEN'
+  | 'CONTEST_FULL'
   | 'INTERNAL';
 
 export class AppError extends Error {
@@ -53,5 +54,9 @@ export const errors = {
       current,
     }),
   contestClosed: () => new AppError('CONTEST_CLOSED', 'Contest is closed for entries', 409),
+  /** Pre-lock real-entry cap reached. Surfaces `current` and `cap` so the
+   * lobby UI can disable the JOIN button accurately for late arrivals. */
+  contestFull: (current: number, cap: number) =>
+    new AppError('CONTEST_FULL', 'Contest is full', 409, undefined, { current, cap }),
   internal: (msg: string, cause?: unknown) => new AppError('INTERNAL', msg, 500, cause),
 };

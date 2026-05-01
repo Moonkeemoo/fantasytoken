@@ -23,6 +23,7 @@ export function createEntriesRepo(db: Database): EntriesRepo {
           entryFeeCents: contests.entryFeeCents,
           startsAt: contests.startsAt,
           minRank: contests.minRank,
+          maxCapacity: contests.maxCapacity,
         })
         .from(contests)
         .where(
@@ -30,6 +31,27 @@ export function createEntriesRepo(db: Database): EntriesRepo {
         )
         .limit(1);
       return row ?? null;
+    },
+
+    async countRealEntries(contestId) {
+      // Pre-lock real-entry cap enforcement. Bots are inserted at
+      // lockAndSpawn time only, so pre-lock real_count == total_count.
+      // We still filter on user_id IS NOT NULL for safety in case any
+      // future code path inserts bots earlier.
+      const [r] = await db
+        .select({ n: sql<number>`COUNT(*)::int` })
+        .from(entries)
+        .where(and(eq(entries.contestId, contestId), sql`${entries.userId} IS NOT NULL`));
+      return r?.n ?? 0;
+    },
+
+    async getUserCurrentRank(userId) {
+      const [r] = await db
+        .select({ rank: users.currentRank })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      return r?.rank ?? 1;
     },
 
     async unknownSymbols(symbols) {

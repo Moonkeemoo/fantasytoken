@@ -15,6 +15,10 @@ export interface TickSynthetic {
   id: string;
   personaKind: PersonaKind;
   syntheticSeed: number;
+  /** Synth's current rank (RANK_SYSTEM.md). Synths start at 1 and climb
+   * via xp_events the same way real users do. Drives the picker's
+   * minRank gate so they don't try contests above their tier. */
+  currentRank: number;
 }
 
 export interface TickOpenContest {
@@ -22,6 +26,7 @@ export interface TickOpenContest {
   entryFeeCents: bigint;
   createdAt: Date;
   startsAt: Date;
+  minRank: number;
 }
 
 export interface TickRepo {
@@ -51,6 +56,7 @@ export function createTickRepo(db: Database): TickRepo {
           id: users.id,
           personaKind: users.personaKind,
           syntheticSeed: users.syntheticSeed,
+          currentRank: users.currentRank,
         })
         .from(users)
         .where(eq(users.isSynthetic, true));
@@ -60,6 +66,7 @@ export function createTickRepo(db: Database): TickRepo {
           id: r.id,
           personaKind: r.personaKind as PersonaKind,
           syntheticSeed: r.syntheticSeed as number,
+          currentRank: r.currentRank,
         }));
     },
 
@@ -72,6 +79,7 @@ export function createTickRepo(db: Database): TickRepo {
           entryFeeCents: contests.entryFeeCents,
           createdAt: contests.createdAt,
           startsAt: contests.startsAt,
+          minRank: contests.minRank,
         })
         .from(contests)
         .where(and(eq(contests.status, 'scheduled'), gt(contests.startsAt, new Date())));
@@ -80,6 +88,7 @@ export function createTickRepo(db: Database): TickRepo {
         entryFeeCents: r.entryFeeCents,
         createdAt: r.createdAt,
         startsAt: r.startsAt,
+        minRank: r.minRank,
       }));
     },
 

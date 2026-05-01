@@ -22,7 +22,19 @@ function makeFakeRepo(
     },
     async getOpenContest(id) {
       if (opts.contestOpen === false) return null;
-      return { id, entryFeeCents: 500n, startsAt: new Date(Date.now() + 60_000) };
+      return {
+        id,
+        entryFeeCents: 500n,
+        startsAt: new Date(Date.now() + 60_000),
+        maxCapacity: 1000,
+        minRank: 1,
+      };
+    },
+    async countRealEntries() {
+      return 0;
+    },
+    async getUserCurrentRank() {
+      return 1;
     },
     async unknownSymbols(symbols) {
       const known = opts.knownSymbols ?? ['BTC', 'ETH', 'PEPE', 'WIF', 'BONK'];

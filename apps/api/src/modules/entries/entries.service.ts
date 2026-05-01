@@ -26,7 +26,19 @@ export interface SubmitResult {
 
 export interface EntriesRepo {
   findExisting(args: { userId: string; contestId: string }): Promise<{ entryId: string } | null>;
-  getOpenContest(id: string): Promise<{ id: string; entryFeeCents: bigint; startsAt: Date } | null>;
+  getOpenContest(id: string): Promise<{
+    id: string;
+    entryFeeCents: bigint;
+    startsAt: Date;
+    maxCapacity: number;
+    minRank: number;
+  } | null>;
+  /** Pre-lock real-entry count for cap enforcement (excludes bots). */
+  countRealEntries(contestId: string): Promise<number>;
+  /** User's current rank (RANK_SYSTEM.md). Drives the minRank gate at
+   * submit time — without this the lobby filter is the only enforcement
+   * and a synth/curl can bypass it. */
+  getUserCurrentRank(userId: string): Promise<number>;
   unknownSymbols(symbols: string[]): Promise<string[]>;
   create(args: { userId: string; contestId: string; picks: EntryPick[] }): Promise<{
     id: string;
@@ -94,6 +106,27 @@ export function createEntriesService(deps: EntriesServiceDeps): EntriesService {
 
       const contest = await deps.repo.getOpenContest(contestId);
       if (!contest) throw errors.contestClosed();
+
+      // Rank gate. Lobby UI filters contests where contest.minRank >
+      // user.currentRank, but the lobby filter alone leaves a hole for
+      // direct submit (synth, curl, future client divergence). Throw a
+      // CONTEST_NOT_OPEN so the synth log captures the gating moment.
+      const callerRank = await deps.repo.getUserCurrentRank(userId);
+      if (callerRank < contest.minRank) {
+        throw errors.contestNotOpen();
+      }
+
+      // Cap pre-lock real entries. Bots fill the rest at lockAndSpawn
+      // time; if real entries already meet maxCapacity, late arrivals
+      // (real or synthetic) get a clean CONTEST_FULL instead of bypassing
+      // the cap and producing "26/20" displays in the lobby.
+      // Race window is small: count→insert isn't atomic, so a burst of
+      // concurrent submits at exactly cap might add 1-2 extras. Acceptable
+      // tradeoff vs the latency cost of a row-locking transaction.
+      const realCount = await deps.repo.countRealEntries(contestId);
+      if (realCount >= contest.maxCapacity) {
+        throw errors.contestFull(realCount, contest.maxCapacity);
+      }
 
       const unknown = await deps.repo.unknownSymbols(symbols);
       if (unknown.length > 0) {

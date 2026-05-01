@@ -132,19 +132,22 @@ export function createTickService(deps: TickServiceDeps): TickService {
 
         let balance = balancesByUser.get(synth.id) ?? 0n;
 
-        // 1) Per-tick: try to enter EVERY contest the synth can afford that
-        //    they're not already in. "Max connect" mode (TZ-005 amended
-        //    2026-05-01) — real-active-player simulation: see every
-        //    available game, click join. Per-persona joinRate still gates
-        //    each contest, so a lurker doesn't carpet-bomb everything.
-        //    Balance is decremented locally so a 20-coin synth doesn't
+        // 1) Per-tick: try to enter EVERY contest the synth can afford AND
+        //    is rank-eligible for, that they're not already in. "Max
+        //    connect" mode (TZ-005 amended 2026-05-01) — real-active-player
+        //    simulation. Pre-filter eliminates noise:
+        //      - rank-gated contests (minRank > synth.currentRank): a
+        //        rank-1 synth shouldn't waste dice on a tier-2 contest
+        //        (real lobby UI hides those, mirror the same logic).
+        //      - already-entered contests.
+        //      - unaffordable contests (separate signal — `cannot_afford`).
+        //    Balance is drained locally so a 20-coin synth doesn't
         //    "double-spend" within one tick.
-        const affordableUnentered = openContests.filter(
-          (c) => !entered.has(`${synth.id}|${c.id}`) && c.entryFeeCents <= balance,
+        const eligible = openContests.filter(
+          (c) => !entered.has(`${synth.id}|${c.id}`) && c.minRank <= synth.currentRank,
         );
-        const unaffordableUnentered = openContests.filter(
-          (c) => !entered.has(`${synth.id}|${c.id}`) && c.entryFeeCents > balance,
-        );
+        const affordableUnentered = eligible.filter((c) => c.entryFeeCents <= balance);
+        const unaffordableUnentered = eligible.filter((c) => c.entryFeeCents > balance);
 
         for (const c of affordableUnentered) {
           if (joinsLeft <= 0) break;

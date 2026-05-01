@@ -22,8 +22,14 @@ function silent(): Logger {
 }
 
 function makeRepo(opts: {
-  synths?: Array<{ id: string; personaKind: string; syntheticSeed: number }>;
-  contests?: Array<{ id: string; entryFeeCents: bigint; createdAt: Date; startsAt: Date }>;
+  synths?: Array<{ id: string; personaKind: string; syntheticSeed: number; currentRank?: number }>;
+  contests?: Array<{
+    id: string;
+    entryFeeCents: bigint;
+    createdAt: Date;
+    startsAt: Date;
+    minRank?: number;
+  }>;
   pool?: Array<{ symbol: string; marketCapUsd: number | null; pctChange24h: number | null }>;
   entered?: string[]; // "userId|contestId"
   balances?: Map<string, bigint>;
@@ -31,10 +37,14 @@ function makeRepo(opts: {
   return {
     async listSynthetics() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (opts.synths ?? []) as any;
+      return (opts.synths ?? []).map((s: any) => ({
+        ...s,
+        currentRank: s.currentRank ?? 1,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      })) as any;
     },
     async listOpenContests() {
-      return opts.contests ?? [];
+      return (opts.contests ?? []).map((c) => ({ ...c, minRank: c.minRank ?? 1 }));
     },
     async loadTokenPool() {
       return opts.pool ?? [];
