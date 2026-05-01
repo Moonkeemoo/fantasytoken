@@ -47,8 +47,13 @@ export function createPriceFeedWriter(deps: PriceFeedDeps): PriceFeedWriter {
           pctChange24h: u.pctChange24h,
         })),
       );
-      if (written > 0) {
-        deps.log.debug({ batched: batch.length, written }, 'price-feed.flush');
+      if (batch.length > 0) {
+        // INFO during ramp-up so we can compare batched vs written:
+        // batched = unique symbols Bybit pushed in the last second,
+        // written = how many of those exist in our catalog. A big gap
+        // means the live feed has tokens we don't track (fine) OR our
+        // catalog symbols disagree with Bybit's (= bug worth a look).
+        deps.log.info({ batched: batch.length, written }, 'price-feed.flush');
       }
     } catch (err) {
       deps.log.warn({ err, size: batch.length }, 'price-feed.flush failed');
