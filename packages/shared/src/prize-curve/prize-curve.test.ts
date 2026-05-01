@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePrizeCurve, computeActualPrizeCents } from './index.js';
+import { computeLinearPracticeCurve, computePrizeCurve, computeActualPrizeCents } from './index.js';
 
 describe('computePrizeCurve', () => {
   it('1 entry → 1 gets all', () => {
@@ -94,5 +94,64 @@ describe('computeActualPrizeCents', () => {
         guaranteedPoolCents: 500,
       }),
     ).toBe(500);
+  });
+});
+
+describe('computeLinearPracticeCurve', () => {
+  it('1 player → 2 coins', () => {
+    const m = computeLinearPracticeCurve(1);
+    expect(m.get(1)).toBe(2);
+    expect(m.size).toBe(1);
+  });
+
+  it('4 players → 2,2,1,1 (rounded from ideal 2,1.5,1,0.5)', () => {
+    const m = computeLinearPracticeCurve(4);
+    // ideal: rank 1 = 2.0, rank 2 = 1.5, rank 3 = 1.0, rank 4 = 0.5
+    // rounded (half-up): 2, 2, 1, 1 (with floor 1 for last)
+    expect(m.get(1)).toBe(2);
+    expect(m.get(2)).toBe(2); // 1.5 rounds half-up to 2
+    expect(m.get(3)).toBe(1);
+    expect(m.get(4)).toBe(1); // 0.5 → 1 by floor
+  });
+
+  it('every rank gets ≥1 coin (no zero-prize tail)', () => {
+    for (const N of [2, 5, 10, 20, 100, 500]) {
+      const m = computeLinearPracticeCurve(N);
+      expect(m.size).toBe(N);
+      for (let r = 1; r <= N; r++) {
+        expect(m.get(r)).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('rank 1 always wins the most (2 coins)', () => {
+    for (const N of [1, 2, 4, 10, 100]) {
+      const m = computeLinearPracticeCurve(N);
+      expect(m.get(1)).toBe(2);
+    }
+  });
+
+  it('curve is monotonically non-increasing — top ranks ≥ bottom', () => {
+    const m = computeLinearPracticeCurve(50);
+    for (let r = 1; r < 50; r++) {
+      expect(m.get(r)!).toBeGreaterThanOrEqual(m.get(r + 1)!);
+    }
+  });
+
+  it('total pool scales ~1.5×N (within rounding)', () => {
+    for (const N of [10, 50, 100, 500]) {
+      const m = computeLinearPracticeCurve(N);
+      const sum = [...m.values()].reduce((a, b) => a + b, 0);
+      // Ideal mean = 1.25, but PRACTICE_MIN_PAYOUT=1 floor lifts the bottom
+      // half from 0.5..1 to 1, so observed mean ~1.5.
+      expect(sum / N).toBeGreaterThanOrEqual(1.2);
+      expect(sum / N).toBeLessThanOrEqual(1.7);
+    }
+  });
+
+  it('computePrizeCurve with payAll delegates to linear curve', () => {
+    const linear = computeLinearPracticeCurve(20);
+    const viaPayAll = computePrizeCurve(20, 999_999, { payAll: true });
+    expect([...viaPayAll.entries()]).toEqual([...linear.entries()]);
   });
 });

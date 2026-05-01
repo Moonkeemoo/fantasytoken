@@ -25,13 +25,24 @@ export function computeActualPrizeCents(args: {
  * player in the top half walks away with at least *something* — softens the
  * "−\$1 again" feeling that drove churn on contests like Quick Match.
  *
- * `payAll: true` overrides the cutoff so every entry receives a (decaying)
- * share — used by the Practice contest where the explicit promise is "all 10
- * positions paid, $2.50 → $0.50". The curve shape stays geometric so 1st
- * still wins more than last; only the eligibility cutoff changes.
+ * `payAll: true` switches to a LINEAR house-funded curve (Practice mode):
+ * top rank gets 2 coins, bottom rank gets 1 coin (rounded up from the
+ * ideal 0.5), middle ranks scale linearly. Total pool = ~1.5×N coins,
+ * funded by the house (the `prizePoolCents` arg is ignored). Earlier we
+ * used geometric decay over a fixed 5-coin pool for Practice; that gave
+ * top-1 ~3 coins and bottom 0, which both starved the long tail and
+ * didn't scale with N. The linear curve guarantees every player walks
+ * away with ≥1 coin — enough to attempt a c1 contest next — without
+ * making Practice grind a way to get rich.
  */
 const DECAY = 0.65;
 const PAY_FRACTION = 0.5;
+
+/** Practice (payAll) curve endpoints. */
+const PRACTICE_TOP_PRIZE = 2;
+const PRACTICE_BOTTOM_PRIZE = 0.5;
+/** Floor applied AFTER rounding so the bottom rank never gets 0. */
+const PRACTICE_MIN_PAYOUT = 1;
 
 export interface PrizeCurveOptions {
   payAll?: boolean;
@@ -43,13 +54,16 @@ export function computePrizeCurve(
   opts: PrizeCurveOptions = {},
 ): Map<number, number> {
   const result = new Map<number, number>();
-  if (totalCount <= 0 || prizePoolCents <= 0) return result;
+  if (totalCount <= 0) return result;
 
-  const payingCount = opts.payAll
-    ? totalCount
-    : totalCount <= 3
-      ? totalCount
-      : Math.max(3, Math.floor(totalCount * PAY_FRACTION));
+  if (opts.payAll) {
+    return computeLinearPracticeCurve(totalCount);
+  }
+
+  if (prizePoolCents <= 0) return result;
+
+  const payingCount =
+    totalCount <= 3 ? totalCount : Math.max(3, Math.floor(totalCount * PAY_FRACTION));
 
   // Build geometric weights w_i = r^i and their normalisation factor.
   const weights: number[] = [];
@@ -71,5 +85,28 @@ export function computePrizeCurve(
   // Rounding drift (sum of floors < pool by a few cents) goes to rank 1.
   const remainder = prizePoolCents - assigned;
   if (remainder > 0) result.set(1, (result.get(1) ?? 0) + remainder);
+  return result;
+}
+
+/**
+ * Practice payout — linear from PRACTICE_TOP_PRIZE (rank 1) to
+ * PRACTICE_BOTTOM_PRIZE (rank N), rounded to whole coins with a floor at
+ * PRACTICE_MIN_PAYOUT so the worst rank still earns ≥1 coin.
+ *
+ * Sum scales as ~1.5×N coins; house-funded.
+ */
+export function computeLinearPracticeCurve(totalCount: number): Map<number, number> {
+  const result = new Map<number, number>();
+  if (totalCount <= 0) return result;
+  if (totalCount === 1) {
+    result.set(1, PRACTICE_TOP_PRIZE);
+    return result;
+  }
+  for (let rank = 1; rank <= totalCount; rank++) {
+    const fraction = (totalCount - rank) / (totalCount - 1);
+    const raw = PRACTICE_BOTTOM_PRIZE + (PRACTICE_TOP_PRIZE - PRACTICE_BOTTOM_PRIZE) * fraction;
+    const rounded = Math.round(raw);
+    result.set(rank, Math.max(PRACTICE_MIN_PAYOUT, rounded));
+  }
   return result;
 }
