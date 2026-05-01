@@ -40,16 +40,16 @@ CREATE TABLE IF NOT EXISTS coin_packages (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- Stars prices were reduced 10× in migration 0024 (2026-05-01). Updated
--- here too so a fresh dev DB doesn't have to apply both migrations to
--- land on the current prices. The earlier values (100/500/1000/5000)
--- are preserved in git history.
+-- Stars + coins both reduced 10× via 0024 then 0025 (2026-05-01).
+-- Updated here too so a fresh dev DB lands on the current prices in
+-- one step. Earlier values (100/500/1000/5000 stars and 1000/5000/
+-- 10000/50000 coins) are preserved in git history.
 INSERT INTO coin_packages (id, name, stars_price, coins_base, bonus_pct, is_highlighted, sort_order)
 VALUES
-  ('starter', 'Starter',  10, 1000, 0, false, 1),
-  ('trader',  'Trader',   50, 5000, 10, true,  2),
-  ('pro',     'Pro',     100,10000, 20, false, 3),
-  ('whale',   'Whale',   500,50000, 30, false, 4)
+  ('starter', 'Starter',  10,  100, 0, false, 1),
+  ('trader',  'Trader',   50,  500, 10, true,  2),
+  ('pro',     'Pro',     100, 1000, 20, false, 3),
+  ('whale',   'Whale',   500, 5000, 30, false, 4)
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Idempotency for TG payment webhooks. The bot may retry the
