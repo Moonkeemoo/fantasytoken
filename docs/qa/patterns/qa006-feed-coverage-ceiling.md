@@ -65,11 +65,28 @@ Coverage strategy that emerged:
 
 - **Bybit + OKX**: top-tier liquidity (~50% of catalog).
 - **Gate.io tried, blocked from Railway** — kept in qa006/git log as a
-  pre-known dead end so the next attempt jumps straight to MEXC/KuCoin
-  rather than re-deriving the issue.
+  pre-known dead end.
+- **MEXC tried locally, returns explicit `Reason: Blocked!`** — same
+  Asian-exchange anti-US-egress story.
 - **CoinGecko cron**: 60s fallback for the residue (~50% of catalog).
+  Tried 15s cadence — triggered the qa003 burst rate-limit; reverted.
 - **Per-symbol drop**: review tokens with `age > 1d` quarterly — these
   are usually delisted and shouldn't be in a "top 500" basket anyway.
+
+## Where this leaves the "≥95%" target
+
+Practically infeasible at the current setup. Realistic outcomes:
+
+- ~35% of the 519-token catalog refreshes <30s (Bybit/OKX active).
+- ~50% refreshes <60s (live feed + half of the CG cron cycle).
+- ~93% refreshes <5min (full CG cron cycle covers everything).
+
+To break past ~50% < 30s would require:
+
+1. Self-host outside US so MEXC/Gate accept us (infrastructure change).
+2. Pay for CoinGecko Pro (per-second burst headroom, predictable).
+3. Drop the long-tail tokens from the catalog so the denominator is
+   what live feeds CAN cover.
 
 ## How to spot in review
 

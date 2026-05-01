@@ -38,3 +38,16 @@ third-party API, check:
 - Is there a delay between iterations?
 - What's the provider's per-second limit (most are ≤ 5/s on free)?
 - If batches > 1 typical, add `setTimeout(resolve, 5000)` between.
+
+## Re-learn (2026-05-01)
+
+Tightening the cron from 30s → 15s and the freshness window from
+60s → 25s (commit `2a4aa79`) tripped this same limit again. The new
+asks were ~340 ids per cycle = 2 batches with 5s gap; at 15s cadence
+that's ~24 calls/min — under the 30/min documented quota but the
+per-second pattern still trips 429. Reverted in `da7e965`.
+
+> **The pattern repeats:** even with the documented qa003 fix in place,
+> changing cron cadence revisits the burst boundary. When tuning a cron
+> that hits a free tier, run for 5 minutes and check Railway logs for
+> 429 BEFORE declaring it stable. The signal is fast and unambiguous.
