@@ -125,7 +125,11 @@ export function createSeedService(deps: SeedServiceDeps): SeedService {
         const wanted = counts[persona];
         const startingCoins = config.personas[persona].startingCoins;
         for (let i = 0; i < wanted; i++) {
-          const userSeed = ((resolvedBatchSeed + seedCounter * 0x9e3779b9) >>> 0) | 1; // odd, non-zero
+          // Mask to signed-int31 ([0, 2^31-1]) — Postgres `synthetic_seed`
+          // is int4 and rejects values above 2^31. `| 1` keeps it odd /
+          // non-zero so collisions across batches stay rare.
+          const userSeed =
+            (((resolvedBatchSeed + seedCounter * 0x9e3779b9) >>> 0) & 0x7fffffff) | 1;
           seedCounter++;
           const id = generateIdentity(userSeed);
           const created = await deps.repo.createSynthetic({

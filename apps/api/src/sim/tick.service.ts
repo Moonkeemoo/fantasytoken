@@ -210,7 +210,13 @@ export function createTickService(deps: TickServiceDeps): TickService {
         // contest wins or referral bonuses bring in new coins.)
         if (invitesLeft > 0 && persona.referralRate > 0 && random() < persona.referralRate) {
           invitesLeft -= 1;
-          const childSeed = (Math.floor(random() * 0xffffffff) ^ Date.now()) >>> 0;
+          // Mask to signed-int31 range. `users.synthetic_seed` is a 32-bit
+          // signed integer; uint32 values from the mulberry32 stream
+          // exceed 2^31 about half the time and Postgres rejects them
+          // ("value … is out of range for type integer"). 0x7fffffff
+          // keeps every seed in [0, 2^31-1]. Migration to bigint is the
+          // cleaner long-term fix — flagged for later.
+          const childSeed = (Math.floor(random() * 0xffffffff) ^ Date.now()) & 0x7fffffff;
           const r = await inviteFriend(
             {
               seedRepo: deps.seedRepo,
