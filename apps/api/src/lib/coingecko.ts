@@ -72,8 +72,17 @@ export function createCoinGeckoClient(cfg: CoinGeckoConfig, log: Logger): CoinGe
       if (ids.length === 0) return [];
       // CoinGecko per_page max 250; for >250 ids, batch sequentially.
       const BATCH = 250;
+      // Stagger batches to dodge CoinGecko's per-second / per-burst rate
+      // limit on the free tier. syncCatalog uses the same 5s gap between
+      // pages and never 429s; syncActive used to fire batches back-to-back
+      // and got 429-spammed. Total syncActive duration with N=2 batches
+      // is ≈ 1×fetch + 5s + 1×fetch ≈ 6-7s, well under the 15s cron tick.
+      const BATCH_DELAY_MS = 5000;
       const out: CoinGeckoMarket[] = [];
       for (let i = 0; i < ids.length; i += BATCH) {
+        if (i > 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+        }
         const slice = ids.slice(i, i + BATCH);
         const url = new URL(`${cfg.baseUrl}/coins/markets`);
         url.searchParams.set('vs_currency', 'usd');
