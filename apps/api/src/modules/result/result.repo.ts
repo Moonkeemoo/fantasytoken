@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { virtualBudgetCentsFor } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import {
   contests,
@@ -26,13 +27,18 @@ export function createResultRepo(db: Database): ResultRepo {
         .where(eq(contests.id, id))
         .limit(1);
       if (!c) return null;
+      // ADR-0003: virtualBudgetCents is derived from entryFee via the
+      // shared tier ladder. The DB column default (10_000_000) was being
+      // returned as-is for every Quick Match (c1) contest, displaying as
+      // "$10M committed" instead of the correct $10K tier. Mirror the
+      // contests.repo projection so result + lobby agree.
       return {
         id: c.id,
         name: c.name,
         status: c.status as 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled',
         prizePoolCents: Number(c.prizePoolCents),
         entryFeeCents: Number(c.entryFeeCents),
-        virtualBudgetCents: Number(c.virtualBudgetCents),
+        virtualBudgetCents: virtualBudgetCentsFor(Number(c.entryFeeCents)),
       };
     },
 
