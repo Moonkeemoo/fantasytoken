@@ -25,5 +25,9 @@ export const TransactionType = z.enum([
   'REFEREE_SIGNUP_BONUS',
   'RECRUITER_SIGNUP_BONUS',
   'WELCOME_EXPIRED',
+  // TZ-005: admin grant for synthetic users (no Stars charge). Distinct
+  // type so ledger reports can split synthetic-funded balance from real
+  // Stars-purchased coins. Only ever issued by /admin/sim/grant-coins.
+  'DEV_GRANT',
 ]);
 export type TransactionType = z.infer<typeof TransactionType>;

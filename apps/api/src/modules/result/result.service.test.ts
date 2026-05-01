@@ -24,6 +24,7 @@ function makeRepo(opts: {
         status: opts.status ?? 'finalized',
         prizePoolCents: opts.prizePoolCents ?? 100_000,
         entryFeeCents: opts.entryFeeCents ?? 500,
+        virtualBudgetCents: 100,
       };
     },
     async getEntries() {

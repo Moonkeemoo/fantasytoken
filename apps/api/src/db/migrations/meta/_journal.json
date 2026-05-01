@@ -148,6 +148,13 @@
       "when": 1777481235900,
       "tag": "0020_contests_v2_matrix",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777481236000,
+      "tag": "0021_synthetic_users",
+      "breakpoints": true
     }
   ]
 }

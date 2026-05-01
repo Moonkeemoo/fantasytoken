@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   integer,
   pgTable,
   text,
@@ -15,6 +16,13 @@ export const users = pgTable('users', {
   username: text('username'),
   firstName: text('first_name'),
   photoUrl: text('photo_url'),
+  // TZ-005 synthetic users. is_synthetic=true → row is a simulated player
+  // (NOT a real TG user); persona_kind drives behavior weights; synthetic_seed
+  // is the deterministic-randomness seed used by tick actions. CHECK in
+  // 0021 enforces (is_synthetic=false) OR (persona_kind IS NOT NULL).
+  isSynthetic: boolean('is_synthetic').notNull().default(false),
+  personaKind: text('persona_kind'),
+  syntheticSeed: integer('synthetic_seed'),
   // INV-11: xp_total / xp_season are denormalised counters; xp_events is source of truth.
   xpTotal: bigint('xp_total', { mode: 'number' })
     .notNull()

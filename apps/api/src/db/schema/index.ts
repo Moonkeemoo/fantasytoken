@@ -21,3 +21,4 @@ export * from './referral_payouts.js';
 export * from './referral_signup_bonuses.js';
 export * from './bot_dm_queue.js';
 export * from './coin_packages.js';
+export * from './synthetic_actions_log.js';

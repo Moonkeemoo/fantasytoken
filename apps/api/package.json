@@ -13,7 +13,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "node --env-file=.env node_modules/tsx/dist/cli.mjs src/db/seed/run.ts"
+    "db:seed": "node --env-file=.env node_modules/tsx/dist/cli.mjs src/db/seed/run.ts",
+    "sim:seed": "node --env-file=.env node_modules/tsx/dist/cli.mjs src/sim/cli/seed.ts",
+    "sim:wipe": "node --env-file=.env node_modules/tsx/dist/cli.mjs src/sim/cli/wipe.ts"
   },
   "dependencies": {
     "@fantasytoken/shared": "workspace:*",

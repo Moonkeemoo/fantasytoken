@@ -62,6 +62,13 @@ import { makeProfileRoutes } from './modules/profile/profile.routes.js';
 import { createSeasonsService } from './modules/seasons/seasons.service.js';
 import { makeSeasonsRoutes } from './modules/seasons/seasons.routes.js';
 import { makeRankRoutes } from './modules/rank/rank.routes.js';
+import {
+  createSeedRepo,
+  createSeedService,
+  createWipeRepo,
+  createWipeService,
+  makeSimAdminRoutes,
+} from './sim/index.js';
 
 export interface ServerDeps {
   config: Config;
@@ -293,6 +300,22 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   }
   await app.register(makeProfileRoutes({ profile, users }), { prefix: '/profile' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
+
+  // TZ-005: synthetic-users admin endpoints — only mounted when explicitly
+  // enabled via env. Behind requireAdmin too, so the env flag is a coarse
+  // build-time gate and the per-request gate stays the existing
+  // ADMIN_TG_IDS check.
+  if (deps.config.SIM_ADMIN_ENABLED) {
+    const seedSvc = createSeedService({
+      repo: createSeedRepo(deps.db),
+      currency,
+    });
+    const wipeSvc = createWipeService({ repo: createWipeRepo(deps.db) });
+    await app.register(makeSimAdminRoutes({ seed: seedSvc, wipe: wipeSvc, currency }), {
+      prefix: '/admin/sim',
+    });
+    deps.logger.warn('SIM_ADMIN_ENABLED — /admin/sim routes are ACTIVE');
+  }
 
   // Crons. INV-7 logging is inside scheduleEvery.
   const MINUTE = 60_000;

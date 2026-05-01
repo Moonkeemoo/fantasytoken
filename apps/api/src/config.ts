@@ -44,6 +44,15 @@ const ConfigSchema = z.object({
    * and `setChatMenuButton.web_app` — a t.me alias is silently rejected.
    * Default points at the production Vercel deploy. */
   MINI_APP_WEB_URL: z.string().url().default('https://fantasytoken.vercel.app'),
+
+  // TZ-005: synthetic users simulation. When false (default) /admin/sim/*
+  // routes are not registered — production deploys explicitly opt in.
+  // Accepts truthy strings ('true', '1', 'yes') so .env values from
+  // any provider behave consistently.
+  SIM_ADMIN_ENABLED: z
+    .string()
+    .default('false')
+    .transform((s) => ['true', '1', 'yes', 'on'].includes(s.toLowerCase())),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

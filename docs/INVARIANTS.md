@@ -35,6 +35,8 @@
 
 **INV-12** — Rank monotonic в межах сезону. `users.current_rank` тільки росте від `awardXp` через `GREATEST(current_rank, new_rank)`. Єдине виключення — soft-reset наприкінці сезону (`max(5, current_rank - 5)`). Consequence: юзер втрачає прогрес посеред сезону і кидає app.
 
+**INV-14** — Synthetic users (`users.is_synthetic = true`) приховані від real-user-facing read paths. Partial index `users_real_only_idx` сигналізує: кожен `SELECT … FROM users` у production-контексті (профіль, friends discovery, referral attribution, real-user counts, leaderboards поза рамками одного контесту) фільтрує `is_synthetic = false`. Per-contest leaderboards — виняток: synthetic entries навмисно з'являються поруч із real, бо це "населення" продукту (TZ-005). Consequence: real юзер бачить fake handle у `friends`/`recruiter` UI → втрата довіри; analytics counts inflated → невірні бізнес-метрики. Source: ADR-0006 (TZ-005, 2026-05-01).
+
 ## Maintenance
 
 - Знайшов невидимий контракт у коді → додай як `INV-N`.

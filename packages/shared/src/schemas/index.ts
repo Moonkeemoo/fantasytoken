@@ -14,3 +14,4 @@ export * from './rankings.js';
 export * from './profile.js';
 export * from './rank.js';
 export * from './referrals.js';
+export * from './sim.js';
