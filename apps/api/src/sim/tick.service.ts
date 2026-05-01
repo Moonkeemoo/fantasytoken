@@ -6,7 +6,6 @@ import type { TickRepo } from './tick.repo.js';
 import { joinContest } from './actions/join_contest.js';
 import { login } from './actions/login.js';
 import { idle } from './actions/idle.js';
-import { inviteFriend } from './actions/invite_friend.js';
 import { density } from './pacing.js';
 import { SIM_CONFIG } from './sim.config.js';
 import type { SeedRepo } from './seed.service.js';
@@ -102,7 +101,6 @@ export function createTickService(deps: TickServiceDeps): TickService {
       // Per-tick budgets — wider than typical demand so they only kick in
       // when something's gone wrong (config tweak, runaway loop, etc.).
       let joinsLeft = config.perTickJoinAttemptsCap;
-      let invitesLeft = config.perTickInviteAttemptsCap;
 
       for (const synth of synths) {
         const persona = config.personas[synth.personaKind];
@@ -204,35 +202,14 @@ export function createTickService(deps: TickServiceDeps): TickService {
           );
         }
 
-        // 2) Invite friend — rarest action, gated by persona referralRate.
-        // (Top-up removed 2026-05-01 — synthetics never DEV_GRANT after
-        // their initial welcome bonus. Closed-loop economy: only
-        // contest wins or referral bonuses bring in new coins.)
-        if (invitesLeft > 0 && persona.referralRate > 0 && random() < persona.referralRate) {
-          invitesLeft -= 1;
-          // Mask to signed-int31 range. `users.synthetic_seed` is a 32-bit
-          // signed integer; uint32 values from the mulberry32 stream
-          // exceed 2^31 about half the time and Postgres rejects them
-          // ("value … is out of range for type integer"). 0x7fffffff
-          // keeps every seed in [0, 2^31-1]. Migration to bigint is the
-          // cleaner long-term fix — flagged for later.
-          const childSeed = (Math.floor(random() * 0xffffffff) ^ Date.now()) & 0x7fffffff;
-          const r = await inviteFriend(
-            {
-              seedRepo: deps.seedRepo,
-              currency: deps.currency,
-              signupBonuses: deps.signupBonuses,
-              log: deps.log,
-              config,
-              random,
-            },
-            {
-              inviter: { id: synth.id, personaKind: synth.personaKind },
-              childSeed,
-            },
-          );
-          if (r.kind === 'success') stats.invitesCreated += 1;
-        }
+        // Synth-driven invites permanently disabled (owner directive
+        // 2026-05-01). Existing referral edges keep working — RECRUITER /
+        // REFEREE signup bonuses still unlock on first finalized contest
+        // via referrals.service.maybeUnlockSignupBonuses — but no new
+        // synth→synth invites are created. The `invite_friend` action
+        // file is preserved for admin/CLI use; only the per-tick dispatch
+        // here is retired. `stats.invitesCreated` stays in shape but is
+        // always 0; `seedRepo` / `signupBonuses` deps are unused here now.
       }
 
       stats.durationMs = Date.now() - t0;

@@ -255,17 +255,19 @@ describe('tickService.tick', () => {
     expect(stats.topUpsGranted).toBe(0);
   });
 
-  it('invite fires for inviter persona at high random gate', async () => {
+  it('invite path is permanently disabled — inviter persona never spawns children', async () => {
+    // Owner directive 2026-05-01: synth-driven invites are off. The
+    // tick service must NOT call inviteFriend even with maxed-out
+    // gates (referralRate=1, cap raised, inviter persona). Existing
+    // referral edges still pay out via referrals.service hooks; only
+    // the per-tick dispatch is retired.
     const log = makeLog();
     const config = structuredClone(SIM_CONFIG);
     config.personas.inviter.loginProbabilityByHour = new Array(24).fill(1);
     config.personas.inviter.joinFreeRate = 0;
     config.personas.inviter.joinPaidRate = 0;
     config.personas.inviter.referralRate = 1.0;
-    // perTickInviteAttemptsCap is 0 by default (kill switch on the
-    // synth referral chain); restore it for this test that asserts
-    // the invite path itself still works when the cap is open.
-    config.perTickInviteAttemptsCap = 20;
+    config.perTickInviteAttemptsCap = 20; // would be honored if path existed
 
     const svc = createTickService({
       repo: makeRepo({
@@ -278,9 +280,9 @@ describe('tickService.tick', () => {
       log,
       serverLog: silent(),
       config,
-      random: () => 0.5, // gates: login-log @ 0.10, idle @ 0.01, login itself irrelevant (1.0)
+      random: () => 0.5,
     });
     const stats = await svc.tick();
-    expect(stats.invitesCreated).toBe(1);
+    expect(stats.invitesCreated).toBe(0);
   });
 });
