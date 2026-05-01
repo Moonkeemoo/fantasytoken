@@ -40,8 +40,23 @@ export interface TokensRepo {
    * Used by the contest-scoped /tokens/search to surface 🔥 N% picked. */
   pickedByPctMap(args: { contestId: string; symbols: string[] }): Promise<Map<string, number>>;
   listActiveSymbols(): Promise<string[]>;
-  /** Returns coingecko_ids for tokens used in any active contest's entry picks. */
-  listActiveCoingeckoIds(): Promise<string[]>;
+  /** Returns coingecko_ids for tokens used in any active contest's entry picks.
+   * `excludeFreshWithinSec` filters out tokens whose `last_updated_at` is
+   * newer than the given window — used by the price-feed router to avoid
+   * asking CoinGecko for tokens Binance is already keeping live (the
+   * Binance feed bumps last_updated_at on every tick). */
+  listActiveCoingeckoIds(opts?: { excludeFreshWithinSec?: number }): Promise<string[]>;
+  /** Bulk price update by symbol (Binance feed path — no coingecko_id
+   * involved). Touches `current_price_usd`, `pct_change_24h`,
+   * `last_updated_at`. Tokens missing from our catalog are silently
+   * skipped (Binance has many we don't track). */
+  upsertPricesBySymbol(
+    rows: ReadonlyArray<{
+      symbol: string;
+      currentPriceUsd: number;
+      pctChange24h: number | null;
+    }>,
+  ): Promise<number>;
 }
 
 export interface TokensServiceDeps {
@@ -91,7 +106,13 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
     },
 
     async syncActive() {
-      const ids = await deps.repo.listActiveCoingeckoIds();
+      // Only chase tokens whose price hasn't been refreshed in the last
+      // 60s — when Binance WS feed is up, it bumps last_updated_at every
+      // tick for ~500 covered symbols, so this filter naturally narrows
+      // the CoinGecko ask to the long-tail (memes, low-liquidity) that
+      // Binance doesn't carry. Without Binance the filter still helps
+      // because freshly-locked contests don't immediately need refresh.
+      const ids = await deps.repo.listActiveCoingeckoIds({ excludeFreshWithinSec: 60 });
       if (ids.length === 0) return 0;
       try {
         const markets = await deps.client.marketsByIds(ids);

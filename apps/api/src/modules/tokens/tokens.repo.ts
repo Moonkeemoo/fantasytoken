@@ -93,21 +93,62 @@ export function createTokensRepo(db: Database): TokensRepo {
       return (rows as unknown as Array<{ symbol: string }>).map((r) => r.symbol);
     },
 
-    async listActiveCoingeckoIds() {
+    async listActiveCoingeckoIds(opts) {
       // Resolve symbols-in-live-or-pending-contests → coingecko_ids. We
       // include 'scheduled' so prices stay warm during the fill window —
       // otherwise a contest with no peers could age its picks past the
       // 2h staleness gate the tick service used to enforce, and locking
       // would deadlock waiting for prices that never refresh.
+      //
+      // `excludeFreshWithinSec`: when set, filter out tokens whose
+      // last_updated_at is newer than (NOW() - X seconds). The Binance
+      // WS feed bumps last_updated_at every ~1s for tokens it covers;
+      // CoinGecko sync only needs to chase the long tail.
+      const freshFilter = opts?.excludeFreshWithinSec
+        ? sql`AND (t.last_updated_at IS NULL OR t.last_updated_at < NOW() - (${opts.excludeFreshWithinSec}::int * INTERVAL '1 second'))`
+        : sql``;
       const rows = await db.execute<{ coingecko_id: string }>(
         sql`SELECT DISTINCT t.coingecko_id
             FROM ${entries} e
             JOIN ${contests} c ON e.contest_id = c.id,
             jsonb_array_elements(e.picks::jsonb) pick
             JOIN ${tokens} t ON UPPER(t.symbol) = UPPER(pick->>'symbol')
-            WHERE c.status IN ('scheduled', 'active')`,
+            WHERE c.status IN ('scheduled', 'active')
+              ${freshFilter}`,
       );
       return (rows as unknown as Array<{ coingecko_id: string }>).map((r) => r.coingecko_id);
+    },
+
+    async upsertPricesBySymbol(rows) {
+      if (rows.length === 0) return 0;
+      // One-shot UPDATE … FROM (VALUES …). We can't INSERT here because
+      // tokens.coingecko_id is NOT NULL (catalog-sourced) and Binance
+      // doesn't carry it; only update existing rows. Symbols missing
+      // from our catalog (Binance has ~500, our catalog ~516; overlap
+      // is the bulk) are silently skipped, which is exactly what we want.
+      const valuesSql = sql.join(
+        rows.map(
+          (r) =>
+            sql`(${r.symbol.toUpperCase()},
+                 ${r.currentPriceUsd}::numeric,
+                 ${r.pctChange24h === null ? null : String(r.pctChange24h)}::numeric)`,
+        ),
+        sql`, `,
+      );
+      const result = await db.execute<{ count: string }>(sql`
+        WITH updated AS (
+          UPDATE tokens t
+          SET current_price_usd = v.price,
+              pct_change_24h    = v.pct,
+              last_updated_at   = NOW()
+          FROM (VALUES ${valuesSql}) AS v(symbol, price, pct)
+          WHERE UPPER(t.symbol) = v.symbol
+          RETURNING 1
+        )
+        SELECT COUNT(*)::text AS count FROM updated
+      `);
+      const cnt = (result as unknown as Array<{ count: string }>)[0]?.count ?? '0';
+      return Number(cnt);
     },
 
     async listPage({ page, limit }) {

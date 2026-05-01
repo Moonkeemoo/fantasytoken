@@ -17,6 +17,8 @@ import { createUsersService } from './modules/users/users.service.js';
 import { createTokensRepo } from './modules/tokens/tokens.repo.js';
 import { createTokensService } from './modules/tokens/tokens.service.js';
 import { makeTokensRoutes } from './modules/tokens/tokens.routes.js';
+import { createPriceFeedWriter } from './modules/tokens/price-feed.service.js';
+import { startBinanceFeed } from './lib/binance.js';
 import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
@@ -403,13 +405,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  // Active-token price sync: refresh every 15s during a live contest so
-  // Live screen actually reflects market movement. CoinGecko free tier
-  // is 5-15 req/min; one batched marketsByIds call (≤2 batches for ≤500
-  // ids) per 15s = ≤8 req/min, comfortably under the limit. Tighter than
-  // 30s so a 10-min contest registers at minimum ~40 price refreshes.
+  // Active-token price sync via CoinGecko — long-tail only when Binance
+  // is up. listActiveCoingeckoIds({excludeFreshWithinSec:60}) drops every
+  // token Binance has refreshed in the last minute. Cron tick stays at
+  // 30s (was 15s) since the live feed is now Binance; CoinGecko is the
+  // tail-of-distribution chaser.
   const stopActiveSync = scheduleEvery({
-    intervalMs: 15_000,
+    intervalMs: 30_000,
     fn: async () => {
       await tokens.syncActive();
     },
@@ -417,6 +419,22 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     log: deps.logger,
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
+
+  // Binance public WS — live feed for ~500 USDT-quoted spot tokens.
+  // Buffered + flushed once a second through the price-feed writer.
+  // Skipped in test env so unit tests don't open real network sockets.
+  const priceFeedWriter =
+    deps.config.NODE_ENV === 'test'
+      ? null
+      : createPriceFeedWriter({ repo: tokensRepo, log: deps.logger });
+  const binanceHandle =
+    priceFeedWriter !== null
+      ? startBinanceFeed({
+          log: deps.logger,
+          onUpdate: (updates) => priceFeedWriter.push(updates),
+        })
+      : null;
+  void binanceHandle;
 
   const stopScheduler = scheduleEvery({
     intervalMs: MINUTE,
@@ -496,6 +514,8 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopWelcomeExpiry();
       stopDmDrain();
       if (stopSimTick) stopSimTick();
+      if (binanceHandle) binanceHandle.stop();
+      if (priceFeedWriter) priceFeedWriter.stop();
       if (bot) void bot.stop();
       realtimeHub.closeAll();
     },

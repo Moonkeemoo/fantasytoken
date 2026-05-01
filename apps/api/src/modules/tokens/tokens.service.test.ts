@@ -26,6 +26,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async listActiveCoingeckoIds() {
       return [];
     },
+    async upsertPricesBySymbol() {
+      return 0;
+    },
   };
 }
 
