@@ -83,7 +83,7 @@ export function createWipeRepo(db: Database): WipeRepo {
         `);
         await tx.execute(sql`
           DELETE FROM bot_dm_queue
-          WHERE user_id IN (SELECT id FROM users WHERE is_synthetic = true);
+          WHERE recipient_user_id IN (SELECT id FROM users WHERE is_synthetic = true);
         `);
         await tx.execute(sql`
           DELETE FROM friendships
@@ -96,9 +96,8 @@ export function createWipeRepo(db: Database): WipeRepo {
         `);
         await tx.execute(sql`
           DELETE FROM referral_payouts
-          WHERE recruiter_user_id IN (SELECT id FROM users WHERE is_synthetic = true)
-             OR recruit_user_id   IN (SELECT id FROM users WHERE is_synthetic = true)
-             OR created_by_user_id IN (SELECT id FROM users WHERE is_synthetic = true);
+          WHERE recipient_user_id IN (SELECT id FROM users WHERE is_synthetic = true)
+             OR source_user_id    IN (SELECT id FROM users WHERE is_synthetic = true);
         `);
         await tx.execute(sql`
           DELETE FROM referral_signup_bonuses
