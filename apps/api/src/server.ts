@@ -19,6 +19,7 @@ import { createTokensService } from './modules/tokens/tokens.service.js';
 import { makeTokensRoutes } from './modules/tokens/tokens.routes.js';
 import { createPriceFeedWriter } from './modules/tokens/price-feed.service.js';
 import { startBybitFeed } from './lib/bybit.js';
+import { startOkxFeed } from './lib/okx.js';
 import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
@@ -431,11 +432,15 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     deps.config.NODE_ENV === 'test'
       ? null
       : createPriceFeedWriter({ repo: tokensRepo, log: deps.logger });
+  // Two parallel live feeds — Bybit (primary, ~500 USDT spot pairs) and
+  // OKX (secondary, fills gaps for tokens Bybit doesn't list). Both
+  // push into the same coalescing writer; last write wins per symbol
+  // inside the 1s flush window — contention is rare because the
+  // exchanges' coverage overlaps only partially. For symbols on both,
+  // either feed can be the source-of-truth tick.
   let bybitHandle: { stop: () => void } | null = null;
+  let okxHandle: { stop: () => void } | null = null;
   if (priceFeedWriter !== null) {
-    // Fire-and-forget: catalog may be empty on first boot; we subscribe
-    // after the catalog has been populated by the first sync. The cron
-    // tick later refreshes new tokens; for now we get the symbols we have.
     void (async () => {
       try {
         const symbols = await tokensRepo.listAllCatalogSymbols();
@@ -444,8 +449,13 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
           symbols,
           onUpdate: (updates) => priceFeedWriter.push(updates),
         });
+        okxHandle = startOkxFeed({
+          log: deps.logger,
+          symbols,
+          onUpdate: (updates) => priceFeedWriter.push(updates),
+        });
       } catch (err) {
-        deps.logger.warn({ err }, 'bybit.feed bootstrap failed');
+        deps.logger.warn({ err }, 'price-feeds bootstrap failed');
       }
     })();
   }
@@ -529,6 +539,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopDmDrain();
       if (stopSimTick) stopSimTick();
       if (bybitHandle) bybitHandle.stop();
+      if (okxHandle) okxHandle.stop();
       if (priceFeedWriter) priceFeedWriter.stop();
       if (bot) void bot.stop();
       realtimeHub.closeAll();
