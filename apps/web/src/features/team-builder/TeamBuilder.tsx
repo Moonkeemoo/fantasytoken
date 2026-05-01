@@ -126,7 +126,10 @@ export function TeamBuilder(): JSX.Element {
         mode={contest.data.type}
         // ADR-0003: virtualBudget is display-only. Backend stores cents;
         // DraftScreen and AllocSheet expect dollars. Convert at the boundary.
-        tier={Math.round(contest.data.virtualBudgetCents / 100)}
+        // Coin economy (TZ-002): virtualBudgetCents stores whole dollars,
+        // not cents. Drop the legacy /100 divide — it was turning the new
+        // \$1K Practice floor into "\$10" on the build screen.
+        tier={contest.data.virtualBudgetCents}
         entryFeeCents={contest.data.entryFeeCents}
         balanceCents={me.data.balanceCents}
         startsAt={contest.data.startsAt}

@@ -94,13 +94,13 @@ export function Live(): JSX.Element {
         around={slice.aroundMe}
         all={data.leaderboardAll}
         onViewAll={() => setModalOpen(true)}
-        budgetUsd={data.virtualBudgetCents / 100}
+        budgetUsd={data.virtualBudgetCents}
       />
       <LeaderboardModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         entries={data.leaderboardAll}
-        budgetUsd={data.virtualBudgetCents / 100}
+        budgetUsd={data.virtualBudgetCents}
       />
     </div>
   );

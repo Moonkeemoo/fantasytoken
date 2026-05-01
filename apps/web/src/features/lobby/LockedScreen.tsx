@@ -49,7 +49,9 @@ export function LockedScreen(): JSX.Element {
   const stateQuery = useLockedState(id);
   const navState = (location.state ?? {}) as LockedNavState;
 
-  const tier = stateQuery.data ? Math.round(stateQuery.data.virtualBudgetCents / 100) : 100_000;
+  // Coin economy: virtualBudgetCents stores whole dollars (1 coin = $1
+  // fantasy display). Drop the legacy /100 — see TeamBuilder for context.
+  const tier = stateQuery.data?.virtualBudgetCents ?? 100_000;
 
   // Enrich picks with imageUrl from the token catalog so YOUR-TEAM rows show
   // real icons even when navState.picks came from a preset that didn't carry
