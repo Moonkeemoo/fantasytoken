@@ -262,6 +262,10 @@ describe('tickService.tick', () => {
     config.personas.inviter.joinFreeRate = 0;
     config.personas.inviter.joinPaidRate = 0;
     config.personas.inviter.referralRate = 1.0;
+    // perTickInviteAttemptsCap is 0 by default (kill switch on the
+    // synth referral chain); restore it for this test that asserts
+    // the invite path itself still works when the cap is open.
+    config.perTickInviteAttemptsCap = 20;
 
     const svc = createTickService({
       repo: makeRepo({

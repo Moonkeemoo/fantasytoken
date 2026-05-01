@@ -78,7 +78,13 @@ export const SIM_CONFIG: {
   // right model.
   joinPacingShape: 'uniform',
   perTickJoinAttemptsCap: 200,
-  perTickInviteAttemptsCap: 20,
+  // Disabled 2026-05-01 — synth-to-synth referral chains were piling
+  // up children faster than the cohort needed (each invite spawns a
+  // new persona via inviteFriend → seedRepo). Setting the per-tick cap
+  // to 0 short-circuits the branch in tick.service.ts without zeroing
+  // every persona's referralRate, so the persona config remains
+  // intact and we can flip this back to 20 once we want the chain.
+  perTickInviteAttemptsCap: 0,
   perSynthCooldownSeconds: 60,
 
   distribution: {
