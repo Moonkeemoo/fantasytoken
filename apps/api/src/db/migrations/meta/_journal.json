@@ -169,6 +169,13 @@
       "when": 1777481236200,
       "tag": "0023_auto_replicate",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777481236300,
+      "tag": "0024_coin_package_prices_div10",
+      "breakpoints": true
     }
   ]
 }
