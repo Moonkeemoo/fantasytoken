@@ -65,11 +65,11 @@ export function TeamBuilder(): JSX.Element {
           // Backend (TZ-002) returns 402 with `code: INSUFFICIENT_COINS` and a
           // `details: { required, current }` payload so we can prefill the
           // top-up hint. Older 'INSUFFICIENT_BALANCE' kept as a fallback.
-          if (
-            msg.includes('INSUFFICIENT_COINS') ||
-            msg.includes('INSUFFICIENT_BALANCE') ||
-            msg.includes('402')
-          ) {
+          // We MUST NOT broad-match `'402'` in the message — UUIDs in the
+          // request path are hex-digit strings, ~1% of which contain "402"
+          // by accident, and that false-positive opens the top-up modal on
+          // a CONTEST_CLOSED / CONTEST_FULL response.
+          if (msg.includes('INSUFFICIENT_COINS') || msg.includes('INSUFFICIENT_BALANCE')) {
             const detailsMatch = /"details":\s*({[^}]+})/.exec(msg);
             if (detailsMatch && detailsMatch[1]) {
               try {

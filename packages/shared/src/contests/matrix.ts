@@ -33,13 +33,18 @@ export const LANE_FILL_MS: Record<DurationLane, number> = {
   '7d': 6 * 60 * 60 * 1000, // 6h fill window
 };
 
-/** Cap per lane (see DESIGN.md §1). */
+/** Cap per lane (see DESIGN.md §1).
+ * Pre-2026-05-01 caps were 20/30/50/100/500. With a 100-synth cohort
+ * filling the lobby in seconds, real users couldn't get a seat in the
+ * fast lanes. Bumped 5–10× so synths + real users coexist without
+ * starving each other. Revisit with auto-replicate (multi-instance per
+ * cell when ≥80% full) once cohort grows to 1000+. */
 export const LANE_CAPACITY: Record<DurationLane, number> = {
-  '10m': 20,
-  '30m': 30,
-  '1h': 50,
-  '24h': 100,
-  '7d': 500,
+  '10m': 200,
+  '30m': 200,
+  '1h': 300,
+  '24h': 500,
+  '7d': 1000,
 };
 
 /** Cancel-on-undersold floors. If a contest finishes the fill window with
