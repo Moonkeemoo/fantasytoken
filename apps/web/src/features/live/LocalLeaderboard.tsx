@@ -29,7 +29,11 @@ export function LocalLeaderboard({
   onViewAll,
   budgetUsd,
 }: LocalLeaderboardProps): JSX.Element {
-  const topThree = top.slice(0, 3);
+  // Show top 10 in the inline leaderboard — the screen has plenty of
+  // room and a longer ladder gives the player a real sense of where the
+  // pack is. The around-me window still kicks in when their rank is
+  // outside the top 10 (showDivider logic below).
+  const topTen = top.slice(0, 10);
   const me = around.find((e) => e.isMe) ?? null;
   const myRank = me?.rank ?? null;
 
@@ -38,13 +42,13 @@ export function LocalLeaderboard({
     myRank !== null &&
     myRank > 5 &&
     around.length > 0 &&
-    around[0]!.rank > topThree[topThree.length - 1]!.rank + 1;
+    around[0]!.rank > topTen[topTen.length - 1]!.rank + 1;
 
   // Filter out around-me entries that would duplicate top-3.
-  const topRanks = new Set(topThree.map((e) => e.rank));
+  const topRanks = new Set(topTen.map((e) => e.rank));
   const aroundFiltered = around.filter((e) => !topRanks.has(e.rank));
 
-  const lowestTopRank = topThree.length > 0 ? topThree[topThree.length - 1]!.rank : 0;
+  const lowestTopRank = topTen.length > 0 ? topTen[topTen.length - 1]!.rank : 0;
   const firstAroundRank = aroundFiltered.length > 0 ? aroundFiltered[0]!.rank : null;
   const skipRange =
     firstAroundRank !== null && firstAroundRank > lowestTopRank + 1
@@ -64,7 +68,7 @@ export function LocalLeaderboard({
         </button>
       </div>
       <ul className="mt-2 space-y-0.5">
-        {topThree.map((e) => (
+        {topTen.map((e) => (
           <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} />
         ))}
         {showDivider && (
