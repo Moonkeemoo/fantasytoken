@@ -64,13 +64,28 @@ export function LockedScreen(): JSX.Element {
   }, [tokensQ.data]);
 
   const picks = useMemo<LineupPick[]>(() => {
-    const raw = navState.picks ?? [];
+    // Source priority: route state (instant after submit) → localStorage
+    // (set by TeamBuilder.onSuccess so the lineup survives a navigation
+    // round-trip; user reported "при перезаході в локд пропадають токени"
+    // because state.picks is empty on a fresh mount).
+    let raw: LineupPick[] = navState.picks ?? [];
+    if (raw.length === 0 && id && typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem(`entry:contest:${id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved) as unknown;
+          if (Array.isArray(parsed)) raw = parsed as LineupPick[];
+        }
+      } catch {
+        // ignore — empty state still surfaces "Lineup details unavailable"
+      }
+    }
     return raw.map((p) => {
       if (p.imageUrl !== undefined && p.imageUrl !== null) return p;
       const fallback = imageBySymbol.get(p.symbol);
       return fallback === undefined ? p : { ...p, imageUrl: fallback };
     });
-  }, [navState.picks, imageBySymbol]);
+  }, [navState.picks, imageBySymbol, id]);
 
   const activityQ = useActivity(id);
   const activity = useMemo(() => activityQ.data?.items ?? [], [activityQ.data]);

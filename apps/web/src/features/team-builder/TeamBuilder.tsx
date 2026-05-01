@@ -47,6 +47,11 @@ export function TeamBuilder(): JSX.Element {
         onSuccess: (res) => {
           try {
             localStorage.removeItem(`draft:contest:${id}`);
+            // Persist the submitted lineup so LockedScreen can recover it
+            // when the user navigates away and comes back (router state is
+            // lost on a fresh route mount, which produced the
+            // "Lineup details unavailable" empty state on prod).
+            localStorage.setItem(`entry:contest:${id}`, JSON.stringify(picks));
           } catch {
             // ignore
           }
