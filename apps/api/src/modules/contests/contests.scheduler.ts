@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import {
+  effectiveCapacity,
   effectiveXpMultiplier,
-  LANE_CAPACITY,
   LANE_DURATION_MS,
   LANE_FILL_MS,
   MATRIX_CELLS,
@@ -168,7 +168,7 @@ async function spawnCellInstance(args: SpawnArgs): Promise<void> {
     entryFeeCents: BigInt(stakeCoins),
     // Practice has a house-funded floor; everything else is pure pari-mutuel.
     prizePoolCents: cell.payAll ? 5n : 0n,
-    maxCapacity: LANE_CAPACITY[cell.lane],
+    maxCapacity: effectiveCapacity(cell),
     isFeatured: false,
     minRank: cell.minRank,
     xpMultiplier,

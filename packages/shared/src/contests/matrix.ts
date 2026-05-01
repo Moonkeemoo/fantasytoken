@@ -109,6 +109,12 @@ export interface MatrixCell {
    * the same lane don't kick off simultaneously. Expressed in seconds since
    * the lane's natural cycle anchor (see scheduler.ts). */
   staggerOffsetSec?: number;
+  /** Override the lane-default `LANE_CAPACITY[lane]`. Free Practice and the
+   * weekly Marathon set this to 5000 to act as effectively-unlimited GPP-
+   * style rooms — there's no prize-pool fairness reason to cap them, and
+   * capping just blocks late arrivals from joining a friend in the same
+   * room. Paid lanes keep the lane default to preserve pari-mutuel math. */
+  capacityOverride?: number;
 }
 
 /** Build the canonical matrix cell key. */
@@ -136,6 +142,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     // a confusing "Multiplier ×0.5 → −5" row that read as a punishment to
     // newcomers. Lane default (1.0×) treats Practice as a real game.
     payAll: true,
+    capacityOverride: 5000, // GPP-style — never block a real user from joining.
     staggerOffsetSec: 0,
   },
   {
@@ -321,6 +328,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     name: 'Marathon · Bull',
     minRank: 22,
     weeklyMonday: true,
+    capacityOverride: 5000, // GPP — marathon is the flagship event, no cap.
   },
   {
     key: cellKey('7d', 'c100', 'bear', 'marathon'),
@@ -330,6 +338,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     name: 'Marathon · Bear',
     minRank: 22,
     weeklyMonday: true,
+    capacityOverride: 5000,
   },
 ] as const;
 
@@ -340,4 +349,11 @@ export function getMatrixCell(key: string): MatrixCell | undefined {
 /** Effective XP multiplier for a cell — falls back to lane default. */
 export function effectiveXpMultiplier(cell: MatrixCell): number {
   return cell.xpMultiplier ?? LANE_XP_MULTIPLIER[cell.lane];
+}
+
+/** Effective capacity for a cell — falls back to lane default. Practice and
+ * Marathon override to a very large value to act as effectively-unlimited
+ * GPP rooms; pari-mutuel paid lanes keep the lane cap. */
+export function effectiveCapacity(cell: MatrixCell): number {
+  return cell.capacityOverride ?? LANE_CAPACITY[cell.lane];
 }
