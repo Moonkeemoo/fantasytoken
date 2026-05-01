@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cellKey,
+  effectiveCapacity,
   effectiveXpMultiplier,
   LANE_CAPACITY,
   LANE_DURATION_MS,
@@ -8,6 +9,7 @@ import {
   LANE_XP_MULTIPLIER,
   MATRIX_CELLS,
 } from '@fantasytoken/shared';
+import { shouldReplicateNow } from './contests.scheduler.js';
 
 describe('contests v2 matrix', () => {
   it('every cell has unique key', () => {
@@ -69,5 +71,44 @@ describe('contests v2 matrix', () => {
     expect(names).toContain('Practice');
     expect(names).toContain('Quick Match');
     expect(names).toContain('Bear Trap');
+  });
+});
+
+describe('scheduler.shouldReplicateNow (ADR-0009)', () => {
+  // Use Quick Match c1 — a short-lane cell with sane capacity for tests.
+  const cell = MATRIX_CELLS.find((c) => c.name === 'Quick Match' && c.mode === 'bull')!;
+  const cap = effectiveCapacity(cell);
+  const now = new Date('2026-05-01T12:00:00Z');
+  const olderThanGap = new Date(now.getTime() - 90_000); // 90s ago, > 60s gap
+
+  it('does not replicate when siblings are below the fill threshold', () => {
+    const siblings = [{ id: 'a', createdAt: olderThanGap, realFilled: Math.floor(cap * 0.5) }];
+    expect(shouldReplicateNow({ cell, siblings, at: now })).toBe(false);
+  });
+
+  it('replicates when the only sibling is ≥90% full and aged past the gap', () => {
+    const siblings = [{ id: 'a', createdAt: olderThanGap, realFilled: Math.ceil(cap * 0.9) }];
+    expect(shouldReplicateNow({ cell, siblings, at: now })).toBe(true);
+  });
+
+  it('does NOT replicate when youngest sibling is fresher than the min gap', () => {
+    const fresh = new Date(now.getTime() - 30_000); // 30s ago, < 60s gap
+    const siblings = [
+      { id: 'a', createdAt: olderThanGap, realFilled: cap },
+      { id: 'b', createdAt: fresh, realFilled: 0 },
+    ];
+    expect(shouldReplicateNow({ cell, siblings, at: now })).toBe(false);
+  });
+
+  it('does NOT replicate when ANY sibling has remaining capacity', () => {
+    const siblings = [
+      { id: 'a', createdAt: olderThanGap, realFilled: cap },
+      { id: 'b', createdAt: olderThanGap, realFilled: Math.floor(cap * 0.5) },
+    ];
+    expect(shouldReplicateNow({ cell, siblings, at: now })).toBe(false);
+  });
+
+  it('returns false on empty sibling list (cold-spawn pass handles that)', () => {
+    expect(shouldReplicateNow({ cell, siblings: [], at: now })).toBe(false);
   });
 });

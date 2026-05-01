@@ -22,6 +22,12 @@ export interface ContestRowFromRepo {
   payingRanks: number;
   topPrize: number;
   minCash: number;
+  /** ADR-0009: when this contest is FILLED (spotsFilled ≥ maxCapacity)
+   * and a sibling instance for the same matrix cell has available
+   * capacity, this is the sibling's id so the lobby card can render an
+   * "open a seat in the next instance" CTA pointing straight at it.
+   * null when there's no sibling, or the contest isn't full. */
+  mirrorContestId: string | null;
 }
 
 export interface CreateContestArgs {

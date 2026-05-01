@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray, isNotNull, sql as dsql } from 'drizzle-orm';
 import {
   effectiveCapacity,
   effectivePrizeFormat,
@@ -10,23 +10,28 @@ import {
   type MatrixCell,
 } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
-import { contests, users } from '../../db/schema/index.js';
+import { contests, entries, users } from '../../db/schema/index.js';
 import type { Logger } from '../../logger.js';
 
 /**
  * Contests v2 matrix scheduler — see `docs/specs/contests-v2/DESIGN.md`.
  *
- * Replaces the legacy `contests.replenish` (which fired the same 12 templates
- * on a 5-min ladder cycle). New behaviour:
+ * Two passes per tick:
  *
- * 1. Iterate every cell in MATRIX_CELLS.
- * 2. If a live (scheduled or active) instance exists for that cell — skip.
- * 3. Else — create the next instance with the lane-appropriate fill window
+ * 1. **Cold spawn** — for each cell with NO live (scheduled or active)
+ *    instance, create the next one with the lane-appropriate fill window
  *    + play duration + xp_multiplier.
  *
- * The DB-level UNIQUE INDEX `idx_one_live_per_cell` enforces INV-13 even
- * if two scheduler ticks race; the ON CONFLICT swallows the duplicate
- * cleanly so we just log and move on.
+ * 2. **Auto-replicate (ADR-0009)** — for each short-lane cell whose live
+ *    instance(s) are ALL ≥AUTO_REPLICATE_FILL_PCT full of real users AND
+ *    whose youngest sibling is older than AUTO_REPLICATE_AGE_MS, spawn a
+ *    fresh sibling starting now+fill. Lobby UI then surfaces a "FILLED —
+ *    open a seat in the next instance" CTA on the full card pointing at
+ *    the new sibling. Skipped for 24h/7d cells (huge capacity + clock-
+ *    anchored kickoffs make replication semantically confusing).
+ *
+ * Race protection is app-level: the scheduler runs on a single instance
+ * with a 60s tick. We removed the partial UNIQUE index in 0023.
  *
  * Special cases:
  *   - Marathon (`weeklyMonday=true`): only spawn on Monday UTC, alternating
@@ -35,6 +40,16 @@ import type { Logger } from '../../logger.js';
  *     so multiple cells of the same lane don't all kick off at the same
  *     wall-clock instant.
  */
+
+/** Trigger replication when the existing instance(s) for a cell hit
+ * this fraction of capacity. 0.9 = "90% full". Pre-spawn at 90% so the
+ * "FILLED" cliff has a CTA the moment the card flips to 100%. */
+const AUTO_REPLICATE_FILL_PCT = 0.9;
+/** Don't replicate if a sibling was spawned recently — avoids spawning
+ * a 3rd instance the very tick after #2 went up. The 60s scheduler
+ * cadence + this guard keeps the chain at most one-replica-per-cell-
+ * per-minute even if fill saturates. */
+const AUTO_REPLICATE_MIN_GAP_MS = 60_000;
 
 export interface SchedulerServiceDeps {
   db: Database;
@@ -47,7 +62,7 @@ export interface SchedulerServiceDeps {
 }
 
 export interface SchedulerService {
-  schedule(): Promise<{ created: number }>;
+  schedule(): Promise<{ created: number; replicated: number }>;
 }
 
 export function createSchedulerService(deps: SchedulerServiceDeps): SchedulerService {
@@ -56,35 +71,75 @@ export function createSchedulerService(deps: SchedulerServiceDeps): SchedulerSer
   return {
     async schedule() {
       const adminId = await ensureAdminUser(deps);
-      const liveByCell = await loadLiveCellKeys(deps.db);
+      const liveByCell = await loadLiveByCell(deps.db);
 
       let created = 0;
+      let replicated = 0;
       for (const cell of MATRIX_CELLS) {
-        if (liveByCell.has(cell.key)) continue;
-        if (!shouldSpawnNow(cell, now())) continue;
+        const liveSiblings = liveByCell.get(cell.key) ?? [];
+
+        // Pass 1 — cold spawn (no live instance for this cell).
+        if (liveSiblings.length === 0) {
+          if (!shouldSpawnNow(cell, now())) continue;
+          try {
+            await spawnCellInstance({ db: deps.db, cell, adminId, now: now() });
+            created += 1;
+            deps.log.info({ cell: cell.key, name: cell.name }, 'scheduler.spawn');
+          } catch (err: unknown) {
+            const code = (err as { code?: string }).code;
+            if (code === '23505') {
+              deps.log.debug({ cell: cell.key }, 'scheduler.spawn race (ignored)');
+              continue;
+            }
+            deps.log.warn({ err, cell: cell.key }, 'scheduler.spawn failed');
+          }
+          continue;
+        }
+
+        // Pass 2 — auto-replicate (ADR-0009). Only short lanes (10m/30m/1h);
+        // 24h/7d already have huge capacity + clock-anchored kickoffs.
+        if (cell.lane === '24h' || cell.lane === '7d') continue;
+        if (cell.weeklyMonday) continue;
+        if (!shouldReplicateNow({ cell, siblings: liveSiblings, at: now() })) continue;
 
         try {
           await spawnCellInstance({ db: deps.db, cell, adminId, now: now() });
-          created += 1;
-          deps.log.info({ cell: cell.key, name: cell.name }, 'scheduler.spawn');
+          replicated += 1;
+          deps.log.info(
+            { cell: cell.key, name: cell.name, siblings: liveSiblings.length },
+            'scheduler.replicate',
+          );
         } catch (err: unknown) {
-          // The unique index races a concurrent tick — swallow duplicate
-          // and let next tick re-evaluate. Anything else is a real bug.
-          const code = (err as { code?: string }).code;
-          if (code === '23505') {
-            deps.log.debug({ cell: cell.key }, 'scheduler.spawn race (ignored)');
-            continue;
-          }
-          deps.log.warn({ err, cell: cell.key }, 'scheduler.spawn failed');
+          deps.log.warn({ err, cell: cell.key }, 'scheduler.replicate failed');
         }
       }
 
-      if (created > 0) {
-        deps.log.info({ created }, 'scheduler.tick');
+      if (created > 0 || replicated > 0) {
+        deps.log.info({ created, replicated }, 'scheduler.tick');
       }
-      return { created };
+      return { created, replicated };
     },
   };
+}
+
+/** Replicate when EVERY live sibling is ≥AUTO_REPLICATE_FILL_PCT full
+ * AND the youngest one was created at least AUTO_REPLICATE_MIN_GAP_MS
+ * ago. The age guard avoids spawning a third instance the same minute
+ * the second went up. Exported for unit-testing the decision logic
+ * without touching the DB. */
+export function shouldReplicateNow(args: {
+  cell: MatrixCell;
+  siblings: ReadonlyArray<LiveSibling>;
+  at: Date;
+}): boolean {
+  const { cell, siblings, at } = args;
+  if (siblings.length === 0) return false;
+  const cap = effectiveCapacity(cell);
+  if (cap <= 0) return false;
+  const allFull = siblings.every((s) => s.realFilled / cap >= AUTO_REPLICATE_FILL_PCT);
+  if (!allFull) return false;
+  const youngest = siblings.reduce((acc, s) => Math.max(acc, s.createdAt.getTime()), 0);
+  return at.getTime() - youngest >= AUTO_REPLICATE_MIN_GAP_MS;
 }
 
 async function ensureAdminUser(deps: SchedulerServiceDeps): Promise<string> {
@@ -106,18 +161,48 @@ async function ensureAdminUser(deps: SchedulerServiceDeps): Promise<string> {
   return created.id;
 }
 
-async function loadLiveCellKeys(db: Database): Promise<Set<string>> {
+export interface LiveSibling {
+  id: string;
+  createdAt: Date;
+  /** Real (non-bot) entries currently submitted on this contest. The
+   * replicate decision uses the real-only count so synth fillers don't
+   * trigger replication on cells that real users haven't yet found. */
+  realFilled: number;
+}
+
+async function loadLiveByCell(db: Database): Promise<Map<string, LiveSibling[]>> {
   const rows = await db
-    .select({ key: contests.matrixCellKey, status: contests.status })
-    .from(contests);
-  const live = new Set<string>();
+    .select({
+      id: contests.id,
+      key: contests.matrixCellKey,
+      status: contests.status,
+      createdAt: contests.createdAt,
+    })
+    .from(contests)
+    .where(
+      dsql`${contests.status} IN ('scheduled', 'active') AND ${isNotNull(contests.matrixCellKey)}`,
+    );
+  if (rows.length === 0) return new Map();
+
+  const ids = rows.map((r) => r.id);
+  const counts = await db
+    .select({
+      contestId: entries.contestId,
+      n: dsql<number>`COUNT(*)::int`,
+    })
+    .from(entries)
+    .where(dsql`${inArray(entries.contestId, ids)} AND ${isNotNull(entries.userId)}`)
+    .groupBy(entries.contestId);
+  const byId = new Map(counts.map((c) => [c.contestId, c.n] as const));
+
+  const out = new Map<string, LiveSibling[]>();
   for (const r of rows) {
     if (!r.key) continue;
-    if (r.status === 'scheduled' || r.status === 'active') {
-      live.add(r.key);
-    }
+    const list = out.get(r.key) ?? [];
+    list.push({ id: r.id, createdAt: r.createdAt, realFilled: byId.get(r.id) ?? 0 });
+    out.set(r.key, list);
   }
-  return live;
+  return out;
 }
 
 /** Marathon (weeklyMonday) only fires on Monday UTC, with bull/bear chosen

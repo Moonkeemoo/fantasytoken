@@ -23,6 +23,7 @@ function mk(over: Partial<ContestListItem> & { id: string }): ContestListItem {
     payingRanks: 5,
     topPrize: 0,
     minCash: 0,
+    mirrorContestId: null,
   };
 }
 

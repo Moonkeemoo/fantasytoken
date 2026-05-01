@@ -103,6 +103,15 @@ export function ContestRow({
     cta = { label: 'WATCH', onClick: () => onView(contest.id), variant: 'ghost' };
   } else if (contest.status !== 'scheduled') {
     cta = { label: 'CLOSED', onClick: () => {}, disabled: true, variant: 'ghost' };
+  } else if (isFull && contest.mirrorContestId) {
+    // ADR-0009: a sibling instance was auto-spawned; route the player
+    // straight to it instead of dead-ending on FULL. DraftKings-style
+    // mirror handoff.
+    cta = {
+      label: 'OPEN SEAT →',
+      onClick: () => onJoin(contest.mirrorContestId as string),
+      variant: 'primary',
+    };
   } else if (isFull) {
     cta = { label: 'FULL', onClick: () => {}, disabled: true, variant: 'ghost' };
   } else if (cantAfford && contest.entryFeeCents > 0) {
@@ -134,7 +143,14 @@ export function ContestRow({
     else if (top !== null) prizeLine = `Win up to 🪙 ${top}`;
     else prizeLine = 'Open';
     const cutoff = contest.payingRanks > 0 ? ` · top ${contest.payingRanks} paid` : '';
-    caption = `${prizeLine}${cutoff} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
+    if (isFull && contest.mirrorContestId) {
+      // ADR-0009: surface the mirror handoff in the caption so the row
+      // explains what happened ("FILLED — opening fresh instance"),
+      // not just shows a "→" button with no context.
+      caption = `FILLED · fresh instance ready → · ${contest.spotsFilled}/${contest.maxCapacity}`;
+    } else {
+      caption = `${prizeLine}${cutoff} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
+    }
   }
 
   const isBear = contest.type === 'bear';

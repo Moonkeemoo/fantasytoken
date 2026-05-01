@@ -84,7 +84,51 @@ function rowFromDbRow(
       spotsFilled || row.maxCapacity,
       dynamicPool,
     ),
+    // Attached in `attachMirror` (post-pass) since it requires the full
+    // sibling list. Default null keeps the row complete when consumed
+    // outside the lobby list (e.g. getById).
+    mirrorContestId: null,
   };
+}
+
+/** ADR-0009: pair every FILLED row in the lobby list with a non-full
+ * sibling (same matrix_cell_key) so the card can render an "open a
+ * seat in the next instance" CTA. Pure function over the already-
+ * computed items + db rows; runs in O(n). */
+function attachMirror(
+  items: ContestRowFromRepo[],
+  rows: Array<{ row: typeof contests.$inferSelect }>,
+): ContestRowFromRepo[] {
+  const cellKeyById = new Map<string, string>();
+  for (const r of rows) {
+    if (r.row.matrixCellKey) cellKeyById.set(r.row.id, r.row.matrixCellKey);
+  }
+  // Group items by cell key so we can pick the best sibling with one
+  // pass per group.
+  const byCell = new Map<string, ContestRowFromRepo[]>();
+  for (const it of items) {
+    const k = cellKeyById.get(it.id);
+    if (!k) continue;
+    const arr = byCell.get(k) ?? [];
+    arr.push(it);
+    byCell.set(k, arr);
+  }
+  return items.map((it) => {
+    if (it.spotsFilled < it.maxCapacity) return it;
+    const k = cellKeyById.get(it.id);
+    if (!k) return it;
+    const sibs = byCell.get(k) ?? [];
+    // Most spots-left wins; ties broken by latest startsAt (freshest).
+    const candidate = sibs
+      .filter((s) => s.id !== it.id && s.spotsFilled < s.maxCapacity)
+      .sort((a, b) => {
+        const aLeft = a.maxCapacity - a.spotsFilled;
+        const bLeft = b.maxCapacity - b.spotsFilled;
+        if (bLeft !== aLeft) return bLeft - aLeft;
+        return b.startsAt.localeCompare(a.startsAt);
+      })[0];
+    return candidate ? { ...it, mirrorContestId: candidate.id } : it;
+  });
 }
 
 /** Derive UI-friendly summary for a row's prize structure. */
@@ -141,7 +185,7 @@ export function createContestsRepo(db: Database, rakePct: number): ContestsRepo 
       const counts = await countSpots(db, contestIds);
       const realCounts = await countRealSpots(db, contestIds);
       const enteredSet = userId ? await getEnteredSet(db, userId, contestIds) : new Set<string>();
-      return rows.map((r) =>
+      const items = rows.map((r) =>
         rowFromDbRow(
           r.row,
           counts.get(r.row.id) ?? 0,
@@ -150,6 +194,11 @@ export function createContestsRepo(db: Database, rakePct: number): ContestsRepo 
           enteredSet.has(r.row.id),
         ),
       );
+      // ADR-0009: pair every FILLED row with a sibling that still has a
+      // seat. Siblings share matrix_cell_key (auto-generated server-side
+      // from lane/stake/mode/name). Pick the one with most spots-left so
+      // the player gets the freshest replica even if multiple exist.
+      return attachMirror(items, rows);
     },
 
     async getById(id, userId) {

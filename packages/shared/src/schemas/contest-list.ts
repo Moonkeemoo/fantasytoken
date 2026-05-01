@@ -43,6 +43,11 @@ export const ContestListItem = z.object({
   virtualBudgetCents: z.number().int().nonnegative().default(10_000_000),
   // True if the requesting user has an entry in this contest.
   userHasEntered: z.boolean(),
+  /** ADR-0009: when this contest is FILLED, the id of a sibling instance
+   * (same matrix cell) that still has a seat. Drives the lobby card's
+   * "open a seat in the next instance" CTA. null when this row isn't
+   * full or there's no available sibling. Optional for back-compat. */
+  mirrorContestId: z.string().uuid().nullable().default(null),
 });
 export type ContestListItem = z.infer<typeof ContestListItem>;
 

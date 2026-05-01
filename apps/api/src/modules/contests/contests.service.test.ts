@@ -30,6 +30,7 @@ function makeRow(overrides: Partial<ContestRowFromRepo> = {}): ContestRowFromRep
     payingRanks: 25,
     topPrize: 200,
     minCash: 10,
+    mirrorContestId: null,
     ...overrides,
   };
 }

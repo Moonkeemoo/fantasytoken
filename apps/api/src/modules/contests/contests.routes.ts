@@ -83,6 +83,7 @@ export function makeContestsRoutes(deps: ContestsRoutesDeps): FastifyPluginAsync
           payingRanks: r.payingRanks,
           topPrize: r.topPrize,
           minCash: r.minCash,
+          mirrorContestId: r.mirrorContestId,
         })),
       };
       return response;
