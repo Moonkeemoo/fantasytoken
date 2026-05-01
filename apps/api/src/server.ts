@@ -345,12 +345,30 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
 
     // Tick cron — drives the synthetics every SIM_CONFIG.tickIntervalMs.
     // INV-7 catch-and-log lives inside scheduleEvery.
+    //
+    // We log every tick (heartbeat at debug level when nothing happened,
+    // info when actions fired) so the cron's liveness is visible. Without
+    // this it took us a confused 5 minutes to tell "tick fired but synths
+    // were quiet" apart from "tick never fired" while bringing the cohort
+    // up on prod.
     stopSimTick = scheduleEvery({
       intervalMs: SIM_CONFIG.tickIntervalMs,
       fn: async () => {
         const stats = await tickSvc.tick();
-        if (stats.joinsAttempted > 0 || stats.invitesCreated > 0 || stats.topUpsGranted > 0) {
+        const fired =
+          stats.joinsAttempted > 0 || stats.invitesCreated > 0 || stats.topUpsGranted > 0;
+        if (fired) {
           deps.logger.info(stats, 'sim.tick');
+        } else if (stats.syntheticsScanned > 0) {
+          deps.logger.info(
+            {
+              syntheticsScanned: stats.syntheticsScanned,
+              loginsLogged: stats.loginsLogged,
+              idlesLogged: stats.idlesLogged,
+              durationMs: stats.durationMs,
+            },
+            'sim.tick.heartbeat',
+          );
         }
       },
       name: 'sim.tick',
