@@ -29,6 +29,9 @@ function makeFakeRepo(): TokensRepo & { upserted: number } {
     async upsertPricesBySymbol() {
       return 0;
     },
+    async listAllCatalogSymbols() {
+      return [];
+    },
   };
 }
 

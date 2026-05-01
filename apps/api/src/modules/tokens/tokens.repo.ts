@@ -93,6 +93,11 @@ export function createTokensRepo(db: Database): TokensRepo {
       return (rows as unknown as Array<{ symbol: string }>).map((r) => r.symbol);
     },
 
+    async listAllCatalogSymbols() {
+      const rows = await db.select({ symbol: tokens.symbol }).from(tokens);
+      return rows.map((r) => r.symbol);
+    },
+
     async listActiveCoingeckoIds(opts) {
       // Resolve symbols-in-live-or-pending-contests → coingecko_ids. We
       // include 'scheduled' so prices stay warm during the fill window —

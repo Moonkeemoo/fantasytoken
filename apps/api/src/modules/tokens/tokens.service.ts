@@ -46,10 +46,10 @@ export interface TokensRepo {
    * asking CoinGecko for tokens Binance is already keeping live (the
    * Binance feed bumps last_updated_at on every tick). */
   listActiveCoingeckoIds(opts?: { excludeFreshWithinSec?: number }): Promise<string[]>;
-  /** Bulk price update by symbol (Binance feed path — no coingecko_id
-   * involved). Touches `current_price_usd`, `pct_change_24h`,
-   * `last_updated_at`. Tokens missing from our catalog are silently
-   * skipped (Binance has many we don't track). */
+  /** Bulk price update by symbol (Binance/Bybit feed path — no
+   * coingecko_id involved). Touches `current_price_usd`,
+   * `pct_change_24h`, `last_updated_at`. Tokens missing from our catalog
+   * are silently skipped (the live feed has many we don't track). */
   upsertPricesBySymbol(
     rows: ReadonlyArray<{
       symbol: string;
@@ -57,6 +57,9 @@ export interface TokensRepo {
       pctChange24h: number | null;
     }>,
   ): Promise<number>;
+  /** All distinct symbols in our token catalog. Used to seed live-feed
+   * subscriptions on boot. */
+  listAllCatalogSymbols(): Promise<string[]>;
 }
 
 export interface TokensServiceDeps {

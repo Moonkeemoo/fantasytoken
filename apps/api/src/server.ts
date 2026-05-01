@@ -18,7 +18,7 @@ import { createTokensRepo } from './modules/tokens/tokens.repo.js';
 import { createTokensService } from './modules/tokens/tokens.service.js';
 import { makeTokensRoutes } from './modules/tokens/tokens.routes.js';
 import { createPriceFeedWriter } from './modules/tokens/price-feed.service.js';
-import { startBinanceFeed } from './lib/binance.js';
+import { startBybitFeed } from './lib/bybit.js';
 import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
@@ -420,21 +420,35 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  // Binance public WS — live feed for ~500 USDT-quoted spot tokens.
+  // Bybit public WS — live feed for ~500 USDT-quoted spot tokens.
+  // (Replaces Binance because Railway's IP is geo-blocked by Binance with
+  // HTTP 451.) Subscribes to `tickers.{SYMBOL}USDT` per catalog symbol.
+  // Bybit silently drops symbols it doesn't list, so we send our whole
+  // catalog on connect and let the broker decide.
   // Buffered + flushed once a second through the price-feed writer.
   // Skipped in test env so unit tests don't open real network sockets.
   const priceFeedWriter =
     deps.config.NODE_ENV === 'test'
       ? null
       : createPriceFeedWriter({ repo: tokensRepo, log: deps.logger });
-  const binanceHandle =
-    priceFeedWriter !== null
-      ? startBinanceFeed({
+  let bybitHandle: { stop: () => void } | null = null;
+  if (priceFeedWriter !== null) {
+    // Fire-and-forget: catalog may be empty on first boot; we subscribe
+    // after the catalog has been populated by the first sync. The cron
+    // tick later refreshes new tokens; for now we get the symbols we have.
+    void (async () => {
+      try {
+        const symbols = await tokensRepo.listAllCatalogSymbols();
+        bybitHandle = startBybitFeed({
           log: deps.logger,
+          symbols,
           onUpdate: (updates) => priceFeedWriter.push(updates),
-        })
-      : null;
-  void binanceHandle;
+        });
+      } catch (err) {
+        deps.logger.warn({ err }, 'bybit.feed bootstrap failed');
+      }
+    })();
+  }
 
   const stopScheduler = scheduleEvery({
     intervalMs: MINUTE,
@@ -514,7 +528,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopWelcomeExpiry();
       stopDmDrain();
       if (stopSimTick) stopSimTick();
-      if (binanceHandle) binanceHandle.stop();
+      if (bybitHandle) bybitHandle.stop();
       if (priceFeedWriter) priceFeedWriter.stop();
       if (bot) void bot.stop();
       realtimeHub.closeAll();
