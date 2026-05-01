@@ -17,17 +17,24 @@ export function formatPct(decimal: number): string {
   const pct = decimal * 100;
   if (pct === 0) return '0.0%';
   const sign = pct > 0 ? '+' : '-';
-  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+  const abs = Math.abs(pct);
+  // TZ-004: avoid rounding tiny moves to "0.0%" (which hides the sign of
+  // the actual result). 2 sig figs below 1%: -0.0016 → "-0.16%" not "0.0%".
+  if (abs < 1) return `${sign}${abs.toFixed(2)}%`;
+  return `${sign}${abs.toFixed(1)}%`;
 }
 
-/** Same as formatPct but with 2-decimal precision — used in places where a
- * sub-tenth-percent move would otherwise round visually to "0.0%" and hide
- * the actual sign of the result (e.g. the no-prize headline). */
+/** Same as formatPct but always 2-decimal precision — used in places where
+ * even sub-percent moves need to read as something other than "0.00%". */
 export function formatPctPrecise(decimal: number): string {
   const pct = decimal * 100;
   if (pct === 0) return '0.00%';
   const sign = pct > 0 ? '+' : '-';
-  return `${sign}${Math.abs(pct).toFixed(2)}%`;
+  const abs = Math.abs(pct);
+  // Sub-1% needs more digits — same logic as formatPct but the floor is 4
+  // for tiny values (-0.00012 → "-0.0120%" not "-0.00%").
+  if (abs < 0.01) return `${sign}${abs.toFixed(4)}%`;
+  return `${sign}${abs.toFixed(2)}%`;
 }
 
 /**

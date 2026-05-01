@@ -15,14 +15,11 @@ export interface LiveHeaderProps {
   status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
 }
 
-export function LiveHeader({ contestName, mode, tier, startsAt, endsAt, status }: LiveHeaderProps) {
+export function LiveHeader({ contestName, tier, startsAt, endsAt, status }: LiveHeaderProps) {
   const navigate = useNavigate();
   const isPreStart = status === 'scheduled';
   const ms = useCountdown(isPreStart ? startsAt : endsAt);
   const locking = isPreStart && ms <= 0;
-
-  const modePillClass =
-    mode === 'bear' ? 'border-bear text-bear bg-bear/5' : 'border-bull text-bull bg-bull/5';
 
   const durationMinutes = Math.round(
     (new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000,
@@ -50,12 +47,10 @@ export function LiveHeader({ contestName, mode, tier, startsAt, endsAt, status }
           ‹
         </button>
         <div className="flex items-center justify-center gap-1.5 text-[14px] font-bold leading-tight">
+          {/* TZ-004: dropped the BULL/BEAR pill — mode is already implicit
+              in the contest name (e.g. "Bear Trap"), the duplicate badge
+              regressed in. */}
           <span>{contestName}</span>
-          <span
-            className={`rounded-full border px-1.5 py-px text-[9px] font-bold uppercase ${modePillClass}`}
-          >
-            {mode}
-          </span>
           <span className="rounded-full bg-ink px-1.5 py-px font-mono text-[9px] font-bold text-paper">
             {fmtMoney(tier)}
           </span>

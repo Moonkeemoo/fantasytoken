@@ -20,6 +20,7 @@ export function createResultRepo(db: Database): ResultRepo {
           status: contests.status,
           prizePoolCents: contests.prizePoolCents,
           entryFeeCents: contests.entryFeeCents,
+          virtualBudgetCents: contests.virtualBudgetCents,
         })
         .from(contests)
         .where(eq(contests.id, id))
@@ -31,6 +32,7 @@ export function createResultRepo(db: Database): ResultRepo {
         status: c.status as 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled',
         prizePoolCents: Number(c.prizePoolCents),
         entryFeeCents: Number(c.entryFeeCents),
+        virtualBudgetCents: Number(c.virtualBudgetCents),
       };
     },
 

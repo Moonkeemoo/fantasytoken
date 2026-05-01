@@ -63,6 +63,18 @@ export function LockedScreen(): JSX.Element {
     return map;
   }, [tokensQ.data]);
 
+  // Live spot price per symbol — used as the "entry price" preview right
+  // up to kickoff (TZ-004 §2). Once status flips to active the real
+  // snapshot is locked server-side; this view-side number stops updating.
+  const priceBySymbol = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const t of tokensQ.data?.items ?? []) {
+      const n = t.currentPriceUsd ? Number.parseFloat(t.currentPriceUsd) : NaN;
+      map.set(t.symbol, Number.isFinite(n) ? n : null);
+    }
+    return map;
+  }, [tokensQ.data]);
+
   const picks = useMemo<LineupPick[]>(() => {
     // Source priority: route state (instant after submit) → localStorage
     // (set by TeamBuilder.onSuccess so the lineup survives a navigation
@@ -120,7 +132,6 @@ export function LockedScreen(): JSX.Element {
 
   const contest = stateQuery.data;
   const time = formatCountdown(ms);
-  const maxAlloc = picks.length === 0 ? 100 : Math.max(...picks.map((p) => p.alloc), 80);
   const dollarsCommitted = picks.reduce((s, p) => s + dollarsFor(p.alloc, tier), 0);
 
   const endLabel = new Date(contest.endsAt).toLocaleString('en-US', {
@@ -226,32 +237,47 @@ export function LockedScreen(): JSX.Element {
             {picks.length} picks · {fmtMoneyExact(dollarsCommitted)} committed
           </span>
         </div>
+        <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+          {/* TZ-004 §2: pre-kickoff this is "lock soon"; after kickoff swap
+              to a snapshot timestamp once we expose contest.lockedAt. */}
+          prices lock at kickoff
+        </div>
         <ul className="mt-2 space-y-1.5">
           {picks.length === 0 && (
             <li className="rounded-md border border-dashed border-line bg-paper-dim/50 px-3 py-3 text-center text-[11px] text-muted">
               Lineup details unavailable. Check back at kickoff.
             </li>
           )}
-          {picks.map((p) => (
-            <li
-              key={p.symbol}
-              className="flex items-center gap-2 rounded-md border border-line bg-paper px-2 py-1.5"
-            >
-              <TokenIcon symbol={p.symbol} imageUrl={p.imageUrl ?? null} size={24} />
-              <div className="flex-1">
-                <div className="text-[12px] font-bold text-ink">{p.symbol}</div>
-                <div className="text-[10px] font-mono text-muted">
-                  {fmtMoneyExact(dollarsFor(p.alloc, tier))} · {p.alloc}%
+          {picks.map((p) => {
+            const price = priceBySymbol.get(p.symbol) ?? null;
+            return (
+              <li
+                key={p.symbol}
+                className="flex items-center gap-2 rounded-md border border-line bg-paper px-2 py-1.5"
+              >
+                <TokenIcon symbol={p.symbol} imageUrl={p.imageUrl ?? null} size={24} />
+                <div className="flex-1">
+                  <div className="text-[13px] font-bold text-ink">{p.symbol}</div>
+                  <div className="text-[11px] font-mono text-ink-soft">
+                    {fmtMoneyExact(dollarsFor(p.alloc, tier))} · {p.alloc}%
+                  </div>
                 </div>
-              </div>
-              <div className="h-1 w-20 rounded-full bg-paper-deep">
-                <div
-                  className="h-full rounded-full bg-ink"
-                  style={{ width: `${(p.alloc / maxAlloc) * 100}%` }}
-                />
-              </div>
-            </li>
-          ))}
+                {/* Right hero: current spot price — what will get locked
+                    in at kickoff. JBM 17px per TZ-004 §2. */}
+                <div className="font-mono text-[17px] font-medium text-ink">
+                  {price === null
+                    ? '—'
+                    : price < 0.01
+                      ? `$${price.toFixed(6)}`
+                      : price < 1
+                        ? `$${price.toFixed(4)}`
+                        : price < 1000
+                          ? `$${price.toFixed(2)}`
+                          : fmtMoney(price)}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </section>
 

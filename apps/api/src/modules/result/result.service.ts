@@ -17,6 +17,7 @@ export interface ResultRepo {
     status: 'scheduled' | 'active' | 'finalizing' | 'finalized' | 'cancelled';
     prizePoolCents: number;
     entryFeeCents: number;
+    virtualBudgetCents: number;
   } | null>;
   getEntries(contestId: string): Promise<ResultEntrySnapshot[]>;
   findMyEntry(
@@ -104,6 +105,10 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
           imageUrl: images.get(p.symbol) ?? null,
           alloc: p.alloc,
           finalPlPct: pct,
+          // TZ-004: surface entry/final prices so the recap row can show
+          // the journey ($145.20 → $148.50) instead of an alloc dupe.
+          startPriceUsd: pr?.start ?? null,
+          finalPriceUsd: pr?.end ?? null,
         };
       });
 
@@ -125,6 +130,7 @@ export function createResultService(deps: ResultServiceDeps): ResultService {
         totalEntries: sorted.length,
         realEntries,
         lineupFinal,
+        virtualBudgetCents: contest.virtualBudgetCents,
         xpAward,
       };
     },

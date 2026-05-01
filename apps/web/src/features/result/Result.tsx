@@ -86,7 +86,7 @@ export function Result() {
       <Headline result={data} onShare={onShare} />
       <Breakdown result={data} />
       {data.xpAward && <XpBreakdown award={data.xpAward} rank={rank.data ?? null} />}
-      <LineupRecap rows={data.lineupFinal} />
+      <LineupRecap rows={data.lineupFinal} budgetUsd={data.virtualBudgetCents} />
       {showRankUp && rank.data && (
         <RankUpOverlay
           rank={rank.data}

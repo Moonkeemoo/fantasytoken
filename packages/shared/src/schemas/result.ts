@@ -8,6 +8,11 @@ export const LineupFinalRow = z.object({
   imageUrl: z.string().nullable(),
   alloc: z.number().int(),
   finalPlPct: z.number(),
+  /** Entry-time spot price (locked at kickoff). null when snapshot
+   * unavailable. */
+  startPriceUsd: z.number().nullable().default(null),
+  /** Contest-end spot price. null when snapshot unavailable. */
+  finalPriceUsd: z.number().nullable().default(null),
 });
 export type LineupFinalRow = z.infer<typeof LineupFinalRow>;
 
@@ -36,6 +41,10 @@ export const ResultResponse = z.object({
   totalEntries: z.number().int().nonnegative(),
   realEntries: z.number().int().nonnegative(),
   lineupFinal: z.array(LineupFinalRow),
+  /** Contest virtual budget (whole dollars). Drives per-row contribution
+   * math on the recap (alloc% × budget × finalPlPct). Default 100 keeps
+   * older clients sane until they refetch. */
+  virtualBudgetCents: z.number().int().nonnegative().default(100),
   /** XP earned from this contest (rank-system). Null for cancelled or pre-rank-system entries. */
   xpAward: XpAwardSummary.nullable(),
 });
