@@ -208,6 +208,23 @@ export function LockedScreen(): JSX.Element {
             <Label>prize pool</Label>
           </div>
         </div>
+        {/* Format hint — DraftKings-style: explicit format tag + paying line. */}
+        {contest.prizeFormat !== 'linear' && (
+          <div className="mt-1 flex items-center justify-between text-[10px] text-muted">
+            <span className="font-mono uppercase tracking-wide">
+              {contest.prizeFormat === '50_50'
+                ? '50/50 · top half wins ~1.8× entry'
+                : contest.prizeFormat === '3x'
+                  ? '3X · top 1/3 wins ~2.7× entry'
+                  : contest.prizeFormat === '5x'
+                    ? '5X · top 1/5 wins ~4.5× entry'
+                    : `GPP · top ${contest.payingRanks} paid`}
+            </span>
+            {contest.minCash > 0 && contest.prizeFormat === 'gpp' && (
+              <span className="font-mono">min cash 🪙 {contest.minCash}</span>
+            )}
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2 border-t border-line pt-2 text-[11px] text-ink-soft">
           <span className="h-1.5 w-1.5 rounded-full bg-bull" />
           {activity.length === 0 ? (

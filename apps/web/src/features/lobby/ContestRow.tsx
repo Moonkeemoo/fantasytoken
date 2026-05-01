@@ -1,20 +1,39 @@
-import { computePrizeCurve, type ContestListItem } from '@fantasytoken/shared';
+import type { ContestListItem, PrizeFormat } from '@fantasytoken/shared';
 import { Button } from '../../components/ui/Button.js';
 import { Card } from '../../components/ui/Card.js';
-import { formatCents, formatTimeLeft } from '../../lib/format.js';
+import { formatTimeLeft } from '../../lib/format.js';
 import { useCountdown } from '../../lib/countdown.js';
 
-/**
- * What rank #1 will pocket when the room fills. The full prize_pool_cents
- * is split across paying ranks via the geometric decay (Practice's $5 pool
- * with 10 seats + payAll → rank-1 ≈ $1.79, not $5). Showing the pool as
- * "Win up to" misled players into expecting the entire amount.
- */
-function topPrizeCents(contest: ContestListItem): number {
-  const curve = computePrizeCurve(contest.maxCapacity, contest.prizePoolCents, {
-    payAll: contest.payAll,
-  });
-  return curve.get(1) ?? contest.prizePoolCents;
+/** Short label shown on the format pill — DraftKings-style mode tag. */
+function prizeFormatLabel(f: PrizeFormat): string {
+  switch (f) {
+    case 'linear':
+      return 'PRACTICE';
+    case '50_50':
+      return '50/50';
+    case '3x':
+      return '3X';
+    case '5x':
+      return '5X';
+    case 'gpp':
+      return 'GPP';
+  }
+}
+
+/** Long-form tooltip for the format pill — surfaces the rule at a glance. */
+function prizeFormatTooltip(f: PrizeFormat): string {
+  switch (f) {
+    case 'linear':
+      return 'Practice — every player wins 1–2 coins';
+    case '50_50':
+      return 'Top half doubles their entry · bottom half loses';
+    case '3x':
+      return 'Top 1/3 wins ~2.7× entry · rest lose';
+    case '5x':
+      return 'Top 1/5 wins ~4.5× entry · rest lose';
+    case 'gpp':
+      return 'Tournament — top 25% paid, top-heavy prizes';
+  }
 }
 
 export interface ContestRowProps {
@@ -102,7 +121,20 @@ export function ContestRow({
   } else if (contest.status === 'finalized' || contest.status === 'cancelled') {
     caption = `Final · ${contest.spotsFilled}/${contest.maxCapacity}`;
   } else {
-    caption = `Win up to ${formatCents(topPrizeCents(contest))} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
+    // Win-up copy switches by format. Multipliers / 50_50 advertise the
+    // marketed multiple ("Win 1.8× / 2.7× / 4.5×"), GPP shows top prize
+    // ("Win up to 🪙 N · top X paid"), Practice shows the friendly fixed
+    // top prize ("Win up to 🪙 2").
+    const fmt = contest.prizeFormat;
+    const top = contest.topPrize > 0 ? contest.topPrize : null;
+    let prizeLine: string;
+    if (fmt === '50_50') prizeLine = 'Win ~1.8× entry';
+    else if (fmt === '3x') prizeLine = 'Win ~2.7× entry';
+    else if (fmt === '5x') prizeLine = 'Win ~4.5× entry';
+    else if (top !== null) prizeLine = `Win up to 🪙 ${top}`;
+    else prizeLine = 'Open';
+    const cutoff = contest.payingRanks > 0 ? ` · top ${contest.payingRanks} paid` : '';
+    caption = `${prizeLine}${cutoff} · ${contest.spotsFilled}/${contest.maxCapacity} · ${formatTimeLeft(ms)}`;
   }
 
   const isBear = contest.type === 'bear';
@@ -131,6 +163,16 @@ export function ContestRow({
           >
             {isFree ? 'FREE' : `🪙 ${contest.entryFeeCents}`}
           </span>
+          {/* Format pill — DraftKings-style mode tag so the player
+              knows the prize structure at a glance (50/50 / 3X / GPP). */}
+          {contest.prizeFormat !== 'linear' && (
+            <span
+              className="rounded-[2px] border-[1px] border-ink bg-paper px-[4px] py-[1px] font-mono text-[8px] font-bold uppercase tracking-[0.06em] text-ink"
+              title={prizeFormatTooltip(contest.prizeFormat)}
+            >
+              {prizeFormatLabel(contest.prizeFormat)}
+            </span>
+          )}
         </div>
         <div className="mt-[2px] truncate text-[10px] text-muted">{caption}</div>
       </div>
