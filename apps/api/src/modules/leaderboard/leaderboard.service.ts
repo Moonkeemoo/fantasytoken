@@ -85,6 +85,18 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
       const totalEntries = scored.length;
       const realEntries = scored.filter((s) => !s.entry.isBot).length;
 
+      // Pre-resolve every pick symbol to its image URL once per request.
+      // Earlier the leaderboard returned plain symbols and the frontend
+      // looked images up via useTokenList(250), which silently dropped
+      // any symbol outside the top-250 mcap — long-tail memes/L1s
+      // rendered as letter circles in the Spectator strip. Resolving
+      // server-side guarantees the full 519-token catalog renders
+      // correctly and removes a frontend round-trip.
+      const allPickSymbols = [
+        ...new Set(scored.flatMap((s) => s.entry.picks.map((p) => p.symbol))),
+      ];
+      const pickImages = await deps.repo.getImagesBySymbols(allPickSymbols);
+
       const display: LeaderboardEntry[] = await Promise.all(
         scored.map(async (s, i) => {
           const isMe = !!userId && s.entry.userId === userId;
@@ -107,10 +119,13 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
             avatarUrl,
             scorePct: s.score,
             isMe,
-            // Symbols only — Spectator renders the 5-icon strip per row.
-            // Allocations intentionally omitted (TZ-003: equal-split makes
-            // them derivable from `picks.length` anyway).
-            picks: s.entry.picks.map((p) => p.symbol),
+            // {symbol, imageUrl} pairs — Spectator renders the icon strip
+            // directly from this. Allocations intentionally omitted
+            // (TZ-003: equal-split makes them derivable from count).
+            picks: s.entry.picks.map((p) => ({
+              symbol: p.symbol,
+              imageUrl: pickImages.get(p.symbol) ?? null,
+            })),
           };
         }),
       );

@@ -13,6 +13,20 @@ export const LineupRow = z.object({
 });
 export type LineupRow = z.infer<typeof LineupRow>;
 
+export const LeaderboardPick = z.object({
+  symbol: z.string(),
+  /** Coingecko image URL for the symbol — resolved server-side so the
+   * Spectator strip doesn't need a separate token-list fetch. Earlier
+   * versions returned `picks: string[]` and the frontend looked images
+   * up via `useTokenList(250)`, which silently dropped any symbol
+   * outside the top-250 (long-tail memes/L1s rendered as letter
+   * circles). Embedding the URL keeps the lookup correct for the full
+   * 519-token catalog and removes a round-trip. null when the catalog
+   * row has no image (rare; CoinGecko nearly always provides one). */
+  imageUrl: z.string().nullable(),
+});
+export type LeaderboardPick = z.infer<typeof LeaderboardPick>;
+
 export const LeaderboardEntry = z.object({
   rank: z.number().int().positive(),
   entryId: z.string().uuid(),
@@ -21,12 +35,12 @@ export const LeaderboardEntry = z.object({
   avatarUrl: z.string().nullable(),
   scorePct: z.number(),
   isMe: z.boolean(),
-  /** Symbols only (no allocations). Surfaces in the Spectator leaderboard
-   * as a 5-icon strip so watchers can read the room composition without a
-   * separate fetch. Allocations are intentionally omitted (privacy + the
-   * equal-split rule means they're derivable from count anyway). Default
-   * `[]` for backward-compat with pre-rollout API responses. */
-  picks: z.array(z.string()).default([]),
+  /** {symbol, imageUrl} pairs — surfaces in the Spectator leaderboard
+   * as a 5-icon strip so watchers can read the room composition.
+   * Allocations are intentionally omitted (privacy + the equal-split
+   * rule means they're derivable from count anyway). Default `[]` for
+   * backward-compat with pre-rollout API responses. */
+  picks: z.array(LeaderboardPick).default([]),
 });
 export type LeaderboardEntry = z.infer<typeof LeaderboardEntry>;
 

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fmtPnL } from '@fantasytoken/shared';
 import { Card } from '../../components/ui/Card.js';
@@ -7,7 +6,6 @@ import { TokenIcon } from '../../components/ui/TokenIcon.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { useLive } from '../live/useLive.js';
 import { LiveHeader } from '../live/LiveHeader.js';
-import { useTokenList } from '../team-builder/useTokenList.js';
 import { formatPctPrecise } from '../../lib/format.js';
 
 /**
@@ -22,17 +20,9 @@ export function Spectator(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const live = useLive(id);
-  // ALL HOOKS MUST BE CALLED BEFORE THE FIRST EARLY RETURN. Putting
-  // `useTokenList` / `useMemo` after the if-guards changed hook order
-  // between renders → React error #310. Token icon lookup for the
-  // leaderboard rows: empty map until tokens load, gracefully handles
-  // missing imageUrls.
-  const tokensQ = useTokenList(250);
-  const imageBySymbol = useMemo(() => {
-    const map = new Map<string, string | null>();
-    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
-    return map;
-  }, [tokensQ.data]);
+  // Pick image URLs are embedded per-pick in the leaderboard payload
+  // (resolved server-side from the full 519-token catalog) — no
+  // separate token-list fetch is required for the icon strip.
 
   // Earlier we redirected to /contests/:id/result on finalize, but that page
   // requires the caller to have an entry — spectators don't, so the redirect
@@ -104,23 +94,20 @@ export function Spectator(): JSX.Element {
                     </div>
                   </div>
                 </div>
-                {/* Picks strip — 5 token icons in a row. Built from
-                    leaderboard.picks (symbols only); we look images up via
-                    the cached token list. Privacy: allocations stay
-                    server-side, only symbols travel. */}
+                {/* Picks strip — 5 token icons in a row. The API embeds
+                    {symbol, imageUrl} per pick (resolved server-side
+                    against the full 519-token catalog), so no separate
+                    token-list fetch is needed. Privacy: allocations stay
+                    server-side, only symbols + images travel. */}
                 {row.picks.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1 pl-[44px]">
-                    {row.picks.map((sym) => (
+                    {row.picks.map((p) => (
                       <span
-                        key={sym}
+                        key={p.symbol}
                         className="inline-flex items-center gap-1 rounded-[3px] border border-line bg-paper-dim/60 px-1 py-px font-mono text-[9px]"
                       >
-                        <TokenIcon
-                          symbol={sym}
-                          imageUrl={imageBySymbol.get(sym) ?? null}
-                          size={12}
-                        />
-                        <span className="text-ink">{sym}</span>
+                        <TokenIcon symbol={p.symbol} imageUrl={p.imageUrl} size={12} />
+                        <span className="text-ink">{p.symbol}</span>
                       </span>
                     ))}
                   </div>
