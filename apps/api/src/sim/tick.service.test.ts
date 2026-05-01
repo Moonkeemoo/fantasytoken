@@ -26,6 +26,7 @@ function makeRepo(opts: {
   contests?: Array<{ id: string; entryFeeCents: bigint; createdAt: Date; startsAt: Date }>;
   pool?: Array<{ symbol: string; marketCapUsd: number | null; pctChange24h: number | null }>;
   entered?: string[]; // "userId|contestId"
+  balances?: Map<string, bigint>;
 }): TickRepo {
   return {
     async listSynthetics() {
@@ -40,6 +41,9 @@ function makeRepo(opts: {
     },
     async loadEnteredPairs() {
       return new Set(opts.entered ?? []);
+    },
+    async loadBalancesByUser() {
+      return opts.balances ?? new Map();
     },
   };
 }

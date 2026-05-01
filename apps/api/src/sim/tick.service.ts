@@ -95,6 +95,7 @@ export function createTickService(deps: TickServiceDeps): TickService {
         contestIds.length > 0
           ? await deps.repo.loadEnteredPairs(synthIds, contestIds)
           : new Set<string>();
+      const balancesByUser = await deps.repo.loadBalancesByUser(synthIds);
       const tickClock = now();
       const hour = tickClock.getUTCHours();
 
@@ -105,7 +106,11 @@ export function createTickService(deps: TickServiceDeps): TickService {
 
       for (const synth of synths) {
         const persona = config.personas[synth.personaKind];
-        const loggedIn = random() < persona.loginProbabilityByHour[hour]!;
+        // alwaysOnline=true bypasses the time-of-day curve so a small
+        // cohort produces visible activity all day.
+        const loggedIn = config.alwaysOnline
+          ? true
+          : random() < persona.loginProbabilityByHour[hour]!;
 
         if (!loggedIn) {
           if (random() < IDLE_LOG_SAMPLE) {
@@ -125,24 +130,32 @@ export function createTickService(deps: TickServiceDeps): TickService {
           stats.loginsLogged += 1;
         }
 
-        // 1) Try to join one contest (whichever lottery hits first).
+        const balance = balancesByUser.get(synth.id) ?? 0n;
+
+        // 1) Try to join one contest among those the synth can afford.
+        // Picker pre-filters by balance, so a 20-coin casual won't roll
+        // dice on a $5 contest — that's noise, not signal.
         if (joinsLeft > 0) {
-          const target = pickContestToJoin(
+          const affordableTarget = pickContestToJoin(
             synth,
             openContests,
             entered,
             persona,
+            balance,
             random,
             tickClock,
           );
-          if (target) {
+          if (affordableTarget) {
             joinsLeft -= 1;
             stats.joinsAttempted += 1;
             const r = await joinContest(
               { entries: deps.entries, currency: deps.currency, log: deps.log },
               {
                 syntheticUser: { id: synth.id, syntheticSeed: synth.syntheticSeed },
-                contest: { id: target.id, entryFeeCents: target.entryFeeCents },
+                contest: {
+                  id: affordableTarget.id,
+                  entryFeeCents: affordableTarget.entryFeeCents,
+                },
                 pool,
                 bias: persona.tokenBias,
                 size: pickSize(persona.lineupSize, random),
@@ -150,8 +163,39 @@ export function createTickService(deps: TickServiceDeps): TickService {
             );
             if (r.kind === 'success') {
               stats.joinsSucceeded += 1;
-              entered.add(`${synth.id}|${target.id}`); // prevent re-pick this tick
+              entered.add(`${synth.id}|${affordableTarget.id}`); // prevent re-pick this tick
             }
+          } else if (
+            // No affordable contest matched the dice — but the synth WANTED
+            // to play (open contests exist that they haven't entered).
+            // Log `cannot_afford` so the polish loop can see exactly when
+            // and at what balance/fee the synth got stuck.
+            openContests.some(
+              (c) => !entered.has(`${synth.id}|${c.id}`) && c.entryFeeCents > balance,
+            ) &&
+            !openContests.some(
+              (c) => !entered.has(`${synth.id}|${c.id}`) && c.entryFeeCents <= balance,
+            )
+          ) {
+            const minFee = openContests
+              .filter((c) => !entered.has(`${synth.id}|${c.id}`))
+              .reduce(
+                (acc, c) => (c.entryFeeCents < acc ? c.entryFeeCents : acc),
+                openContests[0]!.entryFeeCents,
+              );
+            await safeAction(deps.serverLog, 'cannot_afford.log', () =>
+              deps.log.log({
+                userId: synth.id,
+                action: 'cannot_afford',
+                outcome: 'skipped',
+                payload: {
+                  balanceCoins: Number(balance),
+                  minFeeCoins: Number(minFee),
+                  openContestCount: openContests.length,
+                },
+                balanceAfterCents: balance,
+              }),
+            );
           }
         }
 
@@ -195,13 +239,21 @@ function pickContestToJoin(
   openContests: readonly TickOpenContest[],
   entered: Set<string>,
   persona: { joinFreeRate: number; joinPaidRate: number },
+  balance: bigint,
   rand: () => number,
   now: Date,
 ): TickOpenContest | null {
   // Iterate open contests in DB order; first lottery hit wins. Order
   // doesn't matter much because the per-contest probability is bounded.
+  // Skip:
+  //   - already-entered contests (no double-submit possible anyway)
+  //   - contests above current balance (real users see fees upfront and
+  //     don't click what they can't afford — mirror that here so we
+  //     don't drown the log in INSUFFICIENT_COINS noise)
+  //   - persona refuses the kind (e.g. lurker.joinPaidRate=0)
   for (const c of openContests) {
     if (entered.has(`${synth.id}|${c.id}`)) continue;
+    if (c.entryFeeCents > balance) continue;
     const isFree = c.entryFeeCents === 0n;
     const baseRate = isFree ? persona.joinFreeRate : persona.joinPaidRate;
     if (baseRate <= 0) continue;

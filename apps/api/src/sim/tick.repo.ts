@@ -1,7 +1,7 @@
 import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { PersonaKind } from '@fantasytoken/shared';
 import type { Database } from '../db/client.js';
-import { contests, entries, tokens, users } from '../db/schema/index.js';
+import { balances, contests, entries, tokens, users } from '../db/schema/index.js';
 import type { PoolToken } from './lineup_picker.js';
 
 /**
@@ -36,6 +36,11 @@ export interface TickRepo {
    * entry. One query, one round-trip; cheap because of the partial unique
    * index `entries_user_contest_uniq`. */
   loadEnteredPairs(synthIds: string[], contestIds: string[]): Promise<Set<string>>;
+  /** Per-user current coin balance (USD currency). Synths without a row
+   * default to 0n. Used by the picker to skip contests they can't
+   * afford — without this they'd hammer paid contests with INSUFFICIENT_COINS
+   * rejections and drown the real "drained" signal. */
+  loadBalancesByUser(synthIds: string[]): Promise<Map<string, bigint>>;
 }
 
 export function createTickRepo(db: Database): TickRepo {
@@ -103,6 +108,17 @@ export function createTickRepo(db: Database): TickRepo {
       for (const r of rows) {
         if (r.userId) out.add(`${r.userId}|${r.contestId}`);
       }
+      return out;
+    },
+
+    async loadBalancesByUser(synthIds) {
+      if (synthIds.length === 0) return new Map();
+      const rows = await db
+        .select({ userId: balances.userId, amountCents: balances.amountCents })
+        .from(balances)
+        .where(and(inArray(balances.userId, synthIds), eq(balances.currencyCode, 'USD')));
+      const out = new Map<string, bigint>();
+      for (const r of rows) out.set(r.userId, r.amountCents);
       return out;
     },
   };

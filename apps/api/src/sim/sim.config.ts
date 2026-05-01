@@ -44,6 +44,12 @@ export interface PersonaConfig {
 }
 
 export const SIM_CONFIG: {
+  /** When true, the login-dice based on `loginProbabilityByHour` is
+   * skipped — every synth is treated as logged-in every tick. Useful
+   * for early debug + when the cohort is small enough that "natural"
+   * day-night rhythms make activity invisible. Set to false to bring
+   * back the realistic peak-hour curves. */
+  alwaysOnline: boolean;
   /** Tick cadence in milliseconds. ~1 tick/min so a fresh contest fills
    * with 30-50 entries in 2-3 minutes (M2 acceptance). */
   tickIntervalMs: number;
@@ -62,6 +68,7 @@ export const SIM_CONFIG: {
   distribution: Record<PersonaKind, number>;
   personas: Record<PersonaKind, PersonaConfig>;
 } = {
+  alwaysOnline: true,
   tickIntervalMs: 60_000,
   joinPacingShape: 'bell',
   perTickJoinAttemptsCap: 200,

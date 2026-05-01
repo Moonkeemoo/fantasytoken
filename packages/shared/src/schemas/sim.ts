@@ -28,6 +28,10 @@ export const SyntheticAction = z.enum([
   'invite_friend',
   'top_up',
   'view_result',
+  // TZ-005 amended 2026-05-01 — emitted by tick.service when a synth wants
+  // to play but every open contest is above their balance. Lets us spot
+  // the drained moment (and conditions: balance, cheapest fee, persona).
+  'cannot_afford',
 ]);
 export type SyntheticAction = z.infer<typeof SyntheticAction>;
 
