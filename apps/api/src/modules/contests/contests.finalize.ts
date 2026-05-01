@@ -1,4 +1,4 @@
-import { computePrizeCurve } from '@fantasytoken/shared';
+import { computePrizeCurve, type PrizeFormat } from '@fantasytoken/shared';
 
 export interface FinalizeInputEntry {
   entryId: string;
@@ -14,8 +14,13 @@ export interface FinalizeArgs {
   prizePoolCents: number;
   /** 'bull' = highest P&L wins; 'bear' = most-losing P&L wins (rank ASC). Default 'bull'. */
   contestType?: 'bull' | 'bear';
-  /** Pay every entry (Practice) instead of the standard top-50% curve. */
+  /** Pay every entry (Practice) instead of the standard top-50% curve.
+   * Legacy alias for `prizeFormat === 'linear'`. When both are passed,
+   * `prizeFormat` wins. */
   payAll?: boolean;
+  /** ADR-0008: explicit prize structure. Defaults to 'gpp' if neither
+   * payAll nor prizeFormat is provided. */
+  prizeFormat?: PrizeFormat;
 }
 
 export interface FinalizedEntry {
@@ -39,7 +44,14 @@ export interface FinalizeResult {
 }
 
 export function finalizeContest(args: FinalizeArgs): FinalizeResult {
-  const { entries, prices, prizePoolCents, contestType = 'bull', payAll = false } = args;
+  const {
+    entries,
+    prices,
+    prizePoolCents,
+    contestType = 'bull',
+    payAll = false,
+    prizeFormat,
+  } = args;
   const dir = contestType === 'bear' ? -1 : 1;
 
   const scored = entries.map((e) => ({
@@ -66,7 +78,10 @@ export function finalizeContest(args: FinalizeArgs): FinalizeResult {
   // is queued because there's no user to credit (the cents stay with the platform on
   // top of rake). Real users in payable ranks get a transaction in `payouts`.
   const totalCount = scored.length;
-  const curve = computePrizeCurve(totalCount, prizePoolCents, { payAll });
+  const curve = computePrizeCurve(totalCount, prizePoolCents, {
+    ...(prizeFormat ? { format: prizeFormat } : {}),
+    ...(payAll ? { payAll: true } : {}),
+  });
 
   const payouts: PayoutPlan[] = [];
   scored.forEach((s, i) => {

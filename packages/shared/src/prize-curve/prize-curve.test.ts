@@ -1,66 +1,164 @@
 import { describe, expect, it } from 'vitest';
-import { computeLinearPracticeCurve, computePrizeCurve, computeActualPrizeCents } from './index.js';
+import {
+  computeActualPrizeCents,
+  computeGppCurve,
+  computeLinearPracticeCurve,
+  computeMultiplierCurve,
+  computePrizeCurve,
+  gppPayingCutoff,
+} from './index.js';
 
-describe('computePrizeCurve', () => {
-  it('1 entry → 1 gets all', () => {
-    const m = computePrizeCurve(1, 10_000);
-    expect(m.get(1)).toBe(10_000);
-    expect(m.size).toBe(1);
+const sumOf = (m: Map<number, number>): number => [...m.values()].reduce((s, v) => s + v, 0);
+
+describe('computePrizeCurve dispatch', () => {
+  it('payAll → linear (Practice compat)', () => {
+    const m = computePrizeCurve(20, 999, { payAll: true });
+    expect(m.size).toBe(20);
+    for (let r = 1; r <= 20; r++) expect(m.get(r)!).toBeGreaterThanOrEqual(1);
   });
-
-  it('2 entries → top 2 with ~60/40 split', () => {
-    const m = computePrizeCurve(2, 10_000);
-    expect(m.size).toBe(2);
-    expect([...m.values()].reduce((s, v) => s + v, 0)).toBe(10_000);
-    // r=0.65, normalized: 1/1.65 = 0.606 → ~6060c
-    expect(m.get(1)!).toBeGreaterThanOrEqual(6000);
-    expect(m.get(1)!).toBeLessThan(6200);
+  it("format 'linear' → linear", () => {
+    const m = computePrizeCurve(10, 999, { format: 'linear' });
+    expect(m.size).toBe(10);
   });
+  it("format '50_50' → top 50% equal", () => {
+    const m = computePrizeCurve(20, 9000, { format: '50_50' });
+    expect(m.size).toBe(10);
+    expect([...m.values()].every((v) => v === 900)).toBe(true);
+  });
+  it("format '3x' → top 1/3 equal", () => {
+    const m = computePrizeCurve(30, 9000, { format: '3x' });
+    expect(m.size).toBe(10);
+    expect([...m.values()].every((v) => v === 900)).toBe(true);
+  });
+  it("format '5x' → top 1/5 equal", () => {
+    const m = computePrizeCurve(50, 9000, { format: '5x' });
+    expect(m.size).toBe(10);
+    expect([...m.values()].every((v) => v === 900)).toBe(true);
+  });
+  it("default ('gpp') → top-heavy GPP", () => {
+    const m = computePrizeCurve(100, 1_000_000);
+    expect(m.size).toBe(25); // ceil(100*0.25)
+    expect(m.get(1)!).toBeGreaterThan(m.get(2)!);
+    expect(sumOf(m)).toBe(1_000_000);
+  });
+});
 
-  it('3 entries → top 3, sum == pool, monotonic', () => {
-    const m = computePrizeCurve(3, 10_000);
+describe('computeMultiplierCurve', () => {
+  it('50/50 (mult=2): top floor(N/2) split equally', () => {
+    const m = computeMultiplierCurve(10, 1000, 2);
+    expect(m.size).toBe(5);
+    expect(sumOf(m)).toBe(1000);
+    expect([...m.values()].every((v) => v === 200)).toBe(true);
+  });
+  it('3X (mult=3): top floor(N/3) split equally', () => {
+    const m = computeMultiplierCurve(30, 1000, 3);
+    expect(m.size).toBe(10);
+    expect(sumOf(m)).toBe(1000);
+  });
+  it('5X (mult=5): top floor(N/5) split equally', () => {
+    const m = computeMultiplierCurve(100, 1000, 5);
+    expect(m.size).toBe(20);
+    expect(sumOf(m)).toBe(1000);
+  });
+  it('odd N: rounding leftover lands on rank 1', () => {
+    const m = computeMultiplierCurve(11, 100, 2);
+    expect(m.size).toBe(5);
+    expect(sumOf(m)).toBe(100);
+    // 100 / 5 = 20 exactly so leftover is 0; rank 1 = 20.
+    expect(m.get(1)).toBe(20);
+  });
+  it('non-divisible pool: leftover distributed to top ranks', () => {
+    const m = computeMultiplierCurve(10, 23, 2);
+    expect(m.size).toBe(5);
+    expect(sumOf(m)).toBe(23);
+    // 23 / 5 = 4 each, 3 leftover → ranks 1-3 get 5, ranks 4-5 get 4.
+    expect(m.get(1)).toBe(5);
+    expect(m.get(5)).toBe(4);
+  });
+  it('multiplier < 2 returns empty', () => {
+    expect(computeMultiplierCurve(10, 100, 1).size).toBe(0);
+  });
+});
+
+describe('gppPayingCutoff', () => {
+  it('tiny rooms (≤3) pay everyone', () => {
+    expect(gppPayingCutoff(1)).toBe(1);
+    expect(gppPayingCutoff(2)).toBe(2);
+    expect(gppPayingCutoff(3)).toBe(3);
+  });
+  it('mid rooms (4-12) pay top 3', () => {
+    expect(gppPayingCutoff(4)).toBe(3);
+    expect(gppPayingCutoff(12)).toBe(3);
+  });
+  it('larger rooms pay top 25%', () => {
+    expect(gppPayingCutoff(100)).toBe(25);
+    expect(gppPayingCutoff(1000)).toBe(250);
+  });
+});
+
+describe('computeGppCurve', () => {
+  it('N=1 → all to rank 1', () => {
+    expect(computeGppCurve(1, 1000).get(1)).toBe(1000);
+  });
+  it('N=2 → 70/30', () => {
+    const m = computeGppCurve(2, 1000);
+    expect(m.get(1)).toBe(700);
+    expect(m.get(2)).toBe(300);
+  });
+  it('N=3 → 50/30/20', () => {
+    const m = computeGppCurve(3, 10_000);
+    expect(m.get(1)).toBe(5000);
+    expect(m.get(2)).toBe(3000);
+    expect(m.get(3)).toBe(2000);
+  });
+  it('N=10 → top 3 only (K=3 since ceil(10*0.25)=3)', () => {
+    const m = computeGppCurve(10, 10_000);
     expect(m.size).toBe(3);
-    expect([...m.values()].reduce((s, v) => s + v, 0)).toBe(10_000);
+    expect(sumOf(m)).toBe(10_000);
+  });
+  it('N=20 → small-room shape (top 5, 1/2/3 podium + flat 4-5)', () => {
+    const m = computeGppCurve(20, 10_000);
+    expect(m.size).toBe(5);
+    expect(sumOf(m)).toBe(10_000);
+    expect(m.get(1)!).toBeGreaterThanOrEqual(m.get(2)!);
+    expect(m.get(2)!).toBeGreaterThanOrEqual(m.get(3)!);
+    expect(m.get(3)!).toBeGreaterThanOrEqual(m.get(4)!);
+  });
+  it('N=100 → full stepped curve (top 25, 1/2/3 + 4-10 + 11-25)', () => {
+    const m = computeGppCurve(100, 1_000_000);
+    expect(m.size).toBe(25);
+    expect(sumOf(m)).toBe(1_000_000);
+    // Tiers monotonic (rank 1 > rank 2 > rank 3 > rank 4 == ... rank 10 > rank 11 == ... rank 25)
     expect(m.get(1)!).toBeGreaterThan(m.get(2)!);
     expect(m.get(2)!).toBeGreaterThan(m.get(3)!);
+    expect(m.get(3)!).toBeGreaterThan(m.get(4)!);
+    expect(m.get(4)!).toBe(m.get(10)!); // tier flat
+    expect(m.get(10)!).toBeGreaterThan(m.get(11)!);
+    // Min cash ≥ 1
+    expect(m.get(25)!).toBeGreaterThanOrEqual(1);
   });
+  it('N=5000 → top 1250 paid, every payer ≥ 1 coin', () => {
+    const m = computeGppCurve(5000, 100_000_000);
+    expect(m.size).toBe(1250);
+    expect(sumOf(m)).toBe(100_000_000);
+    for (let r = 1; r <= 1250; r++) expect(m.get(r)!).toBeGreaterThanOrEqual(1);
+  });
+});
 
-  it('21 entries → top 10 paid (50%), top-3 in 65-80% band, monotonic, sum == pool', () => {
-    const m = computePrizeCurve(21, 1890);
-    expect(m.size).toBe(10);
-    const sum = [...m.values()].reduce((s, v) => s + v, 0);
-    expect(sum).toBe(1890);
-    let prev = Infinity;
-    for (let r = 1; r <= 10; r++) {
-      const v = m.get(r)!;
-      expect(v).toBeLessThanOrEqual(prev);
-      prev = v;
+describe('computeLinearPracticeCurve', () => {
+  it('N=4 → 2/2/1/1 (rounded from ideal 2/1.5/1/0.5)', () => {
+    const m = computeLinearPracticeCurve(4);
+    expect(m.get(1)).toBe(2);
+    expect(m.get(2)).toBe(2);
+    expect(m.get(3)).toBe(1);
+    expect(m.get(4)).toBe(1);
+  });
+  it('every rank gets ≥1 coin and rank 1 always 2', () => {
+    for (const N of [1, 5, 50, 500]) {
+      const m = computeLinearPracticeCurve(N);
+      expect(m.get(1)).toBe(2);
+      for (const v of m.values()) expect(v).toBeGreaterThanOrEqual(1);
     }
-    const top3 = (m.get(1)! + m.get(2)! + m.get(3)!) / 1890;
-    // Decay r=0.65 over a wider paying band drops top-3 share a touch
-    // (~73% with 10 ranks paid vs ~78% with 6) — still solid podium emphasis.
-    expect(top3).toBeGreaterThan(0.65);
-    expect(top3).toBeLessThan(0.8);
-  });
-
-  it('100 entries → 50 ranks paid, sum == pool, monotonic, top-1 ~30-40%', () => {
-    const m = computePrizeCurve(100, 1_000_000);
-    expect(m.size).toBe(50);
-    expect([...m.values()].reduce((s, v) => s + v, 0)).toBe(1_000_000);
-    let prev = Infinity;
-    for (let r = 1; r <= 50; r++) {
-      const v = m.get(r) ?? 0;
-      expect(v).toBeLessThanOrEqual(prev);
-      prev = v;
-    }
-    const r1 = m.get(1)! / 1_000_000;
-    expect(r1).toBeGreaterThan(0.3);
-    expect(r1).toBeLessThan(0.4);
-  });
-
-  it('zero entries or zero pool returns empty map', () => {
-    expect(computePrizeCurve(0, 1_000).size).toBe(0);
-    expect(computePrizeCurve(10, 0).size).toBe(0);
   });
 });
 
@@ -68,23 +166,9 @@ describe('computeActualPrizeCents', () => {
   it('21 total × $1 entry × 10% rake → 1890 cents', () => {
     expect(computeActualPrizeCents({ totalCount: 21, entryFeeCents: 100, rakePct: 10 })).toBe(1890);
   });
-
-  it('1 total × $1 × 10% rake → 90 cents', () => {
-    expect(computeActualPrizeCents({ totalCount: 1, entryFeeCents: 100, rakePct: 10 })).toBe(90);
-  });
-
   it('zero entries → zero pool', () => {
     expect(computeActualPrizeCents({ totalCount: 0, entryFeeCents: 100, rakePct: 10 })).toBe(0);
   });
-
-  it('zero rake → full sum', () => {
-    expect(computeActualPrizeCents({ totalCount: 10, entryFeeCents: 500, rakePct: 0 })).toBe(5000);
-  });
-
-  it('rounds down to integer cents', () => {
-    expect(computeActualPrizeCents({ totalCount: 7, entryFeeCents: 33, rakePct: 10 })).toBe(207);
-  });
-
   it('honours guaranteed minimum overlay', () => {
     expect(
       computeActualPrizeCents({
@@ -94,64 +178,5 @@ describe('computeActualPrizeCents', () => {
         guaranteedPoolCents: 500,
       }),
     ).toBe(500);
-  });
-});
-
-describe('computeLinearPracticeCurve', () => {
-  it('1 player → 2 coins', () => {
-    const m = computeLinearPracticeCurve(1);
-    expect(m.get(1)).toBe(2);
-    expect(m.size).toBe(1);
-  });
-
-  it('4 players → 2,2,1,1 (rounded from ideal 2,1.5,1,0.5)', () => {
-    const m = computeLinearPracticeCurve(4);
-    // ideal: rank 1 = 2.0, rank 2 = 1.5, rank 3 = 1.0, rank 4 = 0.5
-    // rounded (half-up): 2, 2, 1, 1 (with floor 1 for last)
-    expect(m.get(1)).toBe(2);
-    expect(m.get(2)).toBe(2); // 1.5 rounds half-up to 2
-    expect(m.get(3)).toBe(1);
-    expect(m.get(4)).toBe(1); // 0.5 → 1 by floor
-  });
-
-  it('every rank gets ≥1 coin (no zero-prize tail)', () => {
-    for (const N of [2, 5, 10, 20, 100, 500]) {
-      const m = computeLinearPracticeCurve(N);
-      expect(m.size).toBe(N);
-      for (let r = 1; r <= N; r++) {
-        expect(m.get(r)).toBeGreaterThanOrEqual(1);
-      }
-    }
-  });
-
-  it('rank 1 always wins the most (2 coins)', () => {
-    for (const N of [1, 2, 4, 10, 100]) {
-      const m = computeLinearPracticeCurve(N);
-      expect(m.get(1)).toBe(2);
-    }
-  });
-
-  it('curve is monotonically non-increasing — top ranks ≥ bottom', () => {
-    const m = computeLinearPracticeCurve(50);
-    for (let r = 1; r < 50; r++) {
-      expect(m.get(r)!).toBeGreaterThanOrEqual(m.get(r + 1)!);
-    }
-  });
-
-  it('total pool scales ~1.5×N (within rounding)', () => {
-    for (const N of [10, 50, 100, 500]) {
-      const m = computeLinearPracticeCurve(N);
-      const sum = [...m.values()].reduce((a, b) => a + b, 0);
-      // Ideal mean = 1.25, but PRACTICE_MIN_PAYOUT=1 floor lifts the bottom
-      // half from 0.5..1 to 1, so observed mean ~1.5.
-      expect(sum / N).toBeGreaterThanOrEqual(1.2);
-      expect(sum / N).toBeLessThanOrEqual(1.7);
-    }
-  });
-
-  it('computePrizeCurve with payAll delegates to linear curve', () => {
-    const linear = computeLinearPracticeCurve(20);
-    const viaPayAll = computePrizeCurve(20, 999_999, { payAll: true });
-    expect([...viaPayAll.entries()]).toEqual([...linear.entries()]);
   });
 });

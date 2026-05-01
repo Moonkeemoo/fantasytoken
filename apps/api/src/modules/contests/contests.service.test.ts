@@ -26,6 +26,10 @@ function makeRow(overrides: Partial<ContestRowFromRepo> = {}): ContestRowFromRep
     payAll: false,
     virtualBudgetCents: 10_000_000,
     userHasEntered: false,
+    prizeFormat: 'gpp',
+    payingRanks: 25,
+    topPrize: 200,
+    minCash: 10,
     ...overrides,
   };
 }

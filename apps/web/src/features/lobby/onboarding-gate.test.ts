@@ -19,6 +19,10 @@ function mk(over: Partial<ContestListItem> & { id: string }): ContestListItem {
     payAll: over.payAll ?? false,
     virtualBudgetCents: 10_000_000,
     userHasEntered: false,
+    prizeFormat: 'gpp',
+    payingRanks: 5,
+    topPrize: 0,
+    minCash: 0,
   };
 }
 

@@ -31,6 +31,10 @@ export const contests = pgTable('contests', {
   // curve. `true` makes every entry payable (used by Practice — "all 10
   // positions get a slice"). Curve shape stays geometric either way.
   payAll: boolean('pay_all').notNull().default(false),
+  // ADR-0008: per-contest prize structure. 'linear' for Practice,
+  // '50_50'/'3x'/'5x' for multipliers, 'gpp' for tournaments. Defaults
+  // to 'gpp' for legacy rows that didn't set this.
+  prizeFormat: text('prize_format').notNull().default('gpp'),
   // ADR-0003: $-first UX layer. Display-only — backend score / payout
   // continues to operate in pure % space. Default 10_000_000 cents = $100,000
   // (matches the legacy "fixed budget" concept). drizzle-kit 0.28 cannot

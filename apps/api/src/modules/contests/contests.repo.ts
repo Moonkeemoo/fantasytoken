@@ -2,7 +2,9 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   computeActualPrizeCents,
   computeLinearPracticeCurve,
+  computePrizeCurve,
   virtualBudgetCentsFor,
+  type PrizeFormat,
 } from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
@@ -74,6 +76,31 @@ function rowFromDbRow(
     // requiring admins to set the field manually for every new contest.
     virtualBudgetCents: virtualBudgetCentsFor(Number(row.entryFeeCents)),
     userHasEntered,
+    // ADR-0008: prize structure metadata for the lobby card.
+    // We compute the curve over the projected pool so "Win up to" /
+    // "min cash" / "Top X paid" are accurate before lock-in.
+    ...prizeStructureFor(
+      row.prizeFormat as PrizeFormat,
+      spotsFilled || row.maxCapacity,
+      dynamicPool,
+    ),
+  };
+}
+
+/** Derive UI-friendly summary for a row's prize structure. */
+function prizeStructureFor(
+  format: PrizeFormat,
+  N: number,
+  pool: number,
+): { prizeFormat: PrizeFormat; payingRanks: number; topPrize: number; minCash: number } {
+  const curve = computePrizeCurve(N, pool, { format });
+  const ranks = [...curve.keys()].sort((a, b) => a - b);
+  const lastRank = ranks[ranks.length - 1] ?? 0;
+  return {
+    prizeFormat: format,
+    payingRanks: ranks.length,
+    topPrize: curve.get(1) ?? 0,
+    minCash: lastRank > 0 ? (curve.get(lastRank) ?? 0) : 0,
   };
 }
 

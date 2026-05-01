@@ -4,6 +4,12 @@
 // Each cell is a unique live-instance slot. INV-13: one live contest per
 // `cellKey` at a time (UNIQUE INDEX on contests.matrix_cell_key WHERE status
 // IN ('scheduled','active') enforces this at the DB layer).
+//
+// Each cell also carries a `prizeFormat` (ADR-0008) — DraftKings-style
+// prize structures: 'linear' (Practice), '50_50' (double-up), '3x'/'5x'
+// (multipliers), 'gpp' (top-heavy tournament).
+
+import type { PrizeFormat } from '../prize-curve/index.js';
 
 export const DURATION_LANES = ['10m', '30m', '1h', '24h', '7d'] as const;
 export type DurationLane = (typeof DURATION_LANES)[number];
@@ -115,6 +121,10 @@ export interface MatrixCell {
    * capping just blocks late arrivals from joining a friend in the same
    * room. Paid lanes keep the lane default to preserve pari-mutuel math. */
   capacityOverride?: number;
+  /** Prize structure for this cell. Defaults to 'gpp' if omitted.
+   * Practice always sets 'linear'; mid-tier paid contests typically
+   * '3x'/'5x'; flagship daily/marathon use 'gpp'. */
+  prizeFormat?: PrizeFormat;
 }
 
 /** Build the canonical matrix cell key. */
@@ -142,6 +152,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     // a confusing "Multiplier ×0.5 → −5" row that read as a punishment to
     // newcomers. Lane default (1.0×) treats Practice as a real game.
     payAll: true,
+    prizeFormat: 'linear', // Practice — never break, ever.
     capacityOverride: 5000, // GPP-style — never block a real user from joining.
     staggerOffsetSec: 0,
   },
@@ -152,6 +163,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Quick Match',
     minRank: 1,
+    prizeFormat: '50_50', // simplest casual format — beat half, double up
     staggerOffsetSec: 100,
   },
   {
@@ -161,6 +173,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Bear Trap',
     minRank: 1,
+    prizeFormat: '50_50',
     staggerOffsetSec: 200,
   },
   {
@@ -170,6 +183,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Memecoin Madness',
     minRank: 3,
+    prizeFormat: '3x',
     staggerOffsetSec: 300,
   },
   {
@@ -179,6 +193,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Bear Cup',
     minRank: 3,
+    prizeFormat: '3x',
     staggerOffsetSec: 400,
   },
   {
@@ -191,6 +206,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     // Falls back to the 10m lane default (1.0×). Earlier 1.2× sprint-whale
     // boost was inconsistent with the rest of the matrix where stakes
     // don't tilt XP — duration does.
+    prizeFormat: 'gpp', // high-stake whale sprint — top-heavy
     staggerOffsetSec: 500,
   },
 
@@ -202,6 +218,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: '30m Bull',
     minRank: 5,
+    prizeFormat: '3x',
     staggerOffsetSec: 0,
   },
   {
@@ -211,6 +228,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: '30m Bear',
     minRank: 5,
+    prizeFormat: '3x',
     staggerOffsetSec: 450,
   },
   {
@@ -220,6 +238,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: '30m Bull · 🪙 25',
     minRank: 8,
+    prizeFormat: '3x',
     staggerOffsetSec: 225,
   },
   {
@@ -229,6 +248,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: '30m Bear · 🪙 25',
     minRank: 8,
+    prizeFormat: '3x',
     staggerOffsetSec: 675,
   },
 
@@ -240,6 +260,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Trader Cup',
     minRank: 10,
+    prizeFormat: '3x',
     staggerOffsetSec: 0,
   },
   {
@@ -249,6 +270,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Trader Cup Bear',
     minRank: 10,
+    prizeFormat: '3x',
     staggerOffsetSec: 900,
   },
   {
@@ -258,6 +280,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Whale Hour',
     minRank: 13,
+    prizeFormat: '5x', // higher-stake = sharper risk
     staggerOffsetSec: 450,
   },
   {
@@ -267,6 +290,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Whale Hour Bear',
     minRank: 13,
+    prizeFormat: '5x',
     staggerOffsetSec: 1350,
   },
 
@@ -278,6 +302,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Daily Bull',
     minRank: 15,
+    prizeFormat: 'gpp', // 24h commitment = tournament glory
     staggerOffsetSec: 0,
   },
   {
@@ -287,6 +312,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Daily Bear',
     minRank: 15,
+    prizeFormat: 'gpp',
     staggerOffsetSec: 21_600, // +6h
   },
   {
@@ -296,6 +322,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Daily Whale Bull',
     minRank: 18,
+    prizeFormat: 'gpp',
     staggerOffsetSec: 43_200, // +12h
   },
   {
@@ -305,6 +332,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bear',
     name: 'Daily Whale Bear',
     minRank: 18,
+    prizeFormat: 'gpp',
     staggerOffsetSec: 64_800, // +18h
   },
   {
@@ -314,6 +342,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     mode: 'bull',
     name: 'Mythic 24h',
     minRank: 25,
+    prizeFormat: 'gpp', // pure flagship — 1st takes ~20%
     staggerOffsetSec: 10_800, // +3h
   },
 
@@ -328,6 +357,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     name: 'Marathon · Bull',
     minRank: 22,
     weeklyMonday: true,
+    prizeFormat: 'gpp',
     capacityOverride: 5000, // GPP — marathon is the flagship event, no cap.
   },
   {
@@ -338,6 +368,7 @@ export const MATRIX_CELLS: readonly MatrixCell[] = [
     name: 'Marathon · Bear',
     minRank: 22,
     weeklyMonday: true,
+    prizeFormat: 'gpp',
     capacityOverride: 5000,
   },
 ] as const;
@@ -356,4 +387,10 @@ export function effectiveXpMultiplier(cell: MatrixCell): number {
  * GPP rooms; pari-mutuel paid lanes keep the lane cap. */
 export function effectiveCapacity(cell: MatrixCell): number {
   return cell.capacityOverride ?? LANE_CAPACITY[cell.lane];
+}
+
+/** Effective prize format — falls back to 'gpp' when omitted. Practice
+ * is the only cell that should ever set 'linear'. */
+export function effectivePrizeFormat(cell: MatrixCell): PrizeFormat {
+  return cell.prizeFormat ?? 'gpp';
 }

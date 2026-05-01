@@ -61,6 +61,7 @@ export function createContestsFinalizeRepo(
           type: contests.type,
           xpMultiplier: contests.xpMultiplier,
           payAll: contests.payAll,
+          prizeFormat: contests.prizeFormat,
         })
         .from(contests)
         .where(eq(contests.id, contestId))
@@ -121,6 +122,7 @@ export function createContestsFinalizeRepo(
         prizePoolCents: actualPoolCents,
         contestType: contest.type === 'bear' ? 'bear' : 'bull',
         payAll: contest.payAll,
+        prizeFormat: contest.prizeFormat as 'linear' | '50_50' | '3x' | '5x' | 'gpp',
       });
 
       // 5. Apply entry updates. We deliberately do NOT flip contests.status

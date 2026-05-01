@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import {
   effectiveCapacity,
+  effectivePrizeFormat,
   effectiveXpMultiplier,
   LANE_DURATION_MS,
   LANE_FILL_MS,
@@ -173,6 +174,7 @@ async function spawnCellInstance(args: SpawnArgs): Promise<void> {
     minRank: cell.minRank,
     xpMultiplier,
     payAll: cell.payAll ?? false,
+    prizeFormat: effectivePrizeFormat(cell),
     startsAt,
     endsAt,
     createdByUserId: args.adminId,

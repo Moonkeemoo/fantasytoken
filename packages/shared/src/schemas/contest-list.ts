@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ContestStatus, ContestType } from './contest.js';
+import { PRIZE_FORMATS } from '../prize-curve/index.js';
 
 export const ContestFilter = z.enum(['cash', 'free', 'my']);
 export type ContestFilter = z.infer<typeof ContestFilter>;
@@ -24,6 +25,17 @@ export const ContestListItem = z.object({
   /** When true, every entry receives a (decaying) prize share — used by
    * Practice. Defaults false for backward-compat with pre-deploy responses. */
   payAll: z.boolean().default(false),
+  /** ADR-0008: prize structure. 'gpp' default for legacy/unknown rows. */
+  prizeFormat: z.enum(PRIZE_FORMATS).default('gpp'),
+  /** Cutoff rank: ranks ≤ payingRanks receive a prize, > payingRanks get 0.
+   * Pre-computed server-side from `prizeFormat` + `maxCapacity` so the
+   * lobby card can render "Top X paid" without re-doing the math. */
+  payingRanks: z.number().int().nonnegative().default(0),
+  /** Top-1 payout in coins, derived from `prizeFormat` over the room's
+   * projected pool. Drives "Win up to" copy on the lobby card. */
+  topPrize: z.number().int().nonnegative().default(0),
+  /** Lowest paying rank's payout in coins. Drives "min cash" copy. */
+  minCash: z.number().int().nonnegative().default(0),
   /** ADR-0003: $-first UX. Virtual budget in cents per contest (display-only;
    * backend score / payout still runs in % space). Default 10_000_000 = $100K
    * matches the legacy fixed-budget concept. Optional for backward-compat

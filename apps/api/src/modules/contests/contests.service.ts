@@ -1,4 +1,4 @@
-import type { ContestFilter, ContestStatus } from '@fantasytoken/shared';
+import type { ContestFilter, ContestStatus, PrizeFormat } from '@fantasytoken/shared';
 
 export interface ContestRowFromRepo {
   id: string;
@@ -17,6 +17,11 @@ export interface ContestRowFromRepo {
   /** ADR-0003: $-first UX layer (display-only). */
   virtualBudgetCents: number;
   userHasEntered: boolean;
+  // ADR-0008: prize structure summary for the lobby card.
+  prizeFormat: PrizeFormat;
+  payingRanks: number;
+  topPrize: number;
+  minCash: number;
 }
 
 export interface CreateContestArgs {
