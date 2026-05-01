@@ -9,6 +9,21 @@ export interface HeadlineProps {
   onShare: () => void;
 }
 
+/** DraftKings-style tier badge — the headline above the prize/rank.
+ * Distinct labels for podium vs cash vs no-cash so the player reads
+ * their tier at a glance, not just their numeric rank. */
+function tierBadge(rank: number | null): { label: string; tone: string } {
+  if (rank === null) return { label: 'FINAL', tone: 'text-muted' };
+  // Tailwind-side palette: hl-green for any cash, accent for podium —
+  // bigger emphasis on top-3 via emoji rather than a separate color
+  // class (avoids adding unused tokens).
+  if (rank === 1) return { label: '🥇 1ST PLACE', tone: 'text-accent' };
+  if (rank === 2) return { label: '🥈 2ND PLACE', tone: 'text-accent' };
+  if (rank === 3) return { label: '🥉 3RD PLACE', tone: 'text-accent' };
+  if (rank <= 10) return { label: `TOP 10 · #${rank}`, tone: 'text-hl-green' };
+  return { label: `CASHED · #${rank}`, tone: 'text-hl-green' };
+}
+
 export function Headline({ result, onShare }: HeadlineProps) {
   if (result.outcome === 'cancelled') {
     return (
@@ -20,8 +35,14 @@ export function Headline({ result, onShare }: HeadlineProps) {
     );
   }
   if (result.outcome === 'won') {
+    const tier = tierBadge(result.finalRank);
     return (
       <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
+        <div
+          className={`mb-1 font-mono text-[10px] font-bold uppercase tracking-wider ${tier.tone}`}
+        >
+          {tier.label}
+        </div>
         <Label>you won</Label>
         <div className="my-[6px] text-[42px] font-extrabold leading-none tracking-tight">
           {formatCents(result.prizeCents)}
@@ -51,6 +72,9 @@ export function Headline({ result, onShare }: HeadlineProps) {
     result.finalPlPct > 0 ? 'text-hl-green' : result.finalPlPct < 0 ? 'text-hl-red' : 'text-muted';
   return (
     <Card variant="dim" shadow className="m-3 px-[14px] py-3 text-center">
+      <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted">
+        NO CASH · OUTSIDE PAYING RANKS
+      </div>
       <Label>no prize this time</Label>
       <div className="my-2 text-[36px] font-extrabold leading-none">
         #{result.finalRank ?? '—'}
@@ -60,7 +84,7 @@ export function Headline({ result, onShare }: HeadlineProps) {
         portfolio P&amp;L {formatPctPrecise(result.finalPlPct)}
       </div>
       <div className="mt-1 text-[10px] text-muted">
-        {formatPct(result.finalPlPct)} on a 🪙 100 lineup — outside paying ranks
+        {formatPct(result.finalPlPct)} on your lineup
       </div>
     </Card>
   );

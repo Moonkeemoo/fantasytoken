@@ -15,6 +15,10 @@ export interface LocalLeaderboardProps {
    * card (`+$0.12`). Without this rows showed `🪙 0` because formatPnl
    * was treating a 0..1 ratio as a coin amount. */
   budgetUsd: number;
+  /** Last paying rank (= contest.payingRanks). Ranks ≤ payingRanks get
+   * highlighted in green ("you're cashing"); below = grey ("no cash").
+   * Optional for backward-compat. */
+  payingRanks?: number;
 }
 
 /**
@@ -28,6 +32,7 @@ export function LocalLeaderboard({
   all,
   onViewAll,
   budgetUsd,
+  payingRanks,
 }: LocalLeaderboardProps): JSX.Element {
   // Show top 10 in the inline leaderboard — the screen has plenty of
   // room and a longer ladder gives the player a real sense of where the
@@ -69,28 +74,54 @@ export function LocalLeaderboard({
       </div>
       <ul className="mt-2 space-y-0.5">
         {topTen.map((e) => (
-          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} />
+          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} payingRanks={payingRanks} />
         ))}
+        {/* Cash-line marker — rendered between top-K-paid and the first
+            non-paying rank in the top-10 view. Mirrors DraftKings'
+            "money bubble" indicator so the player knows where the
+            cutoff is even when they're not on it. */}
+        {payingRanks !== undefined &&
+          payingRanks > 0 &&
+          payingRanks < (topTen[topTen.length - 1]?.rank ?? 0) && (
+            <li
+              className="flex items-center justify-center gap-1 border-t border-dashed border-bull/40 py-1 text-[9px] uppercase tracking-wider text-bull"
+              aria-label="cash line"
+            >
+              ─── cash line · top {payingRanks} paid ───
+            </li>
+          )}
         {showDivider && (
           <li className="flex items-center justify-center py-1 text-[10px] text-muted">
             ↕ skip · {skipRange}
           </li>
         )}
         {aroundFiltered.map((e) => (
-          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} />
+          <Row key={e.entryId} entry={e} budgetUsd={budgetUsd} payingRanks={payingRanks} />
         ))}
       </ul>
     </section>
   );
 }
 
-function Row({ entry, budgetUsd }: { entry: LeaderboardEntry; budgetUsd: number }): JSX.Element {
+function Row({
+  entry,
+  budgetUsd,
+  payingRanks,
+}: {
+  entry: LeaderboardEntry;
+  budgetUsd: number;
+  payingRanks: number | undefined;
+}): JSX.Element {
   const pnlColor = entry.scorePct > 0 ? 'text-bull' : entry.scorePct < 0 ? 'text-bear' : 'text-ink';
+  // Paying-band indicator: rank ≤ payingRanks → "you're cashing" (subtle
+  // green left border). Below cutoff → no decoration.
+  const isCashing = payingRanks !== undefined && entry.rank <= payingRanks;
+  const cashingClass = isCashing ? 'border-l-[3px] border-l-bull pl-[5px]' : '';
   return (
     <li
       className={`flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[12px] ${
         entry.isMe ? 'border border-ink bg-note/40' : ''
-      }`}
+      } ${cashingClass}`}
     >
       <span className="flex items-center gap-2 truncate">
         <strong className="font-mono text-[11px] text-ink-soft">#{entry.rank}</strong>

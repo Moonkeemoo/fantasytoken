@@ -95,6 +95,7 @@ export function Live(): JSX.Element {
         all={data.leaderboardAll}
         onViewAll={() => setModalOpen(true)}
         budgetUsd={data.virtualBudgetCents}
+        payingRanks={data.payingRanks}
       />
       <LeaderboardModal
         open={modalOpen}

@@ -18,6 +18,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
           entryFeeCents: contests.entryFeeCents,
           type: contests.type,
           payAll: contests.payAll,
+          prizeFormat: contests.prizeFormat,
         })
         .from(contests)
         .where(eq(contests.id, id))
@@ -33,6 +34,7 @@ export function createLeaderboardRepo(db: Database): LeaderboardRepo {
         entryFeeCents: Number(c.entryFeeCents),
         type: c.type === 'bear' ? 'bear' : 'bull',
         payAll: c.payAll,
+        prizeFormat: c.prizeFormat,
         // ADR-0003: derive from entryFeeCents (matches contests.repo.ts).
         virtualBudgetCents: virtualBudgetCentsFor(Number(c.entryFeeCents)),
       };

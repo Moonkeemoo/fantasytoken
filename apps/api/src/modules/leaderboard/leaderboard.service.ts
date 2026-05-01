@@ -27,6 +27,8 @@ export interface ContestSnapshot {
   type: 'bull' | 'bear';
   /** Whether every entry is paid (Practice) vs the standard top-50% curve. */
   payAll: boolean;
+  /** ADR-0008: explicit prize structure. */
+  prizeFormat: string;
   /** ADR-0003: $-first UX layer (display-only). */
   virtualBudgetCents: number;
 }
@@ -124,8 +126,12 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         rakePct: deps.rakePct,
         guaranteedPoolCents: contest.prizePoolCents,
       });
-      const curve = computePrizeCurve(totalEntries, actualPoolCents, { payAll: contest.payAll });
+      const curve = computePrizeCurve(totalEntries, actualPoolCents, {
+        payAll: contest.payAll,
+        format: contest.prizeFormat as 'linear' | '50_50' | '3x' | '5x' | 'gpp',
+      });
       const topPrizeCents = curve.get(1) ?? 0;
+      const payingRanks = curve.size;
       let projectedPrizeCents = 0;
       let userRank: number | null = null;
       if (userId && userRow) {
@@ -188,6 +194,7 @@ export function createLeaderboardService(deps: LeaderboardServiceDeps): Leaderbo
         projectedPrizeCents,
         topPrizeCents,
         payAll: contest.payAll,
+        payingRanks,
         lineup,
         leaderboardTop: display.slice(0, 3),
         leaderboardAll: display.slice(0, 100),

@@ -56,6 +56,9 @@ export const LiveResponse = z.object({
   /** Pay-curve flag mirrored from the contest. Drives the Scoreboard subtitle
    * ("top 50% pays" vs "all positions paid"). */
   payAll: z.boolean().default(false),
+  /** ADR-0008: paying-rank cutoff for the cash-line indicator on the
+   * live leaderboard. 0 means "no cutoff data" (legacy). */
+  payingRanks: z.number().int().nonnegative().default(0),
   lineup: z.array(LineupRow),
   leaderboardTop: z.array(LeaderboardEntry),
   leaderboardAll: z.array(LeaderboardEntry),
