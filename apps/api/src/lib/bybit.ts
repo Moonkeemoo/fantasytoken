@@ -109,6 +109,16 @@ export function startBybitFeed(opts: BybitFeedOptions): BybitFeedHandle {
     }
   };
 
+  // Per-symbol latest-known state, merged across snapshot + delta frames.
+  // Bybit V5 spot tickers send `type: 'snapshot'` once on subscribe and
+  // `type: 'delta'` on every change, with delta containing ONLY changed
+  // fields. So a delta frame for a stable price has no `lastPrice` —
+  // ignoring those would mean we never bump `last_updated_at` for quiet
+  // markets, which breaks our "stale → ask CoinGecko" filter.
+  // The merge below carries the snapshot price forward so every delta
+  // frame produces an update (with the latest known price).
+  const lastKnown = new Map<string, { priceUsd: number; pctChange24h: number | null }>();
+
   const handleFrame = (frame: BybitFrame): void => {
     if (frame.op === 'ping' || frame.op === 'pong') return; // heartbeat
     if (typeof frame.topic !== 'string' || !frame.topic.startsWith('tickers.')) return;
@@ -123,13 +133,23 @@ export function startBybitFeed(opts: BybitFeedOptions): BybitFeedHandle {
       if (typeof t.symbol !== 'string' || !t.symbol.endsWith('USDT')) continue;
       const symbol = t.symbol.slice(0, -4);
       if (symbol.length === 0) continue;
-      const price = t.lastPrice !== undefined ? Number.parseFloat(t.lastPrice) : NaN;
-      if (!Number.isFinite(price) || price <= 0) continue;
-      // Bybit `price24hPcnt` is decimal (0.05 = 5%); CoinGecko / our schema
-      // expects the percent-as-number (5 for 5%). Multiply by 100.
+
+      const prev = lastKnown.get(symbol) ?? null;
+      const priceFromFrame = t.lastPrice !== undefined ? Number.parseFloat(t.lastPrice) : NaN;
+      // Bybit `price24hPcnt` is decimal (0.05 = 5%); our schema expects
+      // percent-as-number (5 for 5%). Multiply by 100.
       const pctRaw = t.price24hPcnt !== undefined ? Number.parseFloat(t.price24hPcnt) : NaN;
-      const pctChange24h = Number.isFinite(pctRaw) ? pctRaw * 100 : null;
-      updates.push({ symbol, priceUsd: price, pctChange24h });
+
+      const priceUsd =
+        Number.isFinite(priceFromFrame) && priceFromFrame > 0 ? priceFromFrame : prev?.priceUsd;
+      const pctChange24h = Number.isFinite(pctRaw) ? pctRaw * 100 : (prev?.pctChange24h ?? null);
+
+      // Skip only if we have NO known price for this symbol yet (delta
+      // arrived before snapshot — rare but possible on slow links).
+      if (priceUsd === undefined || !Number.isFinite(priceUsd) || priceUsd <= 0) continue;
+
+      lastKnown.set(symbol, { priceUsd, pctChange24h });
+      updates.push({ symbol, priceUsd, pctChange24h });
       coveredSymbols.add(symbol);
     }
     if (updates.length > 0) opts.onUpdate(updates);
