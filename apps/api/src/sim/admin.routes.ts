@@ -1,14 +1,19 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import { SimGrantCoinsBody, SimSeedBody, SimWipeBody } from '@fantasytoken/shared';
 import { requireAdmin } from '../lib/admin-auth.js';
 import type { CurrencyService } from '../modules/currency/currency.service.js';
 import type { SeedService } from './seed.service.js';
 import type { WipeService } from './wipe.service.js';
+import type { TickService } from './tick.service.js';
+import type { SimObservability } from './observability.js';
 
 export interface SimAdminRoutesDeps {
   seed: SeedService;
   wipe: WipeService;
   currency: CurrencyService;
+  tick: TickService;
+  observability: SimObservability;
 }
 
 /**
@@ -16,9 +21,9 @@ export interface SimAdminRoutesDeps {
  *   1. server.ts only registers this plugin when SIM_ADMIN_ENABLED=true.
  *   2. requireAdmin (existing) checks initData + ADMIN_TG_IDS membership.
  *
- * `set-rank` is intentionally omitted from M1 — TZ §10 lists it under M3
- * acceptance and `xp_events` is the source of truth (INV-11). Adding a
- * direct rank/xp_total bump here would violate that invariant.
+ * `set-rank` is intentionally omitted — `xp_events` is the source of
+ * truth (INV-11). Adding a direct rank/xp_total bump here would violate
+ * that invariant.
  */
 export function makeSimAdminRoutes(deps: SimAdminRoutesDeps): FastifyPluginAsync {
   return async (app) => {
@@ -56,6 +61,55 @@ export function makeSimAdminRoutes(deps: SimAdminRoutesDeps): FastifyPluginAsync
       const r = await deps.wipe.wipe({ dryRun: body.dryRun });
       req.log.warn({ ...r }, 'sim.wipe.completed');
       return r;
+    });
+
+    /** Manual tick — useful for one-shot wave triggering during testing. */
+    app.post('/tick', async (req) => {
+      const stats = await deps.tick.tick();
+      req.log.info({ ...stats }, 'sim.tick.manual');
+      return stats;
+    });
+
+    // ─── Observability ────────────────────────────────────────────────
+    const SinceQuery = z.object({
+      sinceMinutes: z.coerce
+        .number()
+        .int()
+        .positive()
+        .max(60 * 24 * 7)
+        .default(60),
+    });
+
+    app.get('/stats/actions', async (req) => {
+      const q = SinceQuery.parse(req.query);
+      const since = new Date(Date.now() - q.sinceMinutes * 60_000);
+      return {
+        sinceMinutes: q.sinceMinutes,
+        rows: await deps.observability.getActionDistribution({ since }),
+      };
+    });
+
+    app.get('/stats/hourly', async (req) => {
+      const q = SinceQuery.extend({ action: z.string().optional() }).parse(req.query);
+      const since = new Date(Date.now() - q.sinceMinutes * 60_000);
+      return {
+        sinceMinutes: q.sinceMinutes,
+        action: q.action ?? null,
+        rows: await deps.observability.getHourlyLoad(
+          q.action ? { since, action: q.action } : { since },
+        ),
+      };
+    });
+
+    app.get('/stats/referral-tree', async () => deps.observability.getReferralTreeShape());
+
+    app.get('/stats/economy', async () => ({
+      rows: await deps.observability.getEconomySnapshot(),
+    }));
+
+    app.get('/stats/lineup-diversity/:contestId', async (req) => {
+      const params = z.object({ contestId: z.string().uuid() }).parse(req.params);
+      return deps.observability.getLineupDiversity({ contestId: params.contestId });
     });
   };
 }

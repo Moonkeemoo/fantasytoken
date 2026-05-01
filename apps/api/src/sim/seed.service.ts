@@ -9,6 +9,11 @@ export interface SeedSyntheticUserInput {
   syntheticSeed: number;
   handle: string;
   firstName: string;
+  /** Set on insert when this synthetic is being created via a referral
+   * cascade (M4). For batch seeds this stays unset. The 60s/0-entries
+   * guards in users.setReferrerIfEligible are intentionally bypassed —
+   * synthetics control their own birth ordering. */
+  referrerUserId?: string;
 }
 
 export interface SeedSyntheticUserResult {

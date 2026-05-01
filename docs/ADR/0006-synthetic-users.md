@@ -98,7 +98,38 @@ operator sees the violation.
 
 ## Milestone scope
 
-This ADR governs the whole TZ-005 initiative. M1 lands schema + seed +
-wipe + admin endpoints. M2..M4 (static play / tick worker / referral
-cascade) extend the same architecture; if any of them require an
-architectural shift, a follow-up ADR will supersede this one in part.
+This ADR governs the whole TZ-005 initiative. \*\*M1 (schema + seed + wipe
+
+- admin endpoints) and M2-M4 (joinContest action, tick worker, referral
+  cascade, observability) are now implemented under this single
+  architecture\*\* — no follow-up ADR was needed.
+
+### M2-M4 specifics
+
+- **Tick worker** — single in-process cron at `SIM_CONFIG.tickIntervalMs`
+  (default 60s). Single-replica safe (Railway). Each tick batch-loads
+  state (synths, open contests, token pool, entered pairs, last-topup
+  per user) and walks synthetics in-memory. Per-tick caps
+  (`perTickJoinAttemptsCap`, `perTickInviteAttemptsCap`) protect
+  entriesService from a config bug.
+- **Pacing** — `density(shape, t)` modulates per-tick join probability
+  across the contest's `[created → startsAt]` window. Default `bell`
+  curve peaks slightly early (t≈0.4) so synthetics don't all race to
+  lock at minute 0.
+- **Token bias** — persona-aware filter (`bluechip`/`meme`/`mixed`/
+  `volatile`) over the live tokens catalog; meme heuristic is symbol-
+  pattern-based with a fallback to lowest-mcap tail when too few named
+  matches exist.
+- **Referral cascade** — `inviteFriend` creates a child synthetic with
+  `referrer_user_id` set inline (bypasses the 60s/0-entries guards on
+  `users.setReferrerIfEligible` — synthetics own their own attribution).
+  Pre-creates locked rows in `referral_signup_bonuses`; the existing
+  `referrals.maybeUnlockSignupBonuses` finalize-hook unlocks them when
+  the child plays their first finalized contest. Persona inheritance:
+  75% of children share the parent's kind, 25% mutate uniformly to
+  prevent monoculture trees.
+- **Observability** — `getActionDistribution`, `getHourlyLoad`,
+  `getReferralTreeShape`, `getLineupDiversity`, `getEconomySnapshot`
+  exposed via `/admin/sim/stats/*`. The economy snapshot is the early-
+  warning signal: if a persona's `zeroBalanceCount` rises faster than
+  it earns prizes, the economy has a hole.

@@ -67,7 +67,12 @@ import {
   createSeedService,
   createWipeRepo,
   createWipeService,
+  createTickRepo,
+  createTickService,
+  createSimLogger,
+  createSimObservability,
   makeSimAdminRoutes,
+  SIM_CONFIG,
 } from './sim/index.js';
 
 export interface ServerDeps {
@@ -301,20 +306,57 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   await app.register(makeProfileRoutes({ profile, users }), { prefix: '/profile' });
   await app.register(makeAdminRoutes({ contests, users, cancelContest }), { prefix: '/admin' });
 
-  // TZ-005: synthetic-users admin endpoints — only mounted when explicitly
-  // enabled via env. Behind requireAdmin too, so the env flag is a coarse
-  // build-time gate and the per-request gate stays the existing
-  // ADMIN_TG_IDS check.
+  // TZ-005: synthetic-users admin endpoints + tick worker — only mounted
+  // when explicitly enabled via env. Behind requireAdmin too, so the env
+  // flag is a coarse build-time gate and the per-request gate stays the
+  // existing ADMIN_TG_IDS check.
+  let stopSimTick: (() => void) | null = null;
   if (deps.config.SIM_ADMIN_ENABLED) {
-    const seedSvc = createSeedService({
-      repo: createSeedRepo(deps.db),
-      currency,
-    });
+    const simSeedRepo = createSeedRepo(deps.db);
+    const seedSvc = createSeedService({ repo: simSeedRepo, currency });
     const wipeSvc = createWipeService({ repo: createWipeRepo(deps.db) });
-    await app.register(makeSimAdminRoutes({ seed: seedSvc, wipe: wipeSvc, currency }), {
-      prefix: '/admin/sim',
+    const simLog = createSimLogger(deps.db);
+    const tickSvc = createTickService({
+      repo: createTickRepo(deps.db),
+      seedRepo: simSeedRepo,
+      entries,
+      currency,
+      // Reuse the existing referrals repo's preCreateSignupBonuses — the
+      // tick's invite_friend action is the synthetic counterpart of the
+      // upsertOnAuth path that sets up real referees.
+      signupBonuses: {
+        preCreateSignupBonuses: (args) => referralsRepo.preCreateSignupBonuses(args),
+      },
+      log: simLog,
+      serverLog: deps.logger,
     });
+    const observability = createSimObservability(deps.db);
+    await app.register(
+      makeSimAdminRoutes({
+        seed: seedSvc,
+        wipe: wipeSvc,
+        currency,
+        tick: tickSvc,
+        observability,
+      }),
+      { prefix: '/admin/sim' },
+    );
     deps.logger.warn('SIM_ADMIN_ENABLED — /admin/sim routes are ACTIVE');
+
+    // Tick cron — drives the synthetics every SIM_CONFIG.tickIntervalMs.
+    // INV-7 catch-and-log lives inside scheduleEvery.
+    stopSimTick = scheduleEvery({
+      intervalMs: SIM_CONFIG.tickIntervalMs,
+      fn: async () => {
+        const stats = await tickSvc.tick();
+        if (stats.joinsAttempted > 0 || stats.invitesCreated > 0 || stats.topUpsGranted > 0) {
+          deps.logger.info(stats, 'sim.tick');
+        }
+      },
+      name: 'sim.tick',
+      log: deps.logger,
+      runOnStart: deps.config.NODE_ENV !== 'test',
+    });
   }
 
   // Crons. INV-7 logging is inside scheduleEvery.
@@ -434,6 +476,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopScheduler();
       stopWelcomeExpiry();
       stopDmDrain();
+      if (stopSimTick) stopSimTick();
       if (bot) void bot.stop();
       realtimeHub.closeAll();
     },

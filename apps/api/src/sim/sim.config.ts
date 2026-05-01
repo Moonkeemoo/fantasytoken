@@ -3,24 +3,71 @@ import type { PersonaKind } from '@fantasytoken/shared';
 /**
  * TZ-005 §9 — single tuning surface for synthetic users.
  *
- * Edit this file (or override at runtime via admin/seed body) to tweak
- * cohort behavior. Keeping every knob in one place lets the polish-loop
- * agent diff before/after across runs.
+ * All behavior knobs live here so the polish-loop agent (and you) can
+ * diff before/after across runs without grepping the codebase. Every
+ * field is plain data — no functions — so a future hot-reload from a
+ * config_table is a one-day swap.
  *
- * M1 only consumes `distribution` and `startingCoins`. M3 will add
- * loginProbability / contestPickProbability / topUpBehavior / referralRate.
+ * Economy goal driving these defaults: a 1000-synth cohort over a 24h
+ * window should produce ~30-50 entries per active scheduled contest,
+ * with the persona mix biasing free/paid splits, lineup sizes, and
+ * lineup contents in a way that surfaces obvious holes (e.g. a casual
+ * burning through coins on day 1 means the welcome grant is too low).
  */
 
+export type TokenBias = 'bluechip' | 'meme' | 'mixed' | 'volatile';
+export type PacingShape = 'bell' | 'exponential' | 'uniform';
+
 export interface PersonaConfig {
-  /** Coins granted at seed time via DEV_GRANT (one-shot). 0 → no grant. */
+  /** Coins granted at seed time via DEV_GRANT (one-shot). */
   startingCoins: number;
+  /** 24-element array — probability of being "logged in" at hour h (UTC).
+   * Used by the tick worker to gate every other action behind a login
+   * decision. Values are independent per hour. */
+  loginProbabilityByHour: number[];
+  /** Pick-count range for a fresh lineup. Inclusive on both ends. */
+  lineupSize: { min: number; max: number };
+  /** Token-pool filter applied before random pick. */
+  tokenBias: TokenBias;
+  /** Per-tick probability of joining one specific eligible scheduled
+   * contest (already filtered by rank gate + not-yet-entered). Free vs
+   * paid split lets us model whales paying eagerly while casuals stay
+   * on practice tier. */
+  joinFreeRate: number;
+  joinPaidRate: number;
+  /** When defined, persona occasionally tops up its balance via DEV_GRANT
+   * (Stars purchase is v2). Amount is in coins; intervalDays gates frequency. */
+  topUpBehavior: { intervalDays: number; amountCoins: number } | null;
+  /** Per-tick probability of inviting a friend (creates a child synthetic,
+   * sets referrer_user_id, pre-creates bonus rows). */
+  referralRate: number;
 }
 
 export const SIM_CONFIG: {
+  /** Tick cadence in milliseconds. ~1 tick/min so a fresh contest fills
+   * with 30-50 entries in 2-3 minutes (M2 acceptance). */
+  tickIntervalMs: number;
+  /** Pacing curve for join-contest decisions over the [contest.created →
+   * contest.startsAt] window. Higher density mid-window approximates real
+   * users discovering the contest after it's been listed for a while. */
+  joinPacingShape: PacingShape;
+  /** Cap on per-tick join attempts across the whole synthetic pool — a
+   * config bug can't accidentally DDOS entriesService. */
+  perTickJoinAttemptsCap: number;
+  /** Cap on per-tick invite attempts across the whole synthetic pool. */
+  perTickInviteAttemptsCap: number;
+  /** Minimum time-between-actions per synthetic, in seconds. Prevents one
+   * persona from spamming all actions in a single tick. */
+  perSynthCooldownSeconds: number;
   distribution: Record<PersonaKind, number>;
   personas: Record<PersonaKind, PersonaConfig>;
 } = {
-  // Default mix — sums to 1.0. Caller can override per-seed.
+  tickIntervalMs: 60_000,
+  joinPacingShape: 'bell',
+  perTickJoinAttemptsCap: 200,
+  perTickInviteAttemptsCap: 20,
+  perSynthCooldownSeconds: 60,
+
   distribution: {
     casual: 0.4,
     newbie: 0.2,
@@ -30,20 +77,136 @@ export const SIM_CONFIG: {
     inviter: 0.05,
     whale: 0.02,
   },
+
   personas: {
-    // Casual: matches a real user's welcome bonus floor. If economy holes
-    // appear, casuals are the canary — they should NOT churn out of coins
-    // before earning their first prize.
-    casual: { startingCoins: 20 },
-    newbie: { startingCoins: 20 },
-    // Streakers play daily; a slightly bigger float lets them last a week
-    // of $1 entries before any payout — that's the success metric.
-    streaker: { startingCoins: 50 },
-    meme_chaser: { startingCoins: 30 },
-    lurker: { startingCoins: 20 },
-    inviter: { startingCoins: 30 },
-    // Whales seed the paid-tier liquidity. $1000 covers ~10 max-tier
-    // entries; anything less and they'd churn unrealistically fast.
-    whale: { startingCoins: 1000 },
+    // Casual: matches a real user's welcome bonus floor. Canary for economy
+    // holes — if casuals drain to zero before earning a prize, the welcome
+    // grant is too small.
+    casual: {
+      startingCoins: 20,
+      loginProbabilityByHour: hourCurve('peak-evening', 0.1, 0.3),
+      lineupSize: { min: 3, max: 5 },
+      tokenBias: 'mixed',
+      joinFreeRate: 0.04,
+      joinPaidRate: 0.005,
+      topUpBehavior: null,
+      referralRate: 0.001,
+    },
+    // Newbie: first-week shape, follows tutorials (5 picks by instinct),
+    // bluechip-only.
+    newbie: {
+      startingCoins: 20,
+      loginProbabilityByHour: hourCurve('scattered', 0.05, 0.25),
+      lineupSize: { min: 5, max: 5 },
+      tokenBias: 'bluechip',
+      joinFreeRate: 0.06,
+      joinPaidRate: 0.002,
+      topUpBehavior: null,
+      referralRate: 0.005,
+    },
+    // Streaker: daily login at consistent hour, rank-focused, balanced.
+    streaker: {
+      startingCoins: 50,
+      loginProbabilityByHour: hourCurve('daily-burst', 0.05, 0.85),
+      lineupSize: { min: 3, max: 5 },
+      tokenBias: 'mixed',
+      joinFreeRate: 0.18,
+      joinPaidRate: 0.04,
+      topUpBehavior: { intervalDays: 14, amountCoins: 50 },
+      referralRate: 0.002,
+    },
+    // Meme chaser: late-night peaks, small lineups (1-2 tokens).
+    meme_chaser: {
+      startingCoins: 30,
+      loginProbabilityByHour: hourCurve('peak-late-night', 0.05, 0.55),
+      lineupSize: { min: 1, max: 2 },
+      tokenBias: 'meme',
+      joinFreeRate: 0.1,
+      joinPaidRate: 0.06,
+      topUpBehavior: { intervalDays: 7, amountCoins: 25 },
+      referralRate: 0.002,
+    },
+    // Lurker: opens app rarely, observes leaderboards, almost never plays.
+    lurker: {
+      startingCoins: 20,
+      loginProbabilityByHour: hourCurve('peak-evening', 0.02, 0.1),
+      lineupSize: { min: 5, max: 5 },
+      tokenBias: 'bluechip',
+      joinFreeRate: 0.005,
+      joinPaidRate: 0,
+      topUpBehavior: null,
+      referralRate: 0,
+    },
+    // Inviter: high referral rate; plays just enough to keep referees
+    // active. Mid-day social peak.
+    inviter: {
+      startingCoins: 30,
+      loginProbabilityByHour: hourCurve('peak-midday', 0.1, 0.5),
+      lineupSize: { min: 3, max: 5 },
+      tokenBias: 'mixed',
+      joinFreeRate: 0.08,
+      joinPaidRate: 0.01,
+      topUpBehavior: null,
+      referralRate: 0.05,
+    },
+    // Whale: high spend, joins all paid contests, conviction plays.
+    whale: {
+      startingCoins: 1000,
+      loginProbabilityByHour: hourCurve('twin-peak', 0.1, 0.85),
+      lineupSize: { min: 1, max: 2 },
+      tokenBias: 'volatile',
+      joinFreeRate: 0.05,
+      joinPaidRate: 0.3,
+      topUpBehavior: { intervalDays: 7, amountCoins: 500 },
+      referralRate: 0.002,
+    },
   },
 };
+
+// ──────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────
+
+type HourCurveShape =
+  | 'peak-evening' // peak 19-22 UTC
+  | 'peak-midday' // peak 12-15 UTC
+  | 'peak-late-night' // peak 22-03 UTC
+  | 'twin-peak' // peaks 09-11 + 19-22
+  | 'scattered' // mostly flat with a small evening lift
+  | 'daily-burst'; // single sharp spike at hour 20
+
+function hourCurve(shape: HourCurveShape, baseline: number, peak: number): number[] {
+  const arr = new Array<number>(24).fill(baseline);
+  const setPeak = (hours: number[]): void => {
+    for (const h of hours) arr[(h + 24) % 24] = peak;
+  };
+  const setShoulder = (hours: number[]): void => {
+    for (const h of hours) arr[(h + 24) % 24] = baseline + (peak - baseline) * 0.5;
+  };
+  switch (shape) {
+    case 'peak-evening':
+      setPeak([19, 20, 21, 22]);
+      setShoulder([18, 23]);
+      break;
+    case 'peak-midday':
+      setPeak([12, 13, 14, 15]);
+      setShoulder([11, 16]);
+      break;
+    case 'peak-late-night':
+      setPeak([22, 23, 0, 1, 2, 3]);
+      setShoulder([21, 4]);
+      break;
+    case 'twin-peak':
+      setPeak([9, 10, 11, 19, 20, 21, 22]);
+      setShoulder([8, 12, 18, 23]);
+      break;
+    case 'scattered':
+      setShoulder([18, 19, 20]);
+      break;
+    case 'daily-burst':
+      setPeak([20]);
+      setShoulder([19, 21]);
+      break;
+  }
+  return arr;
+}

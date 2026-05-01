@@ -12,7 +12,7 @@ import type { SeedRepo } from './seed.service.js';
  */
 export function createSeedRepo(db: Database): SeedRepo {
   return {
-    async createSynthetic({ personaKind, syntheticSeed, handle, firstName }) {
+    async createSynthetic({ personaKind, syntheticSeed, handle, firstName, referrerUserId }) {
       const rows = await db.execute<{ id: string; telegram_id: string }>(sql`
         INSERT INTO users (
           telegram_id,
@@ -21,7 +21,8 @@ export function createSeedRepo(db: Database): SeedRepo {
           is_synthetic,
           persona_kind,
           synthetic_seed,
-          tutorial_done_at
+          tutorial_done_at,
+          referrer_user_id
         ) VALUES (
           -nextval('synthetic_telegram_id_seq'),
           ${handle},
@@ -29,7 +30,8 @@ export function createSeedRepo(db: Database): SeedRepo {
           true,
           ${personaKind},
           ${syntheticSeed},
-          NOW()
+          NOW(),
+          ${referrerUserId ?? null}
         )
         RETURNING id, telegram_id::text AS telegram_id
       `);
