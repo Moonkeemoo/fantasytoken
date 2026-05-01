@@ -406,13 +406,17 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     runOnStart: deps.config.NODE_ENV !== 'test',
   });
 
-  // Active-token price sync via CoinGecko — long-tail only when Binance
-  // is up. listActiveCoingeckoIds({excludeFreshWithinSec:60}) drops every
-  // token Binance has refreshed in the last minute. Cron tick stays at
-  // 30s (was 15s) since the live feed is now Binance; CoinGecko is the
-  // tail-of-distribution chaser.
+  // Active-token price sync via CoinGecko — the workhorse for everything
+  // Bybit/OKX don't list AND for quiet markets they DO list (Bybit only
+  // pushes ticker frames on price change, so a low-volume token can sit
+  // a minute without any update). Tightened cadence: 15s tick, refresh
+  // anything stale >25s. Per-cycle ask is ~250 ids = 1 CG call; 4
+  // calls/min is well inside the free-tier 30/min budget. With this:
+  // covered-and-active tokens stay <5s (live feed), covered-but-quiet
+  // tokens stay <40s (CG fallback), uncovered tokens stay <40s (CG
+  // primary). Net: most of the catalog reads <40s fresh end-to-end.
   const stopActiveSync = scheduleEvery({
-    intervalMs: 30_000,
+    intervalMs: 15_000,
     fn: async () => {
       await tokens.syncActive();
     },

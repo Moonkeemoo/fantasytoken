@@ -109,13 +109,15 @@ export function createTokensService(deps: TokensServiceDeps): TokensService {
     },
 
     async syncActive() {
-      // Only chase tokens whose price hasn't been refreshed in the last
-      // 60s — when Binance WS feed is up, it bumps last_updated_at every
-      // tick for ~500 covered symbols, so this filter naturally narrows
-      // the CoinGecko ask to the long-tail (memes, low-liquidity) that
-      // Binance doesn't carry. Without Binance the filter still helps
-      // because freshly-locked contests don't immediately need refresh.
-      const ids = await deps.repo.listActiveCoingeckoIds({ excludeFreshWithinSec: 60 });
+      // Refresh anything stale > 25s. With Bybit+OKX covering ~50% of
+      // the catalog at <5s freshness on active markets, this filter
+      // naturally narrows the CoinGecko ask to: (a) the ~258 tokens
+      // those exchanges don't list, and (b) tokens they do list whose
+      // markets went quiet (Bybit/OKX push only on price change). The
+      // 25s threshold keeps the per-cycle ask to 1 CG call and gives
+      // every token a refresh within ~40s end-to-end (25s threshold +
+      // 15s cron tick).
+      const ids = await deps.repo.listActiveCoingeckoIds({ excludeFreshWithinSec: 25 });
       if (ids.length === 0) return 0;
       try {
         const markets = await deps.client.marketsByIds(ids);
