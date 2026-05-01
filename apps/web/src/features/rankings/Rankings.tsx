@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button.js';
 import { Label } from '../../components/ui/Label.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { TierIcon } from '../rank/TierIcon.js';
+import { rankFromXp, RANK_THRESHOLDS } from '@fantasytoken/shared';
 import { TopUpModal } from '../wallet/TopUpModal.js';
 import { LoadingSplash } from '../loading/LoadingSplash.js';
 import { formatCents } from '../../lib/format.js';
@@ -166,6 +167,18 @@ function FriendsView({
   );
 }
 
+// Map a numeric current_rank (1..30) → "Newbie I" / "Trader II" / etc.
+// We re-derive from RANK_THRESHOLDS so we don't have to plumb the
+// pre-computed display string through the API response — the wire
+// already carries `tierRank: number`, and rankFromXp(threshold) gives
+// back the canonical RankInfo with `display`.
+function tierLabel(rank: number): string {
+  const idx = Math.max(0, Math.min(29, rank - 1));
+  const xp = RANK_THRESHOLDS[idx];
+  if (xp === undefined) return '';
+  return rankFromXp(xp).display;
+}
+
 function RowPnL({ row }: { row: { netPnlCents: number } }) {
   const value = row.netPnlCents;
   return (
@@ -205,9 +218,14 @@ function GlobalView({
                 <strong className="font-mono text-[10px]">#{r.rank}</strong>
                 <Avatar name={r.displayName} url={r.avatarUrl} size={22} />
                 <TierIcon rank={r.tierRank} size={16} showNumber={false} />
-                <span className={r.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
-                  {r.displayName}
-                  {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                <span className="flex flex-col leading-tight">
+                  <span className={r.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
+                    {r.displayName}
+                    {r.isMe && <span className="ml-1 text-[10px] text-muted">(you)</span>}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wide text-muted">
+                    {tierLabel(r.tierRank)}
+                  </span>
                 </span>
               </span>
               <RowPnL row={r} />
@@ -223,8 +241,13 @@ function GlobalView({
               <strong className="font-mono text-[10px]">#{data.me.rank}</strong>
               <Avatar name={data.me.displayName} url={data.me.avatarUrl} size={22} />
               <TierIcon rank={data.me.tierRank} size={16} showNumber={false} />
-              <span className={data.me.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
-                {data.me.displayName} <span className="text-[10px] text-muted">(you)</span>
+              <span className="flex flex-col leading-tight">
+                <span className={data.me.tierRank >= 16 ? 'font-bold text-[#c9a227]' : ''}>
+                  {data.me.displayName} <span className="text-[10px] text-muted">(you)</span>
+                </span>
+                <span className="text-[9px] uppercase tracking-wide text-muted">
+                  {tierLabel(data.me.tierRank)}
+                </span>
               </span>
             </span>
             <RowPnL row={data.me} />
