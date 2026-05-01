@@ -148,9 +148,28 @@ export function startBybitFeed(opts: BybitFeedOptions): BybitFeedHandle {
       }
     });
 
+    let frameCount = 0;
+    let tickerCount = 0;
+    let lastLog = Date.now();
     ws.on('message', (data) => {
       try {
         const frame = JSON.parse(data.toString()) as BybitFrame;
+        frameCount += 1;
+        if (typeof frame.topic === 'string' && frame.topic.startsWith('tickers.')) {
+          tickerCount += 1;
+        }
+        // Diagnostic: log subscribe responses (one-shot per topic) and a
+        // periodic counter so we can see if the WS is silent vs flooding.
+        if (frame.op === 'subscribe' && frame.success === false) {
+          opts.log.warn({ ret_msg: frame.ret_msg, op: frame.op }, 'bybit.ws.subscribe rejected');
+        }
+        const now = Date.now();
+        if (now - lastLog > 30_000) {
+          opts.log.info({ frames: frameCount, tickers: tickerCount }, 'bybit.ws.heartbeat');
+          frameCount = 0;
+          tickerCount = 0;
+          lastLog = now;
+        }
         handleFrame(frame);
       } catch (err) {
         opts.log.warn({ err }, 'bybit.ws.parse failed');
