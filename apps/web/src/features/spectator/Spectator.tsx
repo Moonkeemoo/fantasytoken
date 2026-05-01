@@ -22,6 +22,17 @@ export function Spectator(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const live = useLive(id);
+  // ALL HOOKS MUST BE CALLED BEFORE THE FIRST EARLY RETURN. Putting
+  // `useTokenList` / `useMemo` after the if-guards changed hook order
+  // between renders → React error #310. Token icon lookup for the
+  // leaderboard rows: empty map until tokens load, gracefully handles
+  // missing imageUrls.
+  const tokensQ = useTokenList(250);
+  const imageBySymbol = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
+    return map;
+  }, [tokensQ.data]);
 
   // Earlier we redirected to /contests/:id/result on finalize, but that page
   // requires the caller to have an entry — spectators don't, so the redirect
@@ -37,16 +48,6 @@ export function Spectator(): JSX.Element {
 
   const data = live.data;
   const top10 = data.leaderboardAll.slice(0, 10);
-
-  // Token icon lookup (by symbol) so each leaderboard row can render
-  // the player's lineup as a 5-icon strip. Cached at the user-list cap
-  // (250) — covers every token in the matrix.
-  const tokensQ = useTokenList(250);
-  const imageBySymbol = useMemo(() => {
-    const map = new Map<string, string | null>();
-    for (const t of tokensQ.data?.items ?? []) map.set(t.symbol, t.imageUrl);
-    return map;
-  }, [tokensQ.data]);
 
   return (
     <div
