@@ -44,6 +44,11 @@ export interface ContestsTickServiceDeps {
    * was sitting in the DB from the prior 30s sync). Optional: tests pass
    * undefined and the lock proceeds with whatever's already in the DB. */
   refreshPricesBeforeLock?: () => Promise<void>;
+  /** When false, skip the maxCapacity−realEntries bot filler at lock time.
+   * Synthetic users (TZ-005) populate contests now; the legacy bot filler
+   * adds noise to leaderboards and prize math. Default true to preserve
+   * the pre-2026-05-01 behaviour for any caller that doesn't pass it. */
+  botFillEnabled?: boolean;
 }
 
 const STALE_PRICE_HOURS = 2;
@@ -116,9 +121,13 @@ export function createContestsTickService(deps: ContestsTickServiceDeps): Contes
 
           // Fill remaining seats: maxCapacity − realEntries. Pure capacity-fill, no
           // ratio/min logic — every contest reaches exactly maxCapacity at lock time.
-          const botCount = Math.max(0, c.maxCapacity - c.realEntries);
+          // Disabled when `botFillEnabled === false` (sim-driven cohort owns
+          // the lobby population now — TZ-005); locking proceeds with only
+          // real + synthetic entries, no fake bot filler.
+          const fillEnabled = deps.botFillEnabled !== false;
+          const botCount = fillEnabled ? Math.max(0, c.maxCapacity - c.realEntries) : 0;
 
-          const allSymbols = await deps.repo.listSymbols();
+          const allSymbols = fillEnabled ? await deps.repo.listSymbols() : [];
           const botPicks: Array<{ handle: string; picks: { symbol: string; alloc: number }[] }> =
             [];
           for (let i = 0; i < botCount; i++) {

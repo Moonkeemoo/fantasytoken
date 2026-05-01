@@ -1,10 +1,25 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { computeActualPrizeCents, virtualBudgetCentsFor } from '@fantasytoken/shared';
+import {
+  computeActualPrizeCents,
+  computeLinearPracticeCurve,
+  virtualBudgetCentsFor,
+} from '@fantasytoken/shared';
 import type { Database } from '../../db/client.js';
 import { contests, entries } from '../../db/schema/index.js';
 import type { ContestsRepo, ContestRowFromRepo, CreateContestArgs } from './contests.service.js';
 
 const MAX_CENTS_AS_NUMBER = BigInt(Number.MAX_SAFE_INTEGER);
+
+/** Sum of all per-rank prizes from the linear Practice curve. House-funded;
+ * scales ~1.5×N. Used to display a believable PRIZE POOL on the lobby card
+ * instead of the legacy hardcoded 5n that didn't scale. */
+function sumLinearCurve(N: number): number {
+  if (N <= 0) return 0;
+  const m = computeLinearPracticeCurve(N);
+  let sum = 0;
+  for (const v of m.values()) sum += v;
+  return sum;
+}
 
 function rowFromDbRow(
   row: typeof contests.$inferSelect,
@@ -20,16 +35,25 @@ function rowFromDbRow(
       `contest ${row.id} has cents value exceeding Number.MAX_SAFE_INTEGER — wire shape would lose precision`,
     );
   }
-  // Projected pool: pre-lock we don't yet know how many bots will fill, so we
-  // assume the room reaches maxCapacity. Once locked/finalized we use the actual
-  // total entry count (which equals maxCapacity in normal flows).
-  const poolCount = row.status === 'scheduled' ? row.maxCapacity : spotsFilled;
-  const dynamicPool = computeActualPrizeCents({
-    totalCount: poolCount,
-    entryFeeCents: Number(row.entryFeeCents),
-    rakePct,
-    guaranteedPoolCents: Number(row.prizePoolCents),
-  });
+  // Projected pool. Pre-lock the actual lock-time count is unknown; for
+  // open scheduled Practice/Marathon we use the LIVE spotsFilled (real
+  // synthetic+real entries) so the lobby shows a believable, growing
+  // number — not the static room cap. For paid contests we still fall
+  // back to maxCapacity pre-lock because their pool is pari-mutuel and
+  // depends on the final filled count.
+  const poolCountForPaid = row.status === 'scheduled' ? row.maxCapacity : spotsFilled;
+  // Practice / Marathon (`payAll`) use a linear house-funded curve:
+  // sum of all per-rank prizes from `computeLinearPracticeCurve(N)`.
+  // Static `prize_pool_cents=5` from the migration is misleading —
+  // it doesn't scale with N and was the legacy hardcode.
+  const dynamicPool = row.payAll
+    ? sumLinearCurve(spotsFilled || row.maxCapacity)
+    : computeActualPrizeCents({
+        totalCount: poolCountForPaid,
+        entryFeeCents: Number(row.entryFeeCents),
+        rakePct,
+        guaranteedPoolCents: Number(row.prizePoolCents),
+      });
   return {
     id: row.id,
     name: row.name,

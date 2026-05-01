@@ -218,6 +218,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     refreshPricesBeforeLock: async () => {
       await tokens.syncActive();
     },
+    botFillEnabled: deps.config.BOT_FILL_ENABLED,
   });
 
   const leaderboardRepo = createLeaderboardRepo(deps.db);

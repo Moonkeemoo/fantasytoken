@@ -361,10 +361,14 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
     },
 
     async getLeaderboard({ callerUserId, scope, friendIds, limit }) {
-      // Top recruiters by SUM(payout_cents) of incoming referral_payouts.
-      // For 'friends' scope we restrict to friendIds + the caller themselves
-      // (so they always see where they sit on their own friend leaderboard).
-      // Empty scope → empty leaderboard, no point hitting the DB.
+      // Top recruiters by total INCOME from being-a-recruiter — both
+      // commission payouts (referee wins) AND the +25 unlocked
+      // RECRUITER_SIGNUP_BONUS. Pre-2026-05-01 we summed only
+      // `referral_payouts.payout_cents`, which left the leaderboard
+      // empty whenever no referee had yet won a paid contest. With
+      // 100-synth cohort + a few hours of prod sim, 30 RECRUITER signup
+      // bonuses had unlocked but board was still empty — surprise.
+      // INV-9: `transactions` is source of truth; aggregate from there.
       const wantUserIds =
         scope === 'global' ? null : Array.from(new Set([callerUserId, ...friendIds]));
       if (scope === 'friends' && wantUserIds!.length === 0) {
@@ -380,19 +384,20 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
         rank: number;
       }>(sql`
         WITH agg AS (
-          SELECT rp.recipient_user_id AS user_id,
-                 SUM(rp.payout_cents)::bigint AS total
-          FROM referral_payouts rp
-          ${
-            scope === 'friends'
-              ? sql`WHERE rp.recipient_user_id IN (${sql.join(
-                  wantUserIds!.map((id) => sql`${id}`),
-                  sql`, `,
-                )})`
-              : sql``
-          }
-          GROUP BY rp.recipient_user_id
-          HAVING SUM(rp.payout_cents) > 0
+          SELECT t.user_id,
+                 SUM(t.delta_cents)::bigint AS total
+          FROM transactions t
+          WHERE t.type IN ('RECRUITER_SIGNUP_BONUS', 'REFERRAL_COMMISSION')
+            ${
+              scope === 'friends'
+                ? sql`AND t.user_id IN (${sql.join(
+                    wantUserIds!.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`
+                : sql``
+            }
+          GROUP BY t.user_id
+          HAVING SUM(t.delta_cents) > 0
         )
         SELECT
           a.user_id,

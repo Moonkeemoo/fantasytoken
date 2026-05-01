@@ -13,6 +13,13 @@ const ConfigSchema = z.object({
   RAKE_PCT: z.coerce.number().int().min(0).max(50).default(10),
   BOT_MIN_FILLER: z.coerce.number().int().nonnegative().default(20),
   BOT_RATIO: z.coerce.number().int().nonnegative().default(3),
+  // Off by default 2026-05-01 — synthetic users (TZ-005) populate
+  // contests now, no need for the fake-bot filler that pre-dates them.
+  // Flip back on if a sim is ever disabled to keep contests non-empty.
+  BOT_FILL_ENABLED: z
+    .string()
+    .default('false')
+    .transform((s) => ['true', '1', 'yes', 'on'].includes(s.toLowerCase())),
 
   // Empty string → empty array. List of TG IDs as integers.
   ADMIN_TG_IDS: z
