@@ -106,6 +106,7 @@ export function makeReferralsRoutes(deps: ReferralsRoutesDeps): FastifyPluginAsy
         photoUrl: row.photoUrl,
         totalEarnedCents: toCents(row.totalEarnedCents, 'totalEarnedCents'),
         l1Count: row.l1Count,
+        l2Count: row.l2Count,
         isMe: row.userId === me.userId,
       });
       const response: typeof ReferralsLeaderboardResponse._type = {

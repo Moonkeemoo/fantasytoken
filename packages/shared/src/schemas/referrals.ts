@@ -66,7 +66,10 @@ const ReferralLeaderRow = z.object({
   firstName: z.string().nullable(),
   photoUrl: z.string().nullable(),
   totalEarnedCents: z.number().int().nonnegative(),
+  /** Direct referees (`users.referrer_user_id = me`). */
   l1Count: z.number().int().nonnegative(),
+  /** Referees of direct referees (depth-2 cascade). */
+  l2Count: z.number().int().nonnegative().default(0),
   isMe: z.boolean(),
 });
 

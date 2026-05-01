@@ -368,7 +368,7 @@ function RecruiterRow({ row }: { row: ReferralsLeaderboardResponse['items'][numb
           {row.isMe && <span className="ml-1 text-accent">· you</span>}
         </div>
         <div className="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">
-          {row.l1Count} L1 invited
+          {row.l1Count} L1 · {row.l2Count} L2
         </div>
       </div>
       <div className="font-mono text-[14px] font-extrabold text-hl-green">

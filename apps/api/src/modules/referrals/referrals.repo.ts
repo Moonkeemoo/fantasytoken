@@ -381,6 +381,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
         photo_url: string | null;
         total_cents: string;
         l1_count: number;
+        l2_count: number;
         rank: number;
       }>(sql`
         WITH agg AS (
@@ -404,7 +405,13 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
           u.first_name,
           u.photo_url,
           a.total::text AS total_cents,
-          (SELECT COUNT(*)::int FROM users u2 WHERE u2.referrer_user_id = a.user_id) AS l1_count,
+          (SELECT COUNT(*)::int
+             FROM users u1 WHERE u1.referrer_user_id = a.user_id) AS l1_count,
+          -- L2 = referees of my referees. Single subquery via JOIN-on-self.
+          (SELECT COUNT(*)::int
+             FROM users u2
+             JOIN users u1 ON u1.id = u2.referrer_user_id
+             WHERE u1.referrer_user_id = a.user_id) AS l2_count,
           ROW_NUMBER() OVER (ORDER BY a.total DESC, a.user_id ASC)::int AS rank
         FROM agg a
         JOIN users u ON u.id = a.user_id
@@ -418,6 +425,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
           photo_url: string | null;
           total_cents: string;
           l1_count: number;
+          l2_count: number;
           rank: number;
         }>
       ).map((r) => ({
@@ -427,6 +435,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
         photoUrl: r.photo_url,
         totalEarnedCents: BigInt(r.total_cents),
         l1Count: r.l1_count,
+        l2Count: r.l2_count,
       }));
 
       // Caller's own row, if not already in `items`. Computed via the same
@@ -434,27 +443,32 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
       const inList = list.find((r) => r.userId === callerUserId);
       let myRow = inList ?? null;
       if (!inList) {
+        // Same source-of-truth as the main aggregate: transactions with
+        // RECRUITER_SIGNUP_BONUS / REFERRAL_COMMISSION types. l1/l2 are
+        // structural counts from `users.referrer_user_id`.
         const meRows = await db.execute<{
           first_name: string | null;
           photo_url: string | null;
           total_cents: string;
           l1_count: number;
+          l2_count: number;
           rank: number;
         }>(sql`
           WITH agg AS (
-            SELECT rp.recipient_user_id AS user_id,
-                   SUM(rp.payout_cents)::bigint AS total
-            FROM referral_payouts rp
-            ${
-              scope === 'friends'
-                ? sql`WHERE rp.recipient_user_id IN (${sql.join(
-                    wantUserIds!.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`
-                : sql``
-            }
-            GROUP BY rp.recipient_user_id
-            HAVING SUM(rp.payout_cents) > 0
+            SELECT t.user_id,
+                   SUM(t.delta_cents)::bigint AS total
+            FROM transactions t
+            WHERE t.type IN ('RECRUITER_SIGNUP_BONUS', 'REFERRAL_COMMISSION')
+              ${
+                scope === 'friends'
+                  ? sql`AND t.user_id IN (${sql.join(
+                      wantUserIds!.map((id) => sql`${id}`),
+                      sql`, `,
+                    )})`
+                  : sql``
+              }
+            GROUP BY t.user_id
+            HAVING SUM(t.delta_cents) > 0
           ),
           ranked AS (
             SELECT a.user_id, a.total,
@@ -466,7 +480,12 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
             r.total::text AS total_cents,
             u.first_name,
             u.photo_url,
-            (SELECT COUNT(*)::int FROM users u2 WHERE u2.referrer_user_id = ${callerUserId}) AS l1_count
+            (SELECT COUNT(*)::int
+               FROM users u1 WHERE u1.referrer_user_id = ${callerUserId}) AS l1_count,
+            (SELECT COUNT(*)::int
+               FROM users u2
+               JOIN users u1 ON u1.id = u2.referrer_user_id
+               WHERE u1.referrer_user_id = ${callerUserId}) AS l2_count
           FROM ranked r
           JOIN users u ON u.id = r.user_id
           WHERE r.user_id = ${callerUserId}
@@ -478,6 +497,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
             first_name: string | null;
             photo_url: string | null;
             l1_count: number;
+            l2_count: number;
           }>
         )[0];
         if (m) {
@@ -488,6 +508,7 @@ export function createReferralsRepo(db: Database): ReferralsRepo {
             photoUrl: m.photo_url,
             totalEarnedCents: BigInt(m.total_cents),
             l1Count: m.l1_count,
+            l2Count: m.l2_count,
           };
         }
       }

@@ -150,6 +150,7 @@ export interface ReferralsRepo {
       photoUrl: string | null;
       totalEarnedCents: bigint;
       l1Count: number;
+      l2Count: number;
     }>;
     myRow: {
       rank: number;
@@ -158,6 +159,7 @@ export interface ReferralsRepo {
       photoUrl: string | null;
       totalEarnedCents: bigint;
       l1Count: number;
+      l2Count: number;
     } | null;
   }>;
 
