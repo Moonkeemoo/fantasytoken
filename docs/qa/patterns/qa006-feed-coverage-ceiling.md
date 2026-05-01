@@ -1,10 +1,13 @@
-# qa006 — Live-feed coverage ceiling per exchange
+# qa006 — Live-feed coverage ceiling per exchange (and Railway-side block)
 
 **First seen:** 2026-05-01 — task #41 ("Drive Bybit feed coverage to ≥95%")
 revealed Bybit + OKX combined cap out at ~50% of our 519-token catalog.
-**Severity:** product expectation mismatch, not a bug. Caught at the moment
-we measured prod freshness.
-**Fix commit:** see `feat(prices): add Gate.io feed for long-tail coverage`.
+A Gate.io 3rd feed was added next, but Railway's egress IP is silently
+black-holed by Gate's WS endpoint — locally the same code works, in prod
+every connection idles for exactly 60s and closes with code=1006.
+**Severity:** product expectation mismatch + an environment-specific block
+that doesn't surface as an error.
+**Fix commits:** `c792593` (added Gate.io), reverted next commit (Railway-blocked).
 
 ## Symptom
 
@@ -32,7 +35,23 @@ don't list on those two. The "≥95% via Bybit alone" framing was infeasible.
 
 > **A live-feed coverage target above ~50% requires ≥3 exchanges, and
 > above ~90% requires accepting that some catalog tokens (RWA, illiquid)
-> have no live source — only CoinGecko cron.**
+> have no live source — only CoinGecko cron. Always probe the candidate
+> exchange from the actual prod IP before counting on it — Railway and
+> similar US-egress hosts are quietly blocked by some endpoints.**
+
+The Railway-side block looks like this in logs:
+
+```
+gateio.ws.open       symbolCount=519
+(60 seconds of silence)
+gateio.ws.closed     code=1006 backoffMs=1000
+```
+
+No subscribe response, no error frame, no data. The local probe
+(`apps/api/scripts/probe-gateio.ts`) hits the same URL with the same
+payload and gets a `result.status:"success"` reply within 1s plus a
+continuous update stream. The disconnect is a server-side idle close
+because our subscribe never registers on their end — a near-silent block.
 
 Diagnostic recipe (committed at `apps/api/scripts/check-feed-gap.ts`):
 
@@ -45,8 +64,10 @@ Diagnostic recipe (committed at `apps/api/scripts/check-feed-gap.ts`):
 Coverage strategy that emerged:
 
 - **Bybit + OKX**: top-tier liquidity (~50% of catalog).
-- **+ Gate.io**: long-tail memes/L1s (~30 more percentage points).
-- **CoinGecko cron**: 60s fallback for the residue (RWA + dead listings).
+- **Gate.io tried, blocked from Railway** — kept in qa006/git log as a
+  pre-known dead end so the next attempt jumps straight to MEXC/KuCoin
+  rather than re-deriving the issue.
+- **CoinGecko cron**: 60s fallback for the residue (~50% of catalog).
 - **Per-symbol drop**: review tokens with `age > 1d` quarterly — these
   are usually delisted and shouldn't be in a "top 500" basket anyway.
 

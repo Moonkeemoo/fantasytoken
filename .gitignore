@@ -18,6 +18,10 @@ build/
 .tmp/
 !.tmp/.gitkeep
 
+# session-local state for the Claude tooling
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks/
+
 # logs
 *.log
 npm-debug.log*

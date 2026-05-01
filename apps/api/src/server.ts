@@ -20,7 +20,6 @@ import { makeTokensRoutes } from './modules/tokens/tokens.routes.js';
 import { createPriceFeedWriter } from './modules/tokens/price-feed.service.js';
 import { startBybitFeed } from './lib/bybit.js';
 import { startOkxFeed } from './lib/okx.js';
-import { startGateioFeed } from './lib/gateio.js';
 import { createContestsRepo } from './modules/contests/contests.repo.js';
 import { createContestsService } from './modules/contests/contests.service.js';
 import { makeContestsRoutes } from './modules/contests/contests.routes.js';
@@ -433,20 +432,19 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
     deps.config.NODE_ENV === 'test'
       ? null
       : createPriceFeedWriter({ repo: tokensRepo, log: deps.logger });
-  // Three parallel live feeds — Bybit (primary, ~459 USDT spot pairs),
-  // OKX (~296 pairs, fills gaps), and Gate.io (~2000 pairs, captures the
-  // long-tail memecoins/L1s the other two don't list). All three push
-  // into the same coalescing writer; last write wins per symbol inside
-  // the 1s flush window — contention is rare because the exchanges'
-  // coverage overlaps only partially, and when it does, any of them is
-  // an acceptable source-of-truth tick.
+  // Two parallel live feeds — Bybit (primary, ~459 USDT spot pairs) and
+  // OKX (secondary, ~296 pairs, fills gaps). Both push into the same
+  // coalescing writer; last write wins per symbol inside the 1s flush
+  // window — contention is rare because their coverage overlaps only
+  // partially, and either is an acceptable source-of-truth tick.
   // Diagnosed via apps/api/scripts/check-feed-gap.ts: Bybit+OKX cover
-  // ~50% of our 519-token catalog; adding Gate.io closes most of the
-  // remaining gap (the residue is RWA/illiquid tokens served by the
-  // CoinGecko cron at ~60s).
+  // ~50% of our 519-token catalog. Gate.io was tried as a 3rd feed
+  // (apps/api/src/lib/gateio.ts) but Railway's egress IP gets silently
+  // black-holed by Gate's WS endpoint — see qa006 for the trace. The
+  // remaining ~50% of the catalog is served by the CoinGecko cron at
+  // 60s cadence.
   let bybitHandle: { stop: () => void } | null = null;
   let okxHandle: { stop: () => void } | null = null;
-  let gateioHandle: { stop: () => void } | null = null;
   if (priceFeedWriter !== null) {
     void (async () => {
       try {
@@ -457,11 +455,6 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
           onUpdate: (updates) => priceFeedWriter.push(updates),
         });
         okxHandle = startOkxFeed({
-          log: deps.logger,
-          symbols,
-          onUpdate: (updates) => priceFeedWriter.push(updates),
-        });
-        gateioHandle = startGateioFeed({
           log: deps.logger,
           symbols,
           onUpdate: (updates) => priceFeedWriter.push(updates),
@@ -552,7 +545,6 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       if (stopSimTick) stopSimTick();
       if (bybitHandle) bybitHandle.stop();
       if (okxHandle) okxHandle.stop();
-      if (gateioHandle) gateioHandle.stop();
       if (priceFeedWriter) priceFeedWriter.stop();
       if (bot) void bot.stop();
       realtimeHub.closeAll();
