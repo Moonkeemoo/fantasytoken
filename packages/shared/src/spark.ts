@@ -68,3 +68,41 @@ export function sparkPath(seed: string, isUp: boolean): string {
 
 export const SPARK_VIEWBOX = `0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}` as const;
 export const SPARK_DIMENSIONS = { width: SPARK_WIDTH, height: SPARK_HEIGHT } as const;
+
+// ─── Histogram — 16 hourly bars showing 24h volatility + direction ───
+
+const HIST_BARS = 16;
+
+/**
+ * Returns an array of 16 normalized bar heights in [0, 1] for the
+ * mini-histogram component. Deterministic per (seed, isUp, pctMagnitude)
+ * — same token + same direction always renders the same shape, so the
+ * rows don't shimmer between renders.
+ *
+ * Magnitude controls the spread: small movements (<2%) cluster bars
+ * around the middle; bigger movements (>10%) push later bars near the
+ * edges (visual "the move is happening NOW").
+ *
+ * NOT a real price feed — same disclaimer as sparkPath above. When we
+ * have hourly price snapshots stored backend-side, swap callers to the
+ * real series.
+ */
+export function histogramBars(seed: string, isUp: boolean, pctMagnitude = 1): number[] {
+  const rng = mulberry32(hashSeed(seed));
+  // Normalize magnitude: 0% → 0.15 spread, 10% → 0.85 spread.
+  const spread = Math.max(0.15, Math.min(0.85, Math.abs(pctMagnitude) / 12));
+  // Direction lifts the back half of the day.
+  const trendBias = isUp ? 1 : -1;
+  const out: number[] = [];
+  for (let i = 0; i < HIST_BARS; i++) {
+    // Recent hours weighted heavier — gives a "now" feel to the right edge.
+    const recency = i / (HIST_BARS - 1);
+    const noise = rng();
+    // Base height: 0.5 ± noise×spread, plus a recency-weighted trend kick.
+    const base = 0.5 + (noise - 0.5) * spread + trendBias * recency * spread * 0.6;
+    out.push(Math.max(0.08, Math.min(1, base)));
+  }
+  return out;
+}
+
+export const HISTOGRAM_BAR_COUNT = HIST_BARS;

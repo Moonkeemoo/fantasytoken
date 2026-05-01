@@ -1,6 +1,7 @@
 import type { LineupRow } from '@fantasytoken/shared';
 import { fmtPnL } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
+import { TokenHistogram } from '../../components/ui/TokenHistogram.js';
 import { Label } from '../../components/ui/Label.js';
 
 export interface LiveTeamProps {
@@ -64,6 +65,17 @@ export function LiveTeam({ rows }: LiveTeamProps): JSX.Element {
                   )}
                 </div>
               </div>
+              {/* Mini histogram of the last 24h — direction tints the bars
+                  (bull / bear), magnitude spreads them. Same primitive as
+                  the Browse list so the player builds a single visual
+                  language across the app. */}
+              <TokenHistogram
+                symbol={r.symbol}
+                pctChange24h={r.pctChange * 100}
+                width={48}
+                height={20}
+                className="shrink-0"
+              />
               <div className="text-right">
                 <div className={`font-mono text-[14px] font-bold ${pnlColor}`}>
                   {fmtPnL(r.contribUsd)}

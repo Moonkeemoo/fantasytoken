@@ -1,6 +1,7 @@
 import type { Token } from '@fantasytoken/shared';
 import { fmtMoney } from '@fantasytoken/shared';
 import { TokenIcon } from '../../components/ui/TokenIcon.js';
+import { TokenHistogram } from '../../components/ui/TokenHistogram.js';
 import type { ContestMode } from './lineupReducer.js';
 
 export interface TokenResultRowProps {
@@ -77,6 +78,13 @@ export function TokenResultRow({
           )}
         </div>
       </div>
+      <TokenHistogram
+        symbol={token.symbol}
+        pctChange24h={d24}
+        width={56}
+        height={22}
+        className="shrink-0"
+      />
       <div className="flex shrink-0 flex-col items-end gap-0.5">
         {fits && <span className="text-[10px] font-semibold text-bull">✓ fit</span>}
         {fightsBg && <span className="text-[10px] font-semibold text-bear">✗ fights</span>}
