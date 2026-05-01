@@ -127,7 +127,7 @@ describe('seedService.seed', () => {
     });
     expect(currency.credits).toHaveLength(1);
     expect(currency.credits[0]?.type).toBe('DEV_GRANT');
-    expect(currency.credits[0]?.delta).toBe(1000n); // SIM_CONFIG whale starting
+    expect(currency.credits[0]?.delta).toBe(20n); // welcome-bonus floor — same as a real new user
   });
 
   it('is reproducible from batchSeed — same input → same handles', async () => {

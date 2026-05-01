@@ -1,7 +1,7 @@
-import { and, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { PersonaKind } from '@fantasytoken/shared';
 import type { Database } from '../db/client.js';
-import { contests, entries, syntheticActionsLog, tokens, users } from '../db/schema/index.js';
+import { contests, entries, tokens, users } from '../db/schema/index.js';
 import type { PoolToken } from './lineup_picker.js';
 
 /**
@@ -36,9 +36,6 @@ export interface TickRepo {
    * entry. One query, one round-trip; cheap because of the partial unique
    * index `entries_user_contest_uniq`. */
   loadEnteredPairs(synthIds: string[], contestIds: string[]): Promise<Set<string>>;
-  /** Per-user most-recent successful 'top_up' tick. Used by tick.service
-   * to enforce persona.topUpBehavior.intervalDays. */
-  loadLastTopUpAt(userIds: string[]): Promise<Map<string, Date>>;
 }
 
 export function createTickRepo(db: Database): TickRepo {
@@ -106,29 +103,6 @@ export function createTickRepo(db: Database): TickRepo {
       for (const r of rows) {
         if (r.userId) out.add(`${r.userId}|${r.contestId}`);
       }
-      return out;
-    },
-
-    async loadLastTopUpAt(userIds) {
-      if (userIds.length === 0) return new Map();
-      // GROUP BY user_id, MAX(tick) WHERE action='top_up' AND outcome='success'.
-      // Indexed on (user_id, tick) — sim_log_user_tick_idx.
-      const rows = await db
-        .select({
-          userId: syntheticActionsLog.userId,
-          lastAt: sql<Date>`MAX(${syntheticActionsLog.tick})`.as('last_at'),
-        })
-        .from(syntheticActionsLog)
-        .where(
-          and(
-            inArray(syntheticActionsLog.userId, userIds),
-            eq(syntheticActionsLog.action, 'top_up'),
-            eq(syntheticActionsLog.outcome, 'success'),
-          ),
-        )
-        .groupBy(syntheticActionsLog.userId);
-      const out = new Map<string, Date>();
-      for (const r of rows) out.set(r.userId, new Date(r.lastAt));
       return out;
     },
   };

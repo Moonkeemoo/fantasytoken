@@ -6,7 +6,6 @@ import type { TickOpenContest, TickRepo, TickSynthetic } from './tick.repo.js';
 import { joinContest } from './actions/join_contest.js';
 import { login } from './actions/login.js';
 import { idle } from './actions/idle.js';
-import { topUp } from './actions/top_up.js';
 import { inviteFriend } from './actions/invite_friend.js';
 import { density } from './pacing.js';
 import { SIM_CONFIG } from './sim.config.js';
@@ -96,8 +95,6 @@ export function createTickService(deps: TickServiceDeps): TickService {
         contestIds.length > 0
           ? await deps.repo.loadEnteredPairs(synthIds, contestIds)
           : new Set<string>();
-      const lastTopUpAt = await deps.repo.loadLastTopUpAt(synthIds);
-
       const tickClock = now();
       const hour = tickClock.getUTCHours();
 
@@ -158,24 +155,10 @@ export function createTickService(deps: TickServiceDeps): TickService {
           }
         }
 
-        // 2) Top-up — only personas with topUpBehavior, only if cooldown elapsed.
-        if (persona.topUpBehavior) {
-          const last = lastTopUpAt.get(synth.id);
-          const elapsedMs = last ? tickClock.getTime() - last.getTime() : Number.POSITIVE_INFINITY;
-          const intervalMs = persona.topUpBehavior.intervalDays * 24 * 60 * 60 * 1000;
-          if (elapsedMs >= intervalMs && random() < 0.2) {
-            const result = await topUp(
-              { currency: deps.currency, log: deps.log },
-              { userId: synth.id, amountCoins: persona.topUpBehavior.amountCoins },
-            );
-            if (result.kind === 'success') {
-              stats.topUpsGranted += 1;
-              lastTopUpAt.set(synth.id, tickClock); // prevent retry this tick
-            }
-          }
-        }
-
-        // 3) Invite friend — rarest action, gated by persona referralRate.
+        // 2) Invite friend — rarest action, gated by persona referralRate.
+        // (Top-up removed 2026-05-01 — synthetics never DEV_GRANT after
+        // their initial welcome bonus. Closed-loop economy: only
+        // contest wins or referral bonuses bring in new coins.)
         if (invitesLeft > 0 && persona.referralRate > 0 && random() < persona.referralRate) {
           invitesLeft -= 1;
           const childSeed = (Math.floor(random() * 0xffffffff) ^ Date.now()) >>> 0;

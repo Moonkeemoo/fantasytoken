@@ -79,9 +79,11 @@ export const SIM_CONFIG: {
   },
 
   personas: {
-    // Casual: matches a real user's welcome bonus floor. Canary for economy
-    // holes — if casuals drain to zero before earning a prize, the welcome
-    // grant is too small.
+    // ALL personas start with WELCOME_BONUS_COINS=20 — synthetics simulate
+    // brand-new players, no different from a real user landing for the
+    // first time. Their economy is closed-loop after that: the only way
+    // to gain coins is to win a contest or bring a referral. No top-ups
+    // (TZ-005 §3 amended 2026-05-01: synths never DEV_GRANT after seed).
     casual: {
       startingCoins: 20,
       loginProbabilityByHour: hourCurve('peak-evening', 0.1, 0.3),
@@ -106,24 +108,24 @@ export const SIM_CONFIG: {
     },
     // Streaker: daily login at consistent hour, rank-focused, balanced.
     streaker: {
-      startingCoins: 50,
+      startingCoins: 20,
       loginProbabilityByHour: hourCurve('daily-burst', 0.05, 0.85),
       lineupSize: { min: 3, max: 5 },
       tokenBias: 'mixed',
       joinFreeRate: 0.18,
       joinPaidRate: 0.04,
-      topUpBehavior: { intervalDays: 14, amountCoins: 50 },
+      topUpBehavior: null,
       referralRate: 0.002,
     },
     // Meme chaser: late-night peaks, small lineups (1-2 tokens).
     meme_chaser: {
-      startingCoins: 30,
+      startingCoins: 20,
       loginProbabilityByHour: hourCurve('peak-late-night', 0.05, 0.55),
       lineupSize: { min: 1, max: 2 },
       tokenBias: 'meme',
       joinFreeRate: 0.1,
       joinPaidRate: 0.06,
-      topUpBehavior: { intervalDays: 7, amountCoins: 25 },
+      topUpBehavior: null,
       referralRate: 0.002,
     },
     // Lurker: opens app rarely, observes leaderboards, almost never plays.
@@ -140,7 +142,7 @@ export const SIM_CONFIG: {
     // Inviter: high referral rate; plays just enough to keep referees
     // active. Mid-day social peak.
     inviter: {
-      startingCoins: 30,
+      startingCoins: 20,
       loginProbabilityByHour: hourCurve('peak-midday', 0.1, 0.5),
       lineupSize: { min: 3, max: 5 },
       tokenBias: 'mixed',
@@ -149,15 +151,17 @@ export const SIM_CONFIG: {
       topUpBehavior: null,
       referralRate: 0.05,
     },
-    // Whale: high spend, joins all paid contests, conviction plays.
+    // Whale: high spend, joins paid contests aggressively, small conviction
+    // lineups. Same starting balance — they earn their way up via wins,
+    // not via being born rich.
     whale: {
-      startingCoins: 1000,
+      startingCoins: 20,
       loginProbabilityByHour: hourCurve('twin-peak', 0.1, 0.85),
       lineupSize: { min: 1, max: 2 },
       tokenBias: 'volatile',
       joinFreeRate: 0.05,
       joinPaidRate: 0.3,
-      topUpBehavior: { intervalDays: 7, amountCoins: 500 },
+      topUpBehavior: null,
       referralRate: 0.002,
     },
   },

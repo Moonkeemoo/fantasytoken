@@ -26,7 +26,6 @@ function makeRepo(opts: {
   contests?: Array<{ id: string; entryFeeCents: bigint; createdAt: Date; startsAt: Date }>;
   pool?: Array<{ symbol: string; marketCapUsd: number | null; pctChange24h: number | null }>;
   entered?: string[]; // "userId|contestId"
-  lastTopUp?: Map<string, Date>;
 }): TickRepo {
   return {
     async listSynthetics() {
@@ -41,9 +40,6 @@ function makeRepo(opts: {
     },
     async loadEnteredPairs() {
       return new Set(opts.entered ?? []);
-    },
-    async loadLastTopUpAt() {
-      return opts.lastTopUp ?? new Map();
     },
   };
 }
@@ -220,50 +216,17 @@ describe('tickService.tick', () => {
     expect(stats.joinsAttempted).toBe(2);
   });
 
-  it('top-up fires only when cooldown elapsed', async () => {
+  it('top-up never fires (closed-loop economy — synthetics earn coins only via wins/referrals)', async () => {
     const log = makeLog();
     const config = structuredClone(SIM_CONFIG);
     config.personas.whale.loginProbabilityByHour = new Array(24).fill(1);
     config.personas.whale.joinFreeRate = 0;
     config.personas.whale.joinPaidRate = 0;
     config.personas.whale.referralRate = 0;
-    // intervalDays default = 7 for whale — last top-up 8 days ago should fire.
-    const now = new Date('2026-05-01T12:00:00Z');
-    const lastTopUp = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
-
     const svc = createTickService({
       repo: makeRepo({
         synths: [{ id: 'u1', personaKind: 'whale', syntheticSeed: 1 }],
         contests: [],
-        lastTopUp: new Map([['u1', lastTopUp]]),
-      }),
-      seedRepo: makeSeedRepo(),
-      entries: makeEntries(),
-      currency: makeCurrency(),
-      signupBonuses: SIGNUP_BONUSES,
-      log,
-      serverLog: silent(),
-      config,
-      random: () => 0.05, // < the internal 0.20 gate → fires
-      now: () => now,
-    });
-    const stats = await svc.tick();
-    expect(stats.topUpsGranted).toBe(1);
-  });
-
-  it('top-up does NOT fire when within cooldown window', async () => {
-    const log = makeLog();
-    const config = structuredClone(SIM_CONFIG);
-    config.personas.whale.loginProbabilityByHour = new Array(24).fill(1);
-    config.personas.whale.referralRate = 0;
-    const now = new Date('2026-05-01T12:00:00Z');
-    const lastTopUp = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000); // 1 day ago
-
-    const svc = createTickService({
-      repo: makeRepo({
-        synths: [{ id: 'u1', personaKind: 'whale', syntheticSeed: 1 }],
-        contests: [],
-        lastTopUp: new Map([['u1', lastTopUp]]),
       }),
       seedRepo: makeSeedRepo(),
       entries: makeEntries(),
@@ -273,7 +236,6 @@ describe('tickService.tick', () => {
       serverLog: silent(),
       config,
       random: () => 0.05,
-      now: () => now,
     });
     const stats = await svc.tick();
     expect(stats.topUpsGranted).toBe(0);

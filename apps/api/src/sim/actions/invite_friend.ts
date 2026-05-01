@@ -93,7 +93,9 @@ export async function inviteFriend(
       recruiterUserId: args.inviter.id,
     });
 
-    // Starter balance — same DEV_GRANT shape as the batch seed flow.
+    // Welcome bonus — same flat amount real users get on first auth (20).
+    // The +25 referral bonus arrives separately via the existing
+    // referrals.maybeUnlockSignupBonuses hook on first finalized contest.
     const startingCoins = config.personas[childPersona].startingCoins;
     if (startingCoins > 0) {
       await deps.currency.transact({
