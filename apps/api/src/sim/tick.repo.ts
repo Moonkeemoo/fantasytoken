@@ -1,7 +1,14 @@
-import { and, eq, gt, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray, sql as dsql } from 'drizzle-orm';
 import type { PersonaKind } from '@fantasytoken/shared';
 import type { Database } from '../db/client.js';
-import { balances, contests, entries, tokens, users } from '../db/schema/index.js';
+import {
+  balances,
+  contests,
+  entries,
+  syntheticActionsLog,
+  tokens,
+  users,
+} from '../db/schema/index.js';
 import type { PoolToken } from './lineup_picker.js';
 
 /**
@@ -46,6 +53,16 @@ export interface TickRepo {
    * afford — without this they'd hammer paid contests with INSUFFICIENT_COINS
    * rejections and drown the real "drained" signal. */
   loadBalancesByUser(synthIds: string[]): Promise<Map<string, bigint>>;
+  /** Faucet state per synth (2026-05-02). Returns the count of
+   * `cannot_afford` events within `lookbackMinutes` and the timestamp
+   * of the most recent `faucet_top_up` (any time). Synths without
+   * either signal are absent from the map. One indexed query —
+   * synthetic_actions_log has `sim_log_user_tick_idx` on (user_id, tick)
+   * and `sim_log_action_tick_idx` on (action, tick). */
+  loadFaucetState(
+    synthIds: string[],
+    lookbackMinutes: number,
+  ): Promise<Map<string, { recentCantAffordCount: number; lastFaucetAt: Date | null }>>;
 }
 
 export function createTickRepo(db: Database): TickRepo {
@@ -128,6 +145,29 @@ export function createTickRepo(db: Database): TickRepo {
         .where(and(inArray(balances.userId, synthIds), eq(balances.currencyCode, 'USD')));
       const out = new Map<string, bigint>();
       for (const r of rows) out.set(r.userId, r.amountCents);
+      return out;
+    },
+
+    async loadFaucetState(synthIds, lookbackMinutes) {
+      if (synthIds.length === 0) return new Map();
+      const rows = await db
+        .select({
+          userId: syntheticActionsLog.userId,
+          cantAfford: dsql<number>`COUNT(*) FILTER (WHERE ${syntheticActionsLog.action} = 'cannot_afford' AND ${syntheticActionsLog.tick} > now() - (${lookbackMinutes} || ' minutes')::interval)::int`,
+          lastFaucet: dsql<Date | null>`MAX(${syntheticActionsLog.tick}) FILTER (WHERE ${syntheticActionsLog.action} = 'faucet_top_up')`,
+        })
+        .from(syntheticActionsLog)
+        .where(inArray(syntheticActionsLog.userId, synthIds))
+        .groupBy(syntheticActionsLog.userId);
+      const out = new Map<string, { recentCantAffordCount: number; lastFaucetAt: Date | null }>();
+      for (const r of rows) {
+        if (r.cantAfford > 0 || r.lastFaucet !== null) {
+          out.set(r.userId, {
+            recentCantAffordCount: r.cantAfford,
+            lastFaucetAt: r.lastFaucet,
+          });
+        }
+      }
       return out;
     },
   };

@@ -67,6 +67,17 @@ export const SIM_CONFIG: {
    * stagnant from the outside. 3 attempts per synth per minute aligns
    * with realistic player behaviour: scan lobby, pick 1-3 contests. */
   perSynthJoinAttemptsPerTick: number;
+  /** Cohort-liveness faucet (2026-05-02). When a synth has hit
+   * ≥`faucetMinCantAffordEvents` `cannot_afford` events in the last
+   * `faucetLookbackMinutes` minutes AND has balance=0 AND its last
+   * faucet was more than `faucetCooldownMinutes` minutes ago,
+   * top up to `faucetTopUpCoins`. Cohort-only mechanism — never
+   * touches real users (INV-14 + tick iterates is_synthetic=true). */
+  faucetEnabled: boolean;
+  faucetTopUpCoins: number;
+  faucetLookbackMinutes: number;
+  faucetMinCantAffordEvents: number;
+  faucetCooldownMinutes: number;
   /** Cap on per-tick invite attempts across the whole synthetic pool. */
   perTickInviteAttemptsCap: number;
   /** Minimum time-between-actions per synthetic, in seconds. Prevents one
@@ -93,6 +104,18 @@ export const SIM_CONFIG: {
   // being the actual fairness control.
   perTickJoinAttemptsCap: 2500,
   perSynthJoinAttemptsPerTick: 3,
+
+  // Faucet defaults — tuned 2026-05-02 against the 2408-synth cohort.
+  // 3 cant_afford events in 15 min = "really stuck", not a transient
+  // mid-day balance dip. 60 min cooldown means the synth has to put
+  // their refill to work between faucets — otherwise they'd just
+  // leak into a steady drip-feed instead of a real "play out, recover"
+  // arc. 20 coins matches the welcome floor.
+  faucetEnabled: true,
+  faucetTopUpCoins: 20,
+  faucetLookbackMinutes: 15,
+  faucetMinCantAffordEvents: 3,
+  faucetCooldownMinutes: 60,
   // Disabled 2026-05-01 — synth-to-synth referral chains were piling
   // up children faster than the cohort needed (each invite spawns a
   // new persona via inviteFriend → seedRepo). Setting the per-tick cap

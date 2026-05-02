@@ -55,6 +55,12 @@ function makeRepo(opts: {
     async loadBalancesByUser() {
       return opts.balances ?? new Map();
     },
+    async loadFaucetState() {
+      // Tests that exercise the faucet path inject their own repo; this
+      // default is "no faucet candidates" so existing throughput / rank
+      // tests don't change behaviour.
+      return new Map();
+    },
   };
 }
 

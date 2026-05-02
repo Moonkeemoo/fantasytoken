@@ -32,6 +32,11 @@ export const SyntheticAction = z.enum([
   // to play but every open contest is above their balance. Lets us spot
   // the drained moment (and conditions: balance, cheapest fee, persona).
   'cannot_afford',
+  // 2026-05-02 — cohort-liveness faucet: a drained synth that has hit
+  // ≥N cannot_afford events in the lookback window gets a DEV_GRANT
+  // back to the welcome floor. Synth-only mechanism; INV-14 keeps it
+  // off real-user paths.
+  'faucet_top_up',
 ]);
 export type SyntheticAction = z.infer<typeof SyntheticAction>;
 

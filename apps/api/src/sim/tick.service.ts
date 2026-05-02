@@ -6,6 +6,7 @@ import type { TickRepo } from './tick.repo.js';
 import { joinContest } from './actions/join_contest.js';
 import { login } from './actions/login.js';
 import { idle } from './actions/idle.js';
+import { applyFaucet } from './actions/faucet.js';
 import { density } from './pacing.js';
 import { SIM_CONFIG } from './sim.config.js';
 import type { SeedRepo } from './seed.service.js';
@@ -32,6 +33,7 @@ export interface TickStats {
   joinsSucceeded: number;
   topUpsGranted: number;
   invitesCreated: number;
+  faucetTopUps: number;
   durationMs: number;
 }
 
@@ -76,6 +78,7 @@ export function createTickService(deps: TickServiceDeps): TickService {
         joinsSucceeded: 0,
         topUpsGranted: 0,
         invitesCreated: 0,
+        faucetTopUps: 0,
         durationMs: 0,
       };
 
@@ -95,8 +98,15 @@ export function createTickService(deps: TickServiceDeps): TickService {
           ? await deps.repo.loadEnteredPairs(synthIds, contestIds)
           : new Set<string>();
       const balancesByUser = await deps.repo.loadBalancesByUser(synthIds);
+      // Faucet pre-fetch — used inside the loop to decide if a drained
+      // synth deserves a liveness top-up. Skipped entirely if disabled
+      // by config (no DB hit).
+      const faucetByUser = config.faucetEnabled
+        ? await deps.repo.loadFaucetState(synthIds, config.faucetLookbackMinutes)
+        : new Map<string, { recentCantAffordCount: number; lastFaucetAt: Date | null }>();
       const tickClock = now();
       const hour = tickClock.getUTCHours();
+      const faucetCooldownMs = config.faucetCooldownMinutes * 60_000;
 
       // Per-tick budgets — wider than typical demand so they only kick in
       // when something's gone wrong (config tweak, runaway loop, etc.).
@@ -135,6 +145,29 @@ export function createTickService(deps: TickServiceDeps): TickService {
         }
 
         let balance = balancesByUser.get(synth.id) ?? 0n;
+
+        // 0) Liveness faucet — runs BEFORE the join loop so a refilled
+        // synth can immediately spend the new coins this tick. Strict
+        // gates: only synths that are demonstrably stuck (multiple
+        // recent cannot_afford events) AND truly empty (balance=0)
+        // AND past cooldown get a top-up.
+        if (config.faucetEnabled && balance === 0n) {
+          const fs = faucetByUser.get(synth.id);
+          const cantAffordHits = fs?.recentCantAffordCount ?? 0;
+          const cooldownExpired =
+            !fs?.lastFaucetAt ||
+            tickClock.getTime() - fs.lastFaucetAt.getTime() >= faucetCooldownMs;
+          if (cantAffordHits >= config.faucetMinCantAffordEvents && cooldownExpired) {
+            const r = await applyFaucet(
+              { currency: deps.currency, log: deps.log },
+              { userId: synth.id, amountCoins: config.faucetTopUpCoins },
+            );
+            if (r.kind === 'success') {
+              balance = r.newBalance ?? BigInt(config.faucetTopUpCoins);
+              stats.faucetTopUps += 1;
+            }
+          }
+        }
 
         // 1) Per-tick: try to enter EVERY contest the synth can afford AND
         //    is rank-eligible for, that they're not already in. "Max
