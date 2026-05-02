@@ -60,6 +60,13 @@ export const SIM_CONFIG: {
   /** Cap on per-tick join attempts across the whole synthetic pool — a
    * config bug can't accidentally DDOS entriesService. */
   perTickJoinAttemptsCap: number;
+  /** Per-synth cap on join attempts within a single tick. Without this,
+   * the most-active personas (esp. `inviter` at 1806 of 2408) can spend
+   * the global budget before quieter personas (whale, lurker) get a
+   * chance to act, creating a top-heavy leaderboard that looks
+   * stagnant from the outside. 3 attempts per synth per minute aligns
+   * with realistic player behaviour: scan lobby, pick 1-3 contests. */
+  perSynthJoinAttemptsPerTick: number;
   /** Cap on per-tick invite attempts across the whole synthetic pool. */
   perTickInviteAttemptsCap: number;
   /** Minimum time-between-actions per synthetic, in seconds. Prevents one
@@ -77,7 +84,15 @@ export const SIM_CONFIG: {
   // have enough cohort + contest density that natural pacing is the
   // right model.
   joinPacingShape: 'uniform',
-  perTickJoinAttemptsCap: 200,
+  // 2026-05-02: bumped from 200 to 2500. The original value was set
+  // when the cohort was 100 synths; at 2400+ synths the cap binds
+  // every minute and the leaderboard looks frozen because only ~200
+  // entries land per minute across 1200+ active contests (~0.16
+  // entries/contest/min). 2500 is wider than the cohort so the global
+  // cap is a true safety net again, with the per-synth cap below
+  // being the actual fairness control.
+  perTickJoinAttemptsCap: 2500,
+  perSynthJoinAttemptsPerTick: 3,
   // Disabled 2026-05-01 — synth-to-synth referral chains were piling
   // up children faster than the cohort needed (each invite spawns a
   // new persona via inviteFriend → seedRepo). Setting the per-tick cap

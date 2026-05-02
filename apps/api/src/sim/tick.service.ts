@@ -104,6 +104,12 @@ export function createTickService(deps: TickServiceDeps): TickService {
 
       for (const synth of synths) {
         const persona = config.personas[synth.personaKind];
+        // Per-synth fairness budget — prevents the most-active personas
+        // (inviter at 1806/2408) from monopolising the global cap and
+        // starving quieter personas (whale, lurker, casual). Each synth
+        // gets at most N join-attempts per tick regardless of how many
+        // contests they're eligible for.
+        let perSynthJoinsLeft = config.perSynthJoinAttemptsPerTick;
         // alwaysOnline=true bypasses the time-of-day curve so a small
         // cohort produces visible activity all day.
         const loggedIn = config.alwaysOnline
@@ -149,6 +155,7 @@ export function createTickService(deps: TickServiceDeps): TickService {
 
         for (const c of affordableUnentered) {
           if (joinsLeft <= 0) break;
+          if (perSynthJoinsLeft <= 0) break;
           if (c.entryFeeCents > balance) continue; // local balance drain
           const isFree = c.entryFeeCents === 0n;
           const baseRate = isFree ? persona.joinFreeRate : persona.joinPaidRate;
@@ -160,6 +167,7 @@ export function createTickService(deps: TickServiceDeps): TickService {
           if (random() >= p) continue;
 
           joinsLeft -= 1;
+          perSynthJoinsLeft -= 1;
           stats.joinsAttempted += 1;
           const r = await joinContest(
             { entries: deps.entries, currency: deps.currency, log: deps.log },
