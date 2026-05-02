@@ -126,13 +126,24 @@ export function createTickRepo(db: Database): TickRepo {
 
     async loadEnteredPairs(synthIds, contestIds) {
       if (synthIds.length === 0 || contestIds.length === 0) return new Set();
-      const rows = await db
-        .select({ userId: entries.userId, contestId: entries.contestId })
-        .from(entries)
-        .where(and(inArray(entries.userId, synthIds), inArray(entries.contestId, contestIds)));
+      // qa007 sister bug (2026-05-02): postgres caps a single query at
+      // 65 534 bind params. synthIds is bounded by the cohort (~2.4k),
+      // but contestIds = scheduler open set, which now sits at ~96k
+      // under steady state (24h-lane spawning ahead of starts_at). We
+      // chunk on contestIds — synthIds always inline as one inArray.
+      // 5000 contests / chunk + 2408 synths = ~7.4k params per query,
+      // well below the ceiling, with N/5000 extra round-trips per tick.
       const out = new Set<string>();
-      for (const r of rows) {
-        if (r.userId) out.add(`${r.userId}|${r.contestId}`);
+      const CHUNK = 5000;
+      for (let i = 0; i < contestIds.length; i += CHUNK) {
+        const slice = contestIds.slice(i, i + CHUNK);
+        const rows = await db
+          .select({ userId: entries.userId, contestId: entries.contestId })
+          .from(entries)
+          .where(and(inArray(entries.userId, synthIds), inArray(entries.contestId, slice)));
+        for (const r of rows) {
+          if (r.userId) out.add(`${r.userId}|${r.contestId}`);
+        }
       }
       return out;
     },
