@@ -62,7 +62,7 @@ export interface SchedulerServiceDeps {
 }
 
 export interface SchedulerService {
-  schedule(): Promise<{ created: number; replicated: number }>;
+  schedule(): Promise<{ created: number; replicated: number; gcCancelled: number }>;
 }
 
 export function createSchedulerService(deps: SchedulerServiceDeps): SchedulerService {
@@ -71,6 +71,17 @@ export function createSchedulerService(deps: SchedulerServiceDeps): SchedulerSer
   return {
     async schedule() {
       const adminId = await ensureAdminUser(deps);
+
+      // Pass 0 — GC: cancel `scheduled` rows whose `starts_at` has already
+      // passed and that hold no real entries. These are zero-stake-zero-loss
+      // cleanups: no user paid an entry fee, so no REFUND is owed; the
+      // tick-pipeline lock fell behind (e.g. a wave from auto-replicate
+      // outpaced the lock budget) and they'd otherwise pile up forever,
+      // eventually blowing past postgres' 65534-parameter ceiling on the
+      // `loadLiveByCell` SELECT. This keeps the live+scheduled set bounded
+      // by real demand, not by historical scheduler churn.
+      const gcCancelled = await gcEmptyOverdueScheduled(deps);
+
       const liveByCell = await loadLiveByCell(deps.db);
 
       let created = 0;
@@ -114,12 +125,50 @@ export function createSchedulerService(deps: SchedulerServiceDeps): SchedulerSer
         }
       }
 
-      if (created > 0 || replicated > 0) {
-        deps.log.info({ created, replicated }, 'scheduler.tick');
+      if (created > 0 || replicated > 0 || gcCancelled > 0) {
+        deps.log.info({ created, replicated, gcCancelled }, 'scheduler.tick');
       }
-      return { created, replicated };
+      return { created, replicated, gcCancelled };
     },
   };
+}
+
+/**
+ * Cancel `scheduled` rows that the lock pipeline never picked up
+ * (`starts_at` is in the past) and that hold zero real entries.
+ *
+ * Bulk single-statement UPDATE — atomic, idempotent, INV-9-safe (no
+ * money moves; the empty-entries predicate guarantees there is nothing
+ * to refund). Logged but never throws; INV-7 — a GC failure must not
+ * stop the spawn passes from running.
+ *
+ * Returns the number of rows cancelled.
+ */
+async function gcEmptyOverdueScheduled(deps: SchedulerServiceDeps): Promise<number> {
+  try {
+    const result = await deps.db
+      .update(contests)
+      .set({ status: 'cancelled' })
+      .where(
+        dsql`${contests.status} = 'scheduled'
+             AND ${contests.startsAt} < now()
+             AND NOT EXISTS (
+               SELECT 1 FROM ${entries}
+                WHERE ${entries.contestId} = ${contests.id}
+                  AND ${entries.userId} IS NOT NULL
+             )`,
+      );
+    // drizzle's UPDATE result shape varies by driver; postgres-js returns
+    // the rows-affected count under `.count`. Default to 0 if absent.
+    const cancelled = (result as { count?: number }).count ?? 0;
+    if (cancelled > 0) {
+      deps.log.info({ cancelled }, 'scheduler.gc cancelled overdue empty');
+    }
+    return cancelled;
+  } catch (err) {
+    deps.log.warn({ err }, 'scheduler.gc failed (non-fatal)');
+    return 0;
+  }
 }
 
 /** Replicate when EVERY live sibling is ≥AUTO_REPLICATE_FILL_PCT full
@@ -184,16 +233,26 @@ async function loadLiveByCell(db: Database): Promise<Map<string, LiveSibling[]>>
     );
   if (rows.length === 0) return new Map();
 
+  // Chunk inArray to stay under postgres' 65534-param ceiling. With short-lane
+  // auto-replicate (ADR-0009) the live+scheduled set can balloon past 65k rows
+  // before the operator notices, and a single bulk SELECT with that many ids
+  // crashes the worker with MAX_PARAMETERS_EXCEEDED → OOM loop. 5000 per chunk
+  // is well below the limit and adds only N/5000 extra round-trips.
   const ids = rows.map((r) => r.id);
-  const counts = await db
-    .select({
-      contestId: entries.contestId,
-      n: dsql<number>`COUNT(*)::int`,
-    })
-    .from(entries)
-    .where(dsql`${inArray(entries.contestId, ids)} AND ${isNotNull(entries.userId)}`)
-    .groupBy(entries.contestId);
-  const byId = new Map(counts.map((c) => [c.contestId, c.n] as const));
+  const CHUNK = 5000;
+  const byId = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const counts = await db
+      .select({
+        contestId: entries.contestId,
+        n: dsql<number>`COUNT(*)::int`,
+      })
+      .from(entries)
+      .where(dsql`${inArray(entries.contestId, slice)} AND ${isNotNull(entries.userId)}`)
+      .groupBy(entries.contestId);
+    for (const c of counts) byId.set(c.contestId, c.n);
+  }
 
   const out = new Map<string, LiveSibling[]>();
   for (const r of rows) {
