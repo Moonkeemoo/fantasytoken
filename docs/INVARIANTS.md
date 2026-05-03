@@ -41,6 +41,8 @@
 
 **INV-16** — `entriesService.submit` rejects with `CONTEST_NOT_OPEN` коли `users.current_rank < contests.min_rank`. Лобі route фільтрує rank-gated контести з UI, але це лише cosmetics — будь-який direct submit (curl, sim, future client divergence) має пройти server-side перевірку. Consequence: rank-1 юзер витрачає welcome bonus на rank-2/5 контест (sim showed this on day-1: synth з 20 coins вгрузався у Whale Hour minRank=13). Source: ADR-0007.
 
+**INV-17** — Postgres volume utilisation у prod ніколи не перевищує 80%. Алерт у `prod-health-sentry` (`disk_used / disk_total >= 0.80`) → triage цього ж дня. Sources of growth, що мусять мати ceiling/cleanup: `synthetic_actions_log`, `entries` (по завершених сезонах), `price_snapshots` (post-finalize archive), `pg_wal` (через `wal_keep_size` / `archive_command`). 100% волюм = Postgres не може завершити WAL recovery (`could not write to file "pg_wal/xlogtemp.NN": No space left on device`), стартова петля без виходу, API падає вторинно з `CONNECT_TIMEOUT`, що виглядає як networking. Consequence: prod-down ховається за фальшивим симптомом, MTTR ×3-5. Source: qa008 (incident 2026-05-02, recurrence 2026-05-03 within 24h of wipe). Ceiling enforcement: `sim.rotate` cron (`apps/api/src/sim/rotate.service.ts`) trims `synthetic_actions_log` (2h), synth `transactions` (24h), finalized contests без real-user entries (24h post-`endsAt`) кожні 10 хв.
+
 ## Maintenance
 
 - Знайшов невидимий контракт у коді → додай як `INV-N`.

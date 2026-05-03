@@ -17,6 +17,14 @@ export {
   type WipeResult,
 } from './wipe.service.js';
 export { createWipeRepo } from './wipe.repo.js';
+export {
+  createRotateService,
+  ROTATE_DEFAULTS,
+  type RotateService,
+  type RotateRepo,
+  type RotateResult,
+} from './rotate.service.js';
+export { createRotateRepo } from './rotate.repo.js';
 export { makeSimAdminRoutes } from './admin.routes.js';
 export { density } from './pacing.js';
 export { pickLineup, filterPoolByBias, shuffle, type PoolToken } from './lineup_picker.js';

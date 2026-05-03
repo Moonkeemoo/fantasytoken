@@ -74,6 +74,8 @@ import {
   createTickService,
   createSimLogger,
   createSimObservability,
+  createRotateRepo,
+  createRotateService,
   makeSimAdminRoutes,
   SIM_CONFIG,
 } from './sim/index.js';
@@ -315,6 +317,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
   // flag is a coarse build-time gate and the per-request gate stays the
   // existing ADMIN_TG_IDS check.
   let stopSimTick: (() => void) | null = null;
+  let stopSimRotate: (() => void) | null = null;
   if (deps.config.SIM_ADMIN_ENABLED) {
     const simSeedRepo = createSeedRepo(deps.db);
     const seedSvc = createSeedService({ repo: simSeedRepo, currency });
@@ -376,6 +379,24 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
         }
       },
       name: 'sim.tick',
+      log: deps.logger,
+      runOnStart: deps.config.NODE_ENV !== 'test',
+    });
+
+    // qa008 — synth-cohort rotation. Without this the tick worker fills
+    // a 500MB Postgres volume in ~24h (synthetic_actions_log + cohort
+    // transactions + finalized contests with only synth entries). Defaults
+    // are in rotate.service.ts; only real-user data is preserved.
+    const rotateSvc = createRotateService({ repo: createRotateRepo(deps.db) });
+    stopSimRotate = scheduleEvery({
+      intervalMs: 10 * 60_000,
+      fn: async () => {
+        const r = await rotateSvc.runOnce();
+        if (r.deletedLogRows + r.deletedTransactions + r.deletedContests > 0) {
+          deps.logger.info(r, 'sim.rotate');
+        }
+      },
+      name: 'sim.rotate',
       log: deps.logger,
       runOnStart: deps.config.NODE_ENV !== 'test',
     });
@@ -546,6 +567,7 @@ export async function createServer(deps: ServerDeps): Promise<ServerHandle> {
       stopWelcomeExpiry();
       stopDmDrain();
       if (stopSimTick) stopSimTick();
+      if (stopSimRotate) stopSimRotate();
       if (bybitHandle) bybitHandle.stop();
       if (okxHandle) okxHandle.stop();
       if (priceFeedWriter) priceFeedWriter.stop();
